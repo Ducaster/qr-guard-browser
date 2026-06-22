@@ -40,6 +40,7 @@ const getLaunchEnv = (qrUrl: string, userDataDir: string): Record<string, string
   env["ELECTRON_DISABLE_SECURITY_WARNINGS"] = "true";
   env["QR_GUARD_ALLOW_INSECURE_TEST_STORAGE"] = "1";
   env["QR_GUARD_QR_URL"] = qrUrl;
+  env["QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"] = "1";
   env["QR_GUARD_USER_DATA_DIR"] = userDataDir;
 
   return env;
@@ -89,6 +90,15 @@ const getShellCounts = async (electronApp: ElectronApplication): Promise<ShellCo
     baseWindowCount: BaseWindow.getAllWindows().length,
     webContentsCount: webContents.getAllWebContents().length
   }));
+
+const getQrVisible = async (controlPage: Page): Promise<boolean> => {
+  const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
+
+  return shellInfo.qrVisible;
+};
+
+const getAuditLogPath = (userDataDir: string): string =>
+  path.join(userDataDir, "audit-log.jsonl");
 
 const completeFirstRunSetup = async (page: Page, qrUrl: string): Promise<void> => {
   await page.getByTestId("setup-qr-url").fill(qrUrl);
@@ -189,6 +199,69 @@ test.describe("secure Electron shell", () => {
       const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
       expect(shellInfo.qrVisible).toBe(false);
       await expect(controlPage.getByRole("button", { name: "Settings" })).toBeVisible();
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("unlocks with the correct code, counts down, and relocks without reloading QR contents", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+      await qrPage.evaluate(() => {
+        Reflect.set(globalThis, "__qrGuardReloadMarker", "survived");
+      });
+
+      // When
+      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      await controlPage.getByTestId("unlock-code").fill("2468");
+      await controlPage.getByTestId("unlock-submit").click();
+
+      // Then
+      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
+      await expect(controlPage.getByTestId("unlock-countdown")).toContainText("s");
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 5_000 }).toBe(false);
+      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+
+      const markerSurvived = await qrPage.evaluate<boolean>(
+        () => Reflect.get(globalThis, "__qrGuardReloadMarker") === "survived"
+      );
+      expect(markerSurvived).toBe(true);
+      const auditLog = fs.readFileSync(getAuditLogPath(launchedApp.userDataDir), "utf8");
+      expect(auditLog).toContain('"userId":"staff01"');
+      expect(auditLog).toContain('"reason":"timer"');
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("keeps QR locked and writes no success audit event when the code is wrong", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+
+      // When
+      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      await controlPage.getByTestId("unlock-code").fill("9999");
+      await controlPage.getByTestId("unlock-submit").click();
+
+      // Then
+      await expect(controlPage.getByTestId("unlock-errors")).toContainText("incorrect");
+      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+      expect(await getQrVisible(controlPage)).toBe(false);
+      const auditLogPath = getAuditLogPath(launchedApp.userDataDir);
+      const auditLog = fs.existsSync(auditLogPath) ? fs.readFileSync(auditLogPath, "utf8") : "";
+      expect(auditLog).not.toContain('"userId":"staff01"');
     } finally {
       await closeLaunchedApp(launchedApp);
     }

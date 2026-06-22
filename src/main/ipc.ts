@@ -26,6 +26,9 @@ export type ShellInfoProvider = () => Pick<ShellInfo, "qrVisible">;
 
 export interface SettingsIpcOptions {
   readonly loadQrUrl: (url: string) => Promise<void>;
+  readonly onSettingsClosed: () => void;
+  readonly onSettingsOpened: () => void;
+  readonly onSetupCompleted: () => void;
   readonly repository: SettingsRepository;
 }
 
@@ -117,6 +120,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       options.repository.save(result.value);
       hasCompletedFirstRunSetupInProcess = true;
       await options.loadQrUrl(result.value.qrUrl);
+      options.onSetupCompleted();
 
       return okResponse();
     }
@@ -136,6 +140,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       }
 
       authorizeSender(event);
+      options.onSettingsOpened();
 
       return okResponse();
     }
@@ -143,6 +148,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
 
   ipcMain.handle(IPC_CHANNELS.closeSettings, (event: IpcMainInvokeEvent): ActionResponse => {
     revokeSender(event);
+    options.onSettingsClosed();
 
     return okResponse();
   });

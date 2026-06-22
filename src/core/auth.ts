@@ -145,3 +145,70 @@ const retryAfterForFailures = (consecutiveFailures: number): number | null => {
 
   return Math.min(LOCKOUT_BASE_WINDOW_MS + incrementalDelay, LOCKOUT_MAX_RETRY_MS);
 };
+
+export const serializeLockoutState = (state: LockoutState): string =>
+  JSON.stringify({
+    entries: state.entries
+  });
+
+export const parseLockoutStateJson = (json: string): LockoutState => {
+  try {
+    return parseLockoutState(JSON.parse(json));
+  } catch (error: unknown) {
+    if (error instanceof SyntaxError) {
+      return createLockoutState();
+    }
+
+    throw error;
+  }
+};
+
+export const parseLockoutState = (value: unknown): LockoutState => {
+  if (!isRecord(value) || !isRecord(value["entries"])) {
+    return createLockoutState();
+  }
+
+  const entries: Record<string, LockoutEntry> = {};
+
+  for (const [userId, rawEntry] of Object.entries(value["entries"])) {
+    const entry = parseLockoutEntry(rawEntry);
+
+    if (entry !== null) {
+      entries[userId] = entry;
+    }
+  }
+
+  return { entries };
+};
+
+const parseLockoutEntry = (value: unknown): LockoutEntry | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const consecutiveFailures = value["consecutiveFailures"];
+  const lockedUntilMs = value["lockedUntilMs"];
+
+  if (
+    typeof consecutiveFailures !== "number" ||
+    !Number.isInteger(consecutiveFailures) ||
+    consecutiveFailures < 0
+  ) {
+    return null;
+  }
+
+  if (
+    lockedUntilMs !== null &&
+    (typeof lockedUntilMs !== "number" || !Number.isFinite(lockedUntilMs))
+  ) {
+    return null;
+  }
+
+  return {
+    consecutiveFailures,
+    lockedUntilMs
+  };
+};
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);

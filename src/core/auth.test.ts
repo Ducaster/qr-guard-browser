@@ -7,6 +7,8 @@ import {
   LOCKOUT_FAILURE_THRESHOLD,
   recordAuthFailure,
   recordAuthSuccess,
+  parseLockoutStateJson,
+  serializeLockoutState,
   verifyCode
 } from "./auth";
 
@@ -93,4 +95,40 @@ describe("brute-force lockout", () => {
     expect(afterSuccess.allowed).toBe(true);
     expect(state.entries[userId]).toBeUndefined();
   });
+
+  it("round-trips lockout persistence JSON without secrets", () => {
+    // Given
+    const userId = "staff01";
+    const now = 4_000;
+    let state = createLockoutState();
+
+    for (let attempt = 1; attempt <= LOCKOUT_FAILURE_THRESHOLD; attempt += 1) {
+      const result = recordAuthFailure(state, userId, now + attempt);
+      state = result.state;
+    }
+
+    // When
+    const json = serializeLockoutState(state);
+    const parsed = parseLockoutStateJson(json);
+    const serializedState: unknown = JSON.parse(json);
+
+    if (!isRecord(serializedState) || !isRecord(serializedState["entries"])) {
+      throw new Error("Expected serialized lockout state object.");
+    }
+
+    const serializedEntry = serializedState["entries"][userId];
+
+    if (!isRecord(serializedEntry)) {
+      throw new Error("Expected serialized lockout entry.");
+    }
+
+    // Then
+    expect(parsed).toEqual(state);
+    expect(Object.keys(serializedState).sort()).toEqual(["entries"]);
+    expect(Object.keys(serializedState["entries"]).sort()).toEqual([userId]);
+    expect(Object.keys(serializedEntry).sort()).toEqual(["consecutiveFailures", "lockedUntilMs"]);
+  });
 });
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);

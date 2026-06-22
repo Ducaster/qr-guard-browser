@@ -31,6 +31,7 @@ const INITIAL_BOUNDS = {
   width: 1280
 } as const;
 
+const CONTROL_TOOLBAR_HEIGHT = 64;
 const transparentColor = "#00000000" as const;
 
 const getContentBounds = (window: BaseWindow): Rectangle => {
@@ -47,12 +48,22 @@ const getContentBounds = (window: BaseWindow): Rectangle => {
 const applyFullWindowLayout = (
   window: BaseWindow,
   qrView: WebContentsView,
-  controlView: WebContentsView
+  controlView: WebContentsView,
+  qrVisible: boolean
 ): void => {
   const bounds = getContentBounds(window);
 
   qrView.setBounds(bounds);
-  controlView.setBounds(bounds);
+  controlView.setBounds(
+    qrVisible
+      ? {
+          height: CONTROL_TOOLBAR_HEIGHT,
+          width: bounds.width,
+          x: 0,
+          y: 0
+        }
+      : bounds
+  );
 };
 
 const getQrUrl = (qrUrl: string | undefined): string => qrUrl ?? DEFAULT_FIXTURE_QR_URL;
@@ -84,15 +95,13 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   hardenWebContents(controlView.webContents);
 
   controlView.setBackgroundColor(transparentColor);
-  qrView.setVisible(false);
 
   window.contentView.addChildView(qrView);
   window.contentView.addChildView(controlView);
-  // TODO(Todo 5): handle pointer-event passthrough and toolbar-strip resize when QR becomes visible.
-  applyFullWindowLayout(window, qrView, controlView);
+  applyFullWindowLayout(window, qrView, controlView, false);
 
   window.on("resize", () => {
-    applyFullWindowLayout(window, qrView, controlView);
+    applyFullWindowLayout(window, qrView, controlView, qrView.getVisible());
   });
 
   const load = async (): Promise<void> => {
@@ -106,6 +115,11 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
 
   const setQrVisible = (visible: boolean): void => {
     qrView.setVisible(visible);
+    applyFullWindowLayout(window, qrView, controlView, visible);
+
+    if (!visible) {
+      controlView.webContents.focus();
+    }
   };
 
   const isQrVisible = (): boolean => qrView.getVisible();

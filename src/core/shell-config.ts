@@ -10,12 +10,17 @@ export const IPC_CHANNELS = {
   closeSettings: "qr-guard:close-settings",
   completeFirstRunSetup: "qr-guard:complete-first-run-setup",
   deleteUser: "qr-guard:delete-user",
+  getState: "qr-guard:get-state",
   getSettingsView: "qr-guard:get-settings-view",
   getShellInfo: "qr-guard:get-shell-info",
   isFirstRun: "qr-guard:is-first-run",
+  manualLock: "qr-guard:manual-lock",
+  manualLoginComplete: "qr-guard:manual-login-complete",
   openSettings: "qr-guard:open-settings",
   resetUserCode: "qr-guard:reset-user-code",
   saveSettings: "qr-guard:save-settings",
+  stateChanged: "qr-guard:state-changed",
+  submitUnlock: "qr-guard:submit-unlock",
   updateUser: "qr-guard:update-user"
 } as const;
 

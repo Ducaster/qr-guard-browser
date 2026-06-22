@@ -1,32 +1,34 @@
 import { useEffect, useState, type JSX } from "react";
 
+import type { StateSnapshot } from "../core/state-machine";
 import { LockScreen } from "./lock/LockScreen";
 import { AdminGate } from "./settings/AdminGate";
 import { FirstRunSetup } from "./settings/FirstRunSetup";
 import { SettingsView } from "./settings/SettingsView";
+import { Toolbar } from "./toolbar/Toolbar";
 
-type AppMode = "adminGate" | "loading" | "locked" | "settings" | "setup";
+type LocalMode = "adminGate" | null;
 
 export const App = (): JSX.Element => {
-  const [mode, setMode] = useState<AppMode>("loading");
+  const [state, setState] = useState<StateSnapshot | null>(null);
+  const [localMode, setLocalMode] = useState<LocalMode>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
+    const unsubscribe = window.qrGuard.onStateChange((nextState) => {
+      if (isMounted) {
+        setState(nextState);
+      }
+    });
 
-    void window.qrGuard.isFirstRun()
-      .then((response) => {
+    void window.qrGuard.getState()
+      .then((nextState) => {
         if (!isMounted) {
           return;
         }
 
-        if (!response.ok) {
-          setError(response.errors.join(" "));
-          setMode("locked");
-          return;
-        }
-
-        setMode(response.isFirstRun ? "setup" : "locked");
+        setState(nextState);
       })
       .catch(() => {
         if (!isMounted) {
@@ -34,34 +36,48 @@ export const App = (): JSX.Element => {
         }
 
         setError("Settings could not be read.");
-        setMode("locked");
+        setState(createLockedFallbackState());
       });
 
     return () => {
       isMounted = false;
+      unsubscribe();
     };
   }, []);
 
-  switch (mode) {
-    case "adminGate":
+  if (localMode === "adminGate") {
+    return (
+      <AdminGate
+        onAuthorized={() => {
+          setLocalMode(null);
+          void window.qrGuard.getState().then(setState, () => undefined);
+        }}
+        onCancel={() => {
+          setLocalMode(null);
+        }}
+      />
+    );
+  }
+
+  if (state === null) {
+    return <LoadingView />;
+  }
+
+  switch (state.state) {
+    case "needsSetup":
       return (
-        <AdminGate
-          onAuthorized={() => {
-            setMode("settings");
-          }}
-          onCancel={() => {
-            setMode("locked");
+        <FirstRunSetup
+          onComplete={() => {
+            void window.qrGuard.getState().then(setState, () => undefined);
           }}
         />
       );
-    case "loading":
-      return <LoadingView />;
     case "locked":
       return (
         <>
           <LockScreen
             onOpenSettings={() => {
-              setMode("adminGate");
+              setLocalMode("adminGate");
             }}
           />
           {error.length > 0 ? <p className="floating-error">{error}</p> : null}
@@ -71,20 +87,25 @@ export const App = (): JSX.Element => {
       return (
         <SettingsView
           onClose={() => {
-            setMode("locked");
+            setLocalMode(null);
+            void window.qrGuard.getState().then(setState, () => undefined);
           }}
         />
       );
-    case "setup":
-      return (
-        <FirstRunSetup
-          onComplete={() => {
-            setMode("locked");
-          }}
-        />
-      );
+    case "loginMode":
+    case "unlocked":
+      return <Toolbar state={state} />;
   }
 };
+
+const createLockedFallbackState = (): StateSnapshot => ({
+  activeUserId: null,
+  now: new Date().toISOString(),
+  qrVisible: false,
+  remainingMs: null,
+  state: "locked",
+  unlockExpiresAt: null
+});
 
 const LoadingView = (): JSX.Element => (
   <main className="app-shell app-shell--center">

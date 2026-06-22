@@ -2,9 +2,28 @@ import { app, safeStorage } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  createLockoutState,
+  parseLockoutStateJson,
+  serializeLockoutState,
+  type LockoutState
+} from "../core/auth";
+import { parseAuditLog, serializeAuditEvent, type AuditEvent } from "../core/audit-log";
 import type { Sealer, SettingsStore } from "../core/settings-repo";
 
 const SETTINGS_FILE_NAME = "settings.json";
+const LOCKOUT_FILE_NAME = "lockout-state.json";
+const AUDIT_LOG_FILE_NAME = "audit-log.jsonl";
+
+export interface LockoutStateStore {
+  readonly load: () => LockoutState;
+  readonly save: (state: LockoutState) => void;
+}
+
+export interface AuditLogStore {
+  readonly append: (event: AuditEvent) => void;
+  readonly read: () => readonly AuditEvent[];
+}
 
 export const createElectronSettingsStore = (): SettingsStore =>
   createFileSettingsStore(path.join(app.getPath("userData"), SETTINGS_FILE_NAME));
@@ -22,8 +41,36 @@ export const createFileSettingsStore = (filePath: string): SettingsStore => ({
     }
   },
   write: (data: string) => {
+    writeAtomicTextFile(filePath, data);
+  }
+});
+
+export const createElectronLockoutStateStore = (): LockoutStateStore =>
+  createFileLockoutStateStore(path.join(app.getPath("userData"), LOCKOUT_FILE_NAME));
+
+export const createFileLockoutStateStore = (filePath: string): LockoutStateStore => ({
+  load: () => {
+    const data = readOptionalTextFile(filePath);
+
+    return data === null ? createLockoutState() : parseLockoutStateJson(data);
+  },
+  save: (state: LockoutState) => {
+    writeAtomicTextFile(filePath, serializeLockoutState(state));
+  }
+});
+
+export const createElectronAuditLogStore = (): AuditLogStore =>
+  createFileAuditLogStore(path.join(app.getPath("userData"), AUDIT_LOG_FILE_NAME));
+
+export const createFileAuditLogStore = (filePath: string): AuditLogStore => ({
+  append: (event: AuditEvent) => {
     fs.mkdirSync(path.dirname(filePath), { mode: 0o700, recursive: true });
-    fs.writeFileSync(filePath, data, { encoding: "utf8", mode: 0o600 });
+    fs.appendFileSync(filePath, serializeAuditEvent(event), { encoding: "utf8", mode: 0o600 });
+  },
+  read: () => {
+    const data = readOptionalTextFile(filePath);
+
+    return data === null ? [] : parseAuditLog(data);
   }
 });
 
@@ -65,4 +112,28 @@ const hasErrorCode = (error: unknown, expectedCode: string): boolean => {
   }
 
   return error.code === expectedCode;
+};
+
+const readOptionalTextFile = (filePath: string): string | null => {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch (error: unknown) {
+    if (hasErrorCode(error, "ENOENT")) {
+      return null;
+    }
+
+    throw error;
+  }
+};
+
+const writeAtomicTextFile = (filePath: string, data: string): void => {
+  const dirPath = path.dirname(filePath);
+  const tempPath = path.join(
+    dirPath,
+    `.${path.basename(filePath)}.${String(process.pid)}.${String(Date.now())}.tmp`
+  );
+
+  fs.mkdirSync(dirPath, { mode: 0o700, recursive: true });
+  fs.writeFileSync(tempPath, data, { encoding: "utf8", mode: 0o600 });
+  fs.renameSync(tempPath, filePath);
 };

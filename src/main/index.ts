@@ -3,8 +3,12 @@ import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
 import { createSettingsRepository, type SettingsRepository } from "../core/settings-repo";
+import { registerLockIpc } from "./lock-ipc";
+import { createLockController, type LockController } from "./lock-controller";
 import { registerSettingsIpc, registerShellIpc } from "./ipc";
 import {
+  createElectronAuditLogStore,
+  createElectronLockoutStateStore,
   createElectronSafeStorageSealer,
   createElectronSettingsStore,
   createInsecureTestSealer
@@ -23,6 +27,7 @@ const formatUnknownError = (error: unknown): string => {
 };
 
 let activeShellWindow: ShellWindow | undefined;
+let activeLockController: LockController | undefined;
 let settingsRepository: SettingsRepository | undefined;
 
 const configuredUserDataPath = process.env["QR_GUARD_USER_DATA_DIR"];
@@ -83,6 +88,18 @@ const loadActiveQrUrl = async (url: string): Promise<void> => {
   await activeShellWindow.qrView.webContents.loadURL(url);
 };
 
+const getUnlockDurationOverrideSeconds = (): number | undefined => {
+  const rawValue = process.env["QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"];
+
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+
+  return Number.isInteger(parsedValue) && parsedValue >= 1 ? parsedValue : undefined;
+};
+
 const createAndLoadShellWindow = (): void => {
   const controlDevServerUrl = getControlDevServerUrl();
   const qrUrl = getConfiguredQrUrl();
@@ -94,7 +111,15 @@ const createAndLoadShellWindow = (): void => {
   });
 
   activeShellWindow = shellWindow;
-  shellWindow.setQrVisible(false);
+  const unlockDurationOverrideSeconds = getUnlockDurationOverrideSeconds();
+  activeLockController = createLockController({
+    appVersion: app.getVersion(),
+    auditLogStore: createElectronAuditLogStore(),
+    lockoutStateStore: createElectronLockoutStateStore(),
+    repository: getSettingsRepository(),
+    shellWindow,
+    ...(unlockDurationOverrideSeconds === undefined ? {} : { unlockDurationOverrideSeconds })
+  });
 
   void shellWindow.load()
     .then(() => {
@@ -113,6 +138,7 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.setName(APP_NAME);
+  registerLockIpc(() => activeLockController);
   registerShellIpc(() => ({
     qrVisible: activeShellWindow?.isQrVisible() ?? false
   }));
@@ -135,6 +161,15 @@ if (!gotSingleInstanceLock) {
     .then(() => {
       registerSettingsIpc({
         loadQrUrl: loadActiveQrUrl,
+        onSettingsClosed: () => {
+          activeLockController?.closeSettings();
+        },
+        onSettingsOpened: () => {
+          activeLockController?.openSettings();
+        },
+        onSetupCompleted: () => {
+          activeLockController?.completeSetup();
+        },
         repository: getSettingsRepository()
       });
       createAndLoadShellWindow();
