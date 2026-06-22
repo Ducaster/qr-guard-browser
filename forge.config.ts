@@ -6,15 +6,27 @@ import type { ForgeConfig } from "@electron-forge/shared-types";
 
 const config: ForgeConfig = {
   packagerConfig: {
+    appBundleId: "com.qrguard.browser",
     asar: true,
     executableName: "qr-guard-browser",
     name: "QR Guard Browser"
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel(
+      {
+        name: "qr_guard_browser",
+        setupExe: "QRGuardBrowserSetup.exe"
+      },
+      ["win32"]
+    ),
     new MakerZIP({}, ["darwin"]),
-    new MakerDMG({}, ["darwin"])
+    new MakerDMG(
+      {
+        name: "QR Guard Browser"
+      },
+      ["darwin"]
+    )
   ],
   plugins: [
     new VitePlugin({

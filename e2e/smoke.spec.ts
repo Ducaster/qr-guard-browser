@@ -109,14 +109,18 @@ test.describe("secure Electron shell", () => {
 
   test("unlocks with the correct code, counts down, and relocks without reloading QR contents", async () => {
     // Given
-    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`);
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`, {
+      unlockDurationSeconds: "3"
+    });
     const electronApp = launchedApp.app;
 
     try {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
       const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
-      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`);
-      await qrPage.waitForLoadState("networkidle");
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`, {
+        unlockDurationSeconds: "3"
+      });
+      await expect(qrPage.locator("#qr-code")).toContainText("fixture-qr-code");
       await qrPage.evaluate(() => {
         Reflect.set(globalThis, "__qrGuardReloadMarker", "survived");
       });
@@ -130,7 +134,7 @@ test.describe("secure Electron shell", () => {
       await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
       await expect(controlPage.getByTestId("unlock-countdown")).toContainText("s");
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
-      await expect.poll(() => getQrVisible(controlPage), { timeout: 5_000 }).toBe(false);
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 8_000 }).toBe(false);
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
 
       const markerSurvived = await qrPage.evaluate<boolean>(

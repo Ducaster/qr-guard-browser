@@ -22,13 +22,15 @@ test.describe("audit log settings view", () => {
 
   test("shows two users' successful unlock history and excludes failed auth", async () => {
     // Given
-    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`);
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`, {
+      unlockDurationSeconds: "3"
+    });
     const electronApp = launchedApp.app;
 
     try {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
       await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`, {
-        unlockDurationSeconds: "1"
+        unlockDurationSeconds: "3"
       });
       await openSettings(controlPage);
       await addUser(controlPage, "staff02", "1357");
@@ -86,6 +88,6 @@ const unlockAndWaitForRelock = async (page: Page, userId: string, code: string):
   await page.getByTestId("unlock-submit").click();
   await expect(page.getByTestId("unlock-toolbar")).toBeVisible();
   await expect.poll(() => getQrVisible(page), { timeout: 2_000 }).toBe(true);
-  await expect(page.getByTestId("locked-screen")).toBeVisible({ timeout: 5_000 });
-  await expect.poll(() => getQrVisible(page), { timeout: 2_000 }).toBe(false);
+  await expect(page.getByTestId("locked-screen")).toBeVisible({ timeout: 8_000 });
+  await expect.poll(() => getQrVisible(page), { timeout: 8_000 }).toBe(false);
 };

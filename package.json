@@ -2,6 +2,7 @@
   "name": "qr-guard-browser",
   "version": "0.1.0",
   "description": "QR Guard Browser desktop app shell.",
+  "productName": "QR Guard Browser",
   "main": ".vite/build/main.js",
   "author": "",
   "license": "UNLICENSED",

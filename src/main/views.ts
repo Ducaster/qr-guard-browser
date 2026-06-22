@@ -22,6 +22,7 @@ export interface ShellWindow {
 export interface ShellWindowOptions {
   readonly controlDevServerUrl?: string;
   readonly controlHtmlPath: string;
+  readonly disableDevTools: boolean;
   readonly preloadPath: string;
   readonly qrUrl?: string;
 }
@@ -90,9 +91,9 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     }
   });
 
-  hardenWebContents(qrView.webContents, qrSession);
+  hardenWebContents(qrView.webContents, qrSession, options.disableDevTools);
   denyDisallowedQrNavigations(qrView.webContents);
-  hardenWebContents(controlView.webContents);
+  hardenWebContents(controlView.webContents, controlView.webContents.session, options.disableDevTools);
 
   controlView.setBackgroundColor(transparentColor);
 

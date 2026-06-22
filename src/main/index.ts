@@ -1,10 +1,11 @@
-import { app, BaseWindow, powerMonitor } from "electron";
+import { app, BaseWindow, Menu, powerMonitor } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
 import { createSettingsRepository, type SettingsRepository } from "../core/settings-repo";
 import { registerLockIpc } from "./lock-ipc";
 import { createLockController, type LockController } from "./lock-controller";
+import { formatUnknownError, mainLogger } from "./logger";
 import { registerSettingsIpc, registerShellIpc } from "./ipc";
 import {
   createElectronAuditLogStore,
@@ -18,14 +19,6 @@ import { createQrWebContentsAdapter } from "./qr-navigation-watcher";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
-
-const formatUnknownError = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.stack ?? error.message;
-  }
-
-  return String(error);
-};
 
 let activeShellWindow: ShellWindow | undefined;
 let activeLockController: LockController | undefined;
@@ -122,6 +115,7 @@ const createAndLoadShellWindow = (): void => {
   const qrUrl = getConfiguredQrUrl();
   const shellWindow = createShellWindow({
     controlHtmlPath: getRendererHtmlPath(getRendererName()),
+    disableDevTools: app.isPackaged,
     preloadPath: path.join(__dirname, "preload.js"),
     ...(controlDevServerUrl === undefined ? {} : { controlDevServerUrl }),
     ...(qrUrl === undefined ? {} : { qrUrl })
@@ -150,7 +144,7 @@ const createAndLoadShellWindow = (): void => {
       shellWindow.window.setTitle(APP_NAME);
     })
     .catch((error: unknown) => {
-      console.error(formatUnknownError(error));
+      mainLogger.error("Failed to load shell window.", { error: formatUnknownError(error) });
       app.quit();
     });
 };
@@ -182,6 +176,10 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady()
     .then(() => {
+      if (app.isPackaged) {
+        Menu.setApplicationMenu(null);
+      }
+
       registerSettingsIpc({
         auditLogStore: createElectronAuditLogStore(),
         loadQrUrl: loadActiveQrUrl,
@@ -205,7 +203,7 @@ if (!gotSingleInstanceLock) {
       });
     })
     .catch((error: unknown) => {
-      console.error(formatUnknownError(error));
+      mainLogger.error("Failed during app startup.", { error: formatUnknownError(error) });
       app.quit();
     });
 

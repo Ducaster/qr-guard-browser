@@ -16,6 +16,7 @@ import {
   type AuditLogReadResult
 } from "../core/audit-log";
 import type { Sealer, SettingsStore } from "../core/settings-repo";
+import { mainLogger } from "./logger";
 
 const SETTINGS_FILE_NAME = "settings.json";
 const LOCKOUT_FILE_NAME = "lockout-state.json";
@@ -58,7 +59,7 @@ export const createFileLockoutStateStore = (filePath: string): LockoutStateStore
   load: () => {
     const data = readOptionalTextFile(filePath);
 
-    return data === null ? createLockoutState() : parseLockoutStateJson(data);
+    return data === null ? createLockoutState() : parseLockoutStateFile(data, filePath);
   },
   save: (state: LockoutState) => {
     writeAtomicTextFile(filePath, serializeLockoutState(state));
@@ -130,6 +131,25 @@ const readOptionalTextFile = (filePath: string): string | null => {
 
     throw error;
   }
+};
+
+const parseLockoutStateFile = (data: string, filePath: string): LockoutState => {
+  try {
+    JSON.parse(data);
+  } catch (error: unknown) {
+    if (error instanceof SyntaxError) {
+      mainLogger.warn("Failed to parse lockout state file; resetting lockout state.", {
+        error,
+        filePath
+      });
+
+      return createLockoutState();
+    }
+
+    throw error;
+  }
+
+  return parseLockoutStateJson(data);
 };
 
 const writeAtomicTextFile = (filePath: string, data: string): void => {
