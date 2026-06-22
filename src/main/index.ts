@@ -2,7 +2,13 @@ import { app, BaseWindow } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
-import { registerShellIpc } from "./ipc";
+import { createSettingsRepository, type SettingsRepository } from "../core/settings-repo";
+import { registerSettingsIpc, registerShellIpc } from "./ipc";
+import {
+  createElectronSafeStorageSealer,
+  createElectronSettingsStore,
+  createInsecureTestSealer
+} from "./settings-adapters";
 import { createShellWindow, getRendererHtmlPath, type ShellWindow } from "./views";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -17,6 +23,13 @@ const formatUnknownError = (error: unknown): string => {
 };
 
 let activeShellWindow: ShellWindow | undefined;
+let settingsRepository: SettingsRepository | undefined;
+
+const configuredUserDataPath = process.env["QR_GUARD_USER_DATA_DIR"];
+
+if (configuredUserDataPath !== undefined) {
+  app.setPath("userData", configuredUserDataPath);
+}
 
 const getControlDevServerUrl = (): string | undefined => {
   if (typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === "string") {
@@ -34,9 +47,45 @@ const getRendererName = (): string => {
   return "main_window";
 };
 
+const getSettingsRepository = (): SettingsRepository => {
+  if (settingsRepository !== undefined) {
+    return settingsRepository;
+  }
+
+  const allowInsecureTestStorage =
+    process.env["QR_GUARD_ALLOW_INSECURE_TEST_STORAGE"] === "1" && !app.isPackaged;
+  const sealer = allowInsecureTestStorage
+    ? createInsecureTestSealer()
+    : createElectronSafeStorageSealer();
+
+  settingsRepository = createSettingsRepository(createElectronSettingsStore(), sealer);
+
+  return settingsRepository;
+};
+
+const getConfiguredQrUrl = (): string | undefined => {
+  const envQrUrl = process.env["QR_GUARD_QR_URL"];
+
+  if (envQrUrl !== undefined) {
+    return envQrUrl;
+  }
+
+  const qrUrl = getSettingsRepository().load().qrUrl;
+
+  return qrUrl.length > 0 ? qrUrl : undefined;
+};
+
+const loadActiveQrUrl = async (url: string): Promise<void> => {
+  if (activeShellWindow === undefined) {
+    return;
+  }
+
+  await activeShellWindow.qrView.webContents.loadURL(url);
+};
+
 const createAndLoadShellWindow = (): void => {
   const controlDevServerUrl = getControlDevServerUrl();
-  const qrUrl = process.env["QR_GUARD_QR_URL"];
+  const qrUrl = getConfiguredQrUrl();
   const shellWindow = createShellWindow({
     controlHtmlPath: getRendererHtmlPath(getRendererName()),
     preloadPath: path.join(__dirname, "preload.js"),
@@ -84,6 +133,10 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady()
     .then(() => {
+      registerSettingsIpc({
+        loadQrUrl: loadActiveQrUrl,
+        repository: getSettingsRepository()
+      });
       createAndLoadShellWindow();
 
       app.on("activate", () => {

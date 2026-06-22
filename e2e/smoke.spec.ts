@@ -1,4 +1,5 @@
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import fs from "node:fs";
 import path from "node:path";
 
 import { startFixtureQrSiteServer, type FixtureQrSiteServer } from "../fixtures/qr-site-server";
@@ -16,13 +17,18 @@ interface ShellCounts {
   readonly webContentsCount: number;
 }
 
+interface LaunchedApp {
+  readonly app: ElectronApplication;
+  readonly userDataDir: string;
+}
+
 const readNodeGlobalTypes = (): NodeGlobalTypes => ({
   moduleType: typeof module,
   processType: typeof process,
   requireType: typeof require
 });
 
-const getLaunchEnv = (qrUrl: string): Record<string, string> => {
+const getLaunchEnv = (qrUrl: string, userDataDir: string): Record<string, string> => {
   const env: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(process.env)) {
@@ -32,17 +38,36 @@ const getLaunchEnv = (qrUrl: string): Record<string, string> => {
   }
 
   env["ELECTRON_DISABLE_SECURITY_WARNINGS"] = "true";
+  env["QR_GUARD_ALLOW_INSECURE_TEST_STORAGE"] = "1";
   env["QR_GUARD_QR_URL"] = qrUrl;
+  env["QR_GUARD_USER_DATA_DIR"] = userDataDir;
 
   return env;
 };
 
-const launchApp = async (qrUrl: string): Promise<ElectronApplication> =>
-  electron.launch({
+const launchApp = async (qrUrl: string): Promise<LaunchedApp> => {
+  const userDataDir = createUserDataDir();
+  const app = await electron.launch({
     args: ["."],
     cwd: PROJECT_ROOT,
-    env: getLaunchEnv(qrUrl)
+    env: getLaunchEnv(qrUrl, userDataDir)
   });
+
+  return { app, userDataDir };
+};
+
+const closeLaunchedApp = async (launchedApp: LaunchedApp): Promise<void> => {
+  await launchedApp.app.close();
+  fs.rmSync(launchedApp.userDataDir, { force: true, recursive: true });
+};
+
+const createUserDataDir = (): string => {
+  const parentDir = path.join(PROJECT_ROOT, ".tmp");
+
+  fs.mkdirSync(parentDir, { recursive: true });
+
+  return fs.mkdtempSync(path.join(parentDir, "e2e-user-data-"));
+};
 
 const findPage = async (
   electronApp: ElectronApplication,
@@ -65,6 +90,16 @@ const getShellCounts = async (electronApp: ElectronApplication): Promise<ShellCo
     webContentsCount: webContents.getAllWebContents().length
   }));
 
+const completeFirstRunSetup = async (page: Page, qrUrl: string): Promise<void> => {
+  await page.getByTestId("setup-qr-url").fill(qrUrl);
+  await page.getByTestId("setup-admin-code").fill("1234");
+  await page.getByTestId("setup-user-id").fill("staff01");
+  await page.getByTestId("setup-user-code").fill("2468");
+  await page.getByTestId("setup-login-pattern").fill("/login");
+  await page.getByTestId("setup-submit").click();
+  await expect(page.getByTestId("locked-screen")).toBeVisible();
+};
+
 test.describe("secure Electron shell", () => {
   let fixtureServer: FixtureQrSiteServer;
 
@@ -78,7 +113,8 @@ test.describe("secure Electron shell", () => {
 
   test("starts with a hardened control renderer and loads the fixture QR site", async () => {
     // Given
-    const electronApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
 
     try {
       // When
@@ -88,7 +124,8 @@ test.describe("secure Electron shell", () => {
       const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
 
       // Then
-      await expect(controlPage.getByRole("heading", { name: "QR Guard Browser" })).toBeVisible();
+      await expect(controlPage.getByText("QR Guard Browser")).toBeVisible();
+      await expect(controlPage.getByRole("heading", { name: "First-run setup" })).toBeVisible();
       expect(qrPage.url()).toBe(`${fixtureServer.baseUrl}/login`);
       expect(nodeGlobals).toEqual({
         moduleType: "undefined",
@@ -101,13 +138,14 @@ test.describe("secure Electron shell", () => {
         qrVisible: false
       });
     } finally {
-      await electronApp.close();
+      await closeLaunchedApp(launchedApp);
     }
   });
 
   test("blocks fixture window.open calls from creating a new Electron window", async () => {
     // Given
-    const electronApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
 
     try {
       await findPage(electronApp, (page) => page.url().includes("main_window"));
@@ -132,7 +170,49 @@ test.describe("secure Electron shell", () => {
       );
       expect(webContentsUrls.filter((url) => url === `${fixtureServer.baseUrl}/dashboard`)).toEqual([]);
     } finally {
-      await electronApp.close();
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("completes first-run setup and lands on the locked screen", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+
+      // When
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+
+      // Then
+      const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
+      expect(shellInfo.qrVisible).toBe(false);
+      await expect(controlPage.getByRole("button", { name: "Settings" })).toBeVisible();
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("keeps settings closed when the admin code is wrong", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+
+      // When
+      await controlPage.getByRole("button", { name: "Settings" }).click();
+      await controlPage.getByTestId("admin-code-input").fill("9999");
+      await controlPage.getByRole("button", { name: "Open settings" }).click();
+
+      // Then
+      await expect(controlPage.getByTestId("admin-errors")).toContainText("Admin code is incorrect.");
+      await expect(controlPage.getByTestId("settings-qr-url")).toHaveCount(0);
+    } finally {
+      await closeLaunchedApp(launchedApp);
     }
   });
 });

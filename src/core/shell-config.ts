@@ -5,7 +5,18 @@ export const QR_SURFACE_KIND = "webContentsView" as const;
 export const DEFAULT_FIXTURE_QR_URL = "http://127.0.0.1:37655/login" as const;
 
 export const IPC_CHANNELS = {
-  getShellInfo: "qr-guard:get-shell-info"
+  addUser: "qr-guard:add-user",
+  clearQrSession: "qr-guard:clear-qr-session",
+  closeSettings: "qr-guard:close-settings",
+  completeFirstRunSetup: "qr-guard:complete-first-run-setup",
+  deleteUser: "qr-guard:delete-user",
+  getSettingsView: "qr-guard:get-settings-view",
+  getShellInfo: "qr-guard:get-shell-info",
+  isFirstRun: "qr-guard:is-first-run",
+  openSettings: "qr-guard:open-settings",
+  resetUserCode: "qr-guard:reset-user-code",
+  saveSettings: "qr-guard:save-settings",
+  updateUser: "qr-guard:update-user"
 } as const;
 
 export interface ShellInfo {

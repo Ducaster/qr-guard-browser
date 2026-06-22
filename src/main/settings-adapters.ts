@@ -39,6 +39,19 @@ export const createElectronSafeStorageSealer = (): Sealer => {
   };
 };
 
+export const createInsecureTestSealer = (): Sealer => ({
+  seal: (plaintext: string) => `test:${Buffer.from(plaintext, "utf8").toString("base64")}`,
+  unseal: (ciphertext: string) => {
+    const prefix = "test:";
+
+    if (!ciphertext.startsWith(prefix)) {
+      throw new Error("Unexpected test settings payload.");
+    }
+
+    return Buffer.from(ciphertext.slice(prefix.length), "base64").toString("utf8");
+  }
+});
+
 export class SafeStorageUnavailableError extends Error {
   constructor() {
     super("Electron safeStorage encryption is not available");
