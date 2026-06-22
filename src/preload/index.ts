@@ -1,6 +1,10 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 
-const qrGuardApi = {} as const;
+import { IPC_CHANNELS, type ShellInfo } from "../core/shell-config";
+
+const qrGuardApi = {
+  getShellInfo: (): Promise<ShellInfo> => ipcRenderer.invoke(IPC_CHANNELS.getShellInfo)
+} as const;
 
 contextBridge.exposeInMainWorld("qrGuard", qrGuardApi);
 

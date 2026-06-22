@@ -1,7 +1,9 @@
-import { app, BrowserWindow } from "electron";
+import { app, BaseWindow } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
+import { registerShellIpc } from "./ipc";
+import { createShellWindow, getRendererHtmlPath, type ShellWindow } from "./views";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -14,46 +16,46 @@ const formatUnknownError = (error: unknown): string => {
   return String(error);
 };
 
-const createMainWindow = (): BrowserWindow => {
-  const mainWindow = new BrowserWindow({
-    height: 800,
-    show: false,
-    title: APP_NAME,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
-      sandbox: true
-    },
-    width: 1280
-  });
+let activeShellWindow: ShellWindow | undefined;
 
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-    mainWindow.setTitle(APP_NAME);
-  });
-
-  return mainWindow;
-};
-
-const loadRenderer = async (mainWindow: BrowserWindow): Promise<void> => {
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    return;
+const getControlDevServerUrl = (): string | undefined => {
+  if (typeof MAIN_WINDOW_VITE_DEV_SERVER_URL === "string") {
+    return MAIN_WINDOW_VITE_DEV_SERVER_URL;
   }
 
-  await mainWindow.loadFile(
-    path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
-  );
+  return undefined;
 };
 
-const createAndLoadMainWindow = (): void => {
-  const mainWindow = createMainWindow();
+const getRendererName = (): string => {
+  if (typeof MAIN_WINDOW_VITE_NAME === "string") {
+    return MAIN_WINDOW_VITE_NAME;
+  }
 
-  void loadRenderer(mainWindow).catch((error: unknown) => {
-    console.error(formatUnknownError(error));
-    app.quit();
+  return "main_window";
+};
+
+const createAndLoadShellWindow = (): void => {
+  const controlDevServerUrl = getControlDevServerUrl();
+  const qrUrl = process.env["QR_GUARD_QR_URL"];
+  const shellWindow = createShellWindow({
+    controlHtmlPath: getRendererHtmlPath(getRendererName()),
+    preloadPath: path.join(__dirname, "preload.js"),
+    ...(controlDevServerUrl === undefined ? {} : { controlDevServerUrl }),
+    ...(qrUrl === undefined ? {} : { qrUrl })
   });
+
+  activeShellWindow = shellWindow;
+  shellWindow.setQrVisible(false);
+
+  void shellWindow.load()
+    .then(() => {
+      shellWindow.window.show();
+      shellWindow.window.setTitle(APP_NAME);
+    })
+    .catch((error: unknown) => {
+      console.error(formatUnknownError(error));
+      app.quit();
+    });
 };
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
@@ -62,9 +64,12 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.setName(APP_NAME);
+  registerShellIpc(() => ({
+    qrVisible: activeShellWindow?.isQrVisible() ?? false
+  }));
 
   app.on("second-instance", () => {
-    const [mainWindow] = BrowserWindow.getAllWindows();
+    const [mainWindow] = BaseWindow.getAllWindows();
 
     if (mainWindow === undefined) {
       return;
@@ -79,11 +84,11 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady()
     .then(() => {
-      createAndLoadMainWindow();
+      createAndLoadShellWindow();
 
       app.on("activate", () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-          createAndLoadMainWindow();
+        if (BaseWindow.getAllWindows().length === 0) {
+          createAndLoadShellWindow();
         }
       });
     })

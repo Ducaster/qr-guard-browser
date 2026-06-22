@@ -8,10 +8,11 @@
   "private": true,
   "scripts": {
     "dev": "electron-forge start",
+    "build:e2e": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build:e2e && playwright test",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
