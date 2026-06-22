@@ -1,0 +1,7 @@
+node_modules/
+.npm-cache/
+.vite/
+dist/
+out/
+coverage/
+*.log
