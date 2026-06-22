@@ -1,114 +1,17 @@
-import { _electron as electron, expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import fs from "node:fs";
-import path from "node:path";
 
 import { startFixtureQrSiteServer, type FixtureQrSiteServer } from "../fixtures/qr-site-server";
-
-const PROJECT_ROOT = path.resolve(__dirname, "..");
-
-interface NodeGlobalTypes {
-  readonly moduleType: string;
-  readonly processType: string;
-  readonly requireType: string;
-}
-
-interface ShellCounts {
-  readonly baseWindowCount: number;
-  readonly webContentsCount: number;
-}
-
-interface LaunchedApp {
-  readonly app: ElectronApplication;
-  readonly userDataDir: string;
-}
-
-const readNodeGlobalTypes = (): NodeGlobalTypes => ({
-  moduleType: typeof module,
-  processType: typeof process,
-  requireType: typeof require
-});
-
-const getLaunchEnv = (qrUrl: string, userDataDir: string): Record<string, string> => {
-  const env: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined) {
-      env[key] = value;
-    }
-  }
-
-  env["ELECTRON_DISABLE_SECURITY_WARNINGS"] = "true";
-  env["QR_GUARD_ALLOW_INSECURE_TEST_STORAGE"] = "1";
-  env["QR_GUARD_QR_URL"] = qrUrl;
-  env["QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"] = "1";
-  env["QR_GUARD_USER_DATA_DIR"] = userDataDir;
-
-  return env;
-};
-
-const launchApp = async (qrUrl: string): Promise<LaunchedApp> => {
-  const userDataDir = createUserDataDir();
-  const app = await electron.launch({
-    args: ["."],
-    cwd: PROJECT_ROOT,
-    env: getLaunchEnv(qrUrl, userDataDir)
-  });
-
-  return { app, userDataDir };
-};
-
-const closeLaunchedApp = async (launchedApp: LaunchedApp): Promise<void> => {
-  await launchedApp.app.close();
-  fs.rmSync(launchedApp.userDataDir, { force: true, recursive: true });
-};
-
-const createUserDataDir = (): string => {
-  const parentDir = path.join(PROJECT_ROOT, ".tmp");
-
-  fs.mkdirSync(parentDir, { recursive: true });
-
-  return fs.mkdtempSync(path.join(parentDir, "e2e-user-data-"));
-};
-
-const findPage = async (
-  electronApp: ElectronApplication,
-  predicate: (page: Page) => boolean
-): Promise<Page> => {
-  const existingPage = electronApp.context().pages().find(predicate);
-
-  if (existingPage !== undefined) {
-    return existingPage;
-  }
-
-  return electronApp.waitForEvent("window", {
-    predicate
-  });
-};
-
-const getShellCounts = async (electronApp: ElectronApplication): Promise<ShellCounts> =>
-  electronApp.evaluate(({ BaseWindow, webContents }) => ({
-    baseWindowCount: BaseWindow.getAllWindows().length,
-    webContentsCount: webContents.getAllWebContents().length
-  }));
-
-const getQrVisible = async (controlPage: Page): Promise<boolean> => {
-  const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
-
-  return shellInfo.qrVisible;
-};
-
-const getAuditLogPath = (userDataDir: string): string =>
-  path.join(userDataDir, "audit-log.jsonl");
-
-const completeFirstRunSetup = async (page: Page, qrUrl: string): Promise<void> => {
-  await page.getByTestId("setup-qr-url").fill(qrUrl);
-  await page.getByTestId("setup-admin-code").fill("1234");
-  await page.getByTestId("setup-user-id").fill("staff01");
-  await page.getByTestId("setup-user-code").fill("2468");
-  await page.getByTestId("setup-login-pattern").fill("/login");
-  await page.getByTestId("setup-submit").click();
-  await expect(page.getByTestId("locked-screen")).toBeVisible();
-};
+import {
+  closeLaunchedApp,
+  completeFirstRunSetup,
+  findPage,
+  getAuditLogPath,
+  getQrVisible,
+  getShellCounts,
+  launchApp,
+  readNodeGlobalTypes
+} from "./harness";
 
 test.describe("secure Electron shell", () => {
   let fixtureServer: FixtureQrSiteServer;
@@ -206,13 +109,14 @@ test.describe("secure Electron shell", () => {
 
   test("unlocks with the correct code, counts down, and relocks without reloading QR contents", async () => {
     // Given
-    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`);
     const electronApp = launchedApp.app;
 
     try {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
       const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
-      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`);
+      await qrPage.waitForLoadState("networkidle");
       await qrPage.evaluate(() => {
         Reflect.set(globalThis, "__qrGuardReloadMarker", "survived");
       });
@@ -284,6 +188,91 @@ test.describe("secure Electron shell", () => {
       // Then
       await expect(controlPage.getByTestId("admin-errors")).toContainText("Admin code is incorrect.");
       await expect(controlPage.getByTestId("settings-qr-url")).toHaveCount(0);
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("shows an expired login page without an app code and relocks on QR navigation", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`, {
+        loggedInUrlPattern: "/qr",
+        loginUrlPattern: "/login"
+      });
+
+      // When
+      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
+      await expect(controlPage.getByText("로그인 모드 (인증 없이 표시 중)")).toBeVisible();
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+      await qrPage.goto(`${fixtureServer.baseUrl}/qr`);
+
+      // Then
+      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(false);
+      const auditLog = fs.readFileSync(getAuditLogPath(launchedApp.userDataDir), "utf8");
+      expect(auditLog).toContain('"reason":"login-mode"');
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("manual login completion relocks when automatic completion detection is disabled", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`, {
+        loginUrlPattern: "/login"
+      });
+      await expect(controlPage.getByTestId("manual-login-complete")).toBeVisible();
+
+      // When
+      await controlPage.getByTestId("manual-login-complete").click();
+
+      // Then
+      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+      expect(await getQrVisible(controlPage)).toBe(false);
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("idle auto-lock relocks an unlocked QR page before the unlock timer", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`, {
+      idlePollMs: "100",
+      systemIdleSeconds: "2",
+      unlockDurationSeconds: "60"
+    });
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`, {
+        idleAutoLockSeconds: "1",
+        unlockDurationSeconds: "60"
+      });
+      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+
+      // When
+      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      await controlPage.getByTestId("unlock-code").fill("2468");
+      await controlPage.getByTestId("unlock-submit").click();
+
+      // Then
+      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 3_000 }).toBe(false);
+      const auditLog = fs.readFileSync(getAuditLogPath(launchedApp.userDataDir), "utf8");
+      expect(auditLog).toContain('"reason":"idle"');
     } finally {
       await closeLaunchedApp(launchedApp);
     }

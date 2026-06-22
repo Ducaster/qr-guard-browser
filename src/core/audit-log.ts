@@ -1,4 +1,4 @@
-export type AuditLockReason = "timer" | "manual" | "idle";
+export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode";
 
 export interface AuditEvent {
   readonly appVersion: string;
@@ -17,6 +17,12 @@ export interface AuditEventInput {
   readonly userId: string;
 }
 
+export interface LoginModeAuditEventInput {
+  readonly appVersion: string;
+  readonly enteredAtMs: number;
+  readonly lockedAtMs: number;
+}
+
 export const buildAuditEvent = (input: AuditEventInput): AuditEvent => ({
   appVersion: input.appVersion,
   durationSeconds: Math.max(0, Math.round((input.lockedAtMs - input.unlockedAtMs) / 1_000)),
@@ -25,6 +31,15 @@ export const buildAuditEvent = (input: AuditEventInput): AuditEvent => ({
   unlockedAt: new Date(input.unlockedAtMs).toISOString(),
   userId: input.userId
 });
+
+export const buildLoginModeAuditEvent = (input: LoginModeAuditEventInput): AuditEvent =>
+  buildAuditEvent({
+    appVersion: input.appVersion,
+    lockedAtMs: input.lockedAtMs,
+    reason: "login-mode",
+    unlockedAtMs: input.enteredAtMs,
+    userId: "login-mode"
+  });
 
 export const serializeAuditEvent = (event: AuditEvent): string =>
   `${JSON.stringify({
@@ -79,7 +94,7 @@ const isAuditEvent = (value: unknown): value is AuditEvent => {
 };
 
 const isAuditReason = (value: unknown): value is AuditLockReason =>
-  value === "timer" || value === "manual" || value === "idle";
+  value === "timer" || value === "manual" || value === "idle" || value === "login-mode";
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

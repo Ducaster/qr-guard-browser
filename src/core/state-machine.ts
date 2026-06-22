@@ -1,3 +1,5 @@
+import type { LoginClassification } from "./login-detector";
+
 export type GuardState = "needsSetup" | "locked" | "unlocked" | "loginMode" | "settings";
 
 export type VisibilityState = GuardState | "unknown";
@@ -111,9 +113,9 @@ export const closeSettings = (state: GuardState): GuardState => {
 export const enterLoginMode = (state: GuardState): GuardState => {
   switch (state) {
     case "locked":
-    case "unlocked":
       return "loginMode";
     case "needsSetup":
+    case "unlocked":
     case "loginMode":
     case "settings":
       return state;
@@ -127,6 +129,24 @@ export const exitLoginMode = (state: GuardState): GuardState => {
     case "needsSetup":
     case "locked":
     case "unlocked":
+    case "settings":
+      return state;
+  }
+};
+
+export const applyLoginDetection = (
+  state: GuardState,
+  classification: LoginClassification,
+  currentUrlMatchesLoginPattern: boolean
+): GuardState => {
+  switch (state) {
+    case "locked":
+      return classification === "login" ? "loginMode" : "locked";
+    case "loginMode":
+      return currentUrlMatchesLoginPattern ? "loginMode" : "locked";
+    case "unlocked":
+      return classification === "login" ? "loginMode" : "unlocked";
+    case "needsSetup":
     case "settings":
       return state;
   }

@@ -22,6 +22,13 @@
   font-weight: 680;
 }
 
+.toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
 .toolbar-dot {
   background: #0f766e;
   border-radius: 999px;
@@ -41,4 +48,14 @@
   font-weight: 720;
   min-height: 40px;
   padding: 8px 13px;
+}
+
+.toolbar-button--secondary {
+  background: #1f5f5b;
+  border-color: rgba(31, 95, 91, 0.28);
+}
+
+.toolbar-error {
+  color: #b42318;
+  font-weight: 720;
 }

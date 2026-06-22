@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyLoginDetection,
   closeSettings,
   completeSetup,
   enterLoginMode,
@@ -95,16 +96,21 @@ describe("lock state transitions", () => {
     expect(state).toBe("locked");
   });
 
-  it.each(["locked", "unlocked"] as const)(
-    "defines %s to loginMode transition shape",
-    (currentState) => {
-      // Given / When
-      const state = enterLoginMode(currentState);
+  it("defines locked to loginMode transition shape", () => {
+    // Given / When
+    const state = enterLoginMode("locked");
 
-      // Then
-      expect(state).toBe("loginMode");
-    }
-  );
+    // Then
+    expect(state).toBe("loginMode");
+  });
+
+  it("does not enter loginMode from unlocked", () => {
+    // Given / When
+    const state = enterLoginMode("unlocked");
+
+    // Then
+    expect(state).toBe("unlocked");
+  });
 
   it("defines loginMode to locked exit transition shape", () => {
     // Given / When
@@ -112,5 +118,36 @@ describe("lock state transitions", () => {
 
     // Then
     expect(state).toBe("locked");
+  });
+
+  it("enters loginMode from locked only when the QR page is classified as login", () => {
+    // Given / When / Then
+    expect(applyLoginDetection("locked", "login", true)).toBe("loginMode");
+    expect(applyLoginDetection("locked", "loggedIn", false)).toBe("locked");
+    expect(applyLoginDetection("locked", "unknown", false)).toBe("locked");
+    expect(applyLoginDetection("settings", "login", true)).toBe("settings");
+  });
+
+  it("moves unlocked to loginMode when the QR page is classified as login", () => {
+    // Given / When
+    const state = applyLoginDetection("unlocked", "login", true);
+
+    // Then
+    expect(state).toBe("loginMode");
+  });
+
+  it("keeps unlocked authenticated sessions unlocked for unknown QR classification", () => {
+    // Given / When
+    const state = applyLoginDetection("unlocked", "unknown", false);
+
+    // Then
+    expect(state).toBe("unlocked");
+  });
+
+  it("relocks loginMode immediately when navigation leaves the login URL pattern", () => {
+    // Given / When / Then
+    expect(applyLoginDetection("loginMode", "login", true)).toBe("loginMode");
+    expect(applyLoginDetection("loginMode", "loggedIn", false)).toBe("locked");
+    expect(applyLoginDetection("loginMode", "unknown", false)).toBe("locked");
   });
 });

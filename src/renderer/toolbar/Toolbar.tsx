@@ -7,9 +7,28 @@ interface ToolbarProps {
   readonly state: StateSnapshot;
 }
 
+interface ToolbarActionResponse {
+  readonly errors?: readonly string[];
+  readonly ok: boolean;
+}
+
 export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
+  const [actionError, setActionError] = useState("");
   const [remainingMs, setRemainingMs] = useState(state.remainingMs);
-  const label = state.state === "loginMode" ? "Login" : "Unlocked";
+  const isLoginMode = state.state === "loginMode";
+
+  const runToolbarAction = (action: () => Promise<ToolbarActionResponse>): void => {
+    setActionError("");
+    void action()
+      .then((response) => {
+        if (!response.ok) {
+          setActionError(response.errors?.[0] ?? "Action failed.");
+        }
+      })
+      .catch(() => {
+        setActionError("Action failed.");
+      });
+  };
 
   useEffect(() => {
     const updateRemainingMs = (): void => {
@@ -33,19 +52,42 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
     <main className="toolbar-shell" data-testid="unlock-toolbar">
       <div className="toolbar-status">
         <span className="toolbar-dot" aria-hidden="true" />
-        <strong>{label}</strong>
-        <span data-testid="unlock-countdown">{formatRemaining(remainingMs)}</span>
+        <strong>{isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "Unlocked"}</strong>
+        {isLoginMode ? (
+          <span data-testid="login-mode-indicator">Login page visible</span>
+        ) : (
+          <span data-testid="unlock-countdown">{formatRemaining(remainingMs)}</span>
+        )}
       </div>
-      <button
-        className="toolbar-button"
-        data-testid="manual-lock"
-        onClick={() => {
-          void window.qrGuard.manualLock();
-        }}
-        type="button"
-      >
-        Lock now
-      </button>
+      <div className="toolbar-actions">
+        {isLoginMode ? (
+          <button
+            className="toolbar-button toolbar-button--secondary"
+            data-testid="manual-login-complete"
+            onClick={() => {
+              runToolbarAction(() => window.qrGuard.manualLoginComplete());
+            }}
+            type="button"
+          >
+            로그인 완료 후 잠금
+          </button>
+        ) : null}
+        <button
+          className="toolbar-button"
+          data-testid="manual-lock"
+          onClick={() => {
+            runToolbarAction(() => window.qrGuard.manualLock());
+          }}
+          type="button"
+        >
+          Lock now
+        </button>
+      </div>
+      {actionError.length > 0 ? (
+        <span className="toolbar-error" data-testid="toolbar-action-error" role="alert">
+          {actionError}
+        </span>
+      ) : null}
     </main>
   );
 };

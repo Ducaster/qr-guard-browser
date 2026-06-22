@@ -1,4 +1,4 @@
-import { app, BaseWindow } from "electron";
+import { app, BaseWindow, powerMonitor } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
@@ -14,6 +14,7 @@ import {
   createInsecureTestSealer
 } from "./settings-adapters";
 import { createShellWindow, getRendererHtmlPath, type ShellWindow } from "./views";
+import { createQrWebContentsAdapter } from "./qr-navigation-watcher";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -89,7 +90,23 @@ const loadActiveQrUrl = async (url: string): Promise<void> => {
 };
 
 const getUnlockDurationOverrideSeconds = (): number | undefined => {
-  const rawValue = process.env["QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"];
+  return readPositiveIntegerEnv("QR_GUARD_TEST_UNLOCK_DURATION_SECONDS");
+};
+
+const getIdlePollIntervalOverrideMs = (): number | undefined =>
+  readPositiveIntegerEnv("QR_GUARD_TEST_IDLE_POLL_MS");
+
+const getLoginModeTimeoutOverrideMs = (): number | undefined =>
+  readPositiveIntegerEnv("QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS");
+
+const getIdleSource = (): (() => number) => {
+  const fixedIdleSeconds = readPositiveIntegerEnv("QR_GUARD_TEST_SYSTEM_IDLE_SECONDS");
+
+  return fixedIdleSeconds === undefined ? () => powerMonitor.getSystemIdleTime() : () => fixedIdleSeconds;
+};
+
+const readPositiveIntegerEnv = (key: string): number | undefined => {
+  const rawValue = process.env[key];
 
   if (rawValue === undefined) {
     return undefined;
@@ -112,12 +129,18 @@ const createAndLoadShellWindow = (): void => {
 
   activeShellWindow = shellWindow;
   const unlockDurationOverrideSeconds = getUnlockDurationOverrideSeconds();
+  const idlePollIntervalMs = getIdlePollIntervalOverrideMs();
+  const loginModeTimeoutOverrideMs = getLoginModeTimeoutOverrideMs();
   activeLockController = createLockController({
     appVersion: app.getVersion(),
     auditLogStore: createElectronAuditLogStore(),
+    idleSource: getIdleSource(),
     lockoutStateStore: createElectronLockoutStateStore(),
+    qrWebContents: createQrWebContentsAdapter(shellWindow.qrView.webContents),
     repository: getSettingsRepository(),
     shellWindow,
+    ...(idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs }),
+    ...(loginModeTimeoutOverrideMs === undefined ? {} : { loginModeTimeoutOverrideMs }),
     ...(unlockDurationOverrideSeconds === undefined ? {} : { unlockDurationOverrideSeconds })
   });
 

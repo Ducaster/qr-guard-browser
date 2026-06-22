@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendAuditEvent,
   buildAuditEvent,
+  buildLoginModeAuditEvent,
   parseAuditLog,
   serializeAuditEvent,
   type AuditEvent
@@ -59,5 +60,28 @@ describe("audit log JSONL", () => {
 
     // Then
     expect(events).toEqual([firstEvent, secondEvent]);
+  });
+
+  it("records loginMode entry and relock in the audit log without changing unlock events", () => {
+    // Given
+    const loginModeEvent = buildLoginModeAuditEvent({
+      appVersion: "0.1.0",
+      enteredAtMs: 1_000,
+      lockedAtMs: 4_000
+    });
+
+    // When
+    const events = parseAuditLog(serializeAuditEvent(loginModeEvent));
+
+    // Then
+    expect(loginModeEvent).toEqual({
+      appVersion: "0.1.0",
+      durationSeconds: 3,
+      lockedAt: "1970-01-01T00:00:04.000Z",
+      reason: "login-mode",
+      unlockedAt: "1970-01-01T00:00:01.000Z",
+      userId: "login-mode"
+    } satisfies AuditEvent);
+    expect(events).toEqual([loginModeEvent]);
   });
 });

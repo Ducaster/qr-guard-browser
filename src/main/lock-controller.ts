@@ -5,10 +5,14 @@ import {
   verifyCode,
   type LockoutState
 } from "../core/auth";
-import { buildAuditEvent, type AuditLockReason } from "../core/audit-log";
+import type { AuditLockReason } from "../core/audit-log";
+import { shouldRelockForIdle } from "../core/idle-lock";
+import { classify, matchesLoginUrl } from "../core/login-detector";
 import {
+  applyLoginDetection,
   closeSettings,
   completeSetup,
+  exitLoginMode,
   manualLock,
   openSettings,
   shouldShowQrView,
@@ -21,12 +25,15 @@ import {
 import { IPC_CHANNELS } from "../core/shell-config";
 import type { Settings, SettingsRepository } from "../core/settings-repo";
 import { isFirstRunSettings } from "../core/settings-validation";
+import { updateLastAuthenticatedAt } from "../core/user-settings";
+import { createAuditSessionTracker } from "./audit-session-tracker";
+import { createLockTimers } from "./lock-timers";
+import {
+  readQrNavigationSnapshot,
+  watchQrNavigation,
+  type QrWebContentsLike
+} from "./qr-navigation-watcher";
 import type { AuditLogStore, LockoutStateStore } from "./settings-adapters";
-
-interface UnlockSession {
-  readonly unlockedAtMs: number;
-  readonly userId: string;
-}
 
 interface LockControllerShellWindow {
   readonly controlView: {
@@ -51,18 +58,28 @@ export interface LockControllerOptions {
   readonly appVersion: string;
   readonly auditLogStore: AuditLogStore;
   readonly lockoutStateStore: LockoutStateStore;
+  readonly qrWebContents: QrWebContentsLike;
   readonly repository: SettingsRepository;
   readonly shellWindow: LockControllerShellWindow;
+  readonly idlePollIntervalMs?: number;
+  readonly idleSource?: () => number;
+  readonly loginModeTimeoutOverrideMs?: number;
   readonly unlockDurationOverrideSeconds?: number;
 }
+
+const DEFAULT_LOGIN_MODE_TIMEOUT_MS = 5 * 60 * 1_000;
+const DEFAULT_IDLE_POLL_INTERVAL_MS = 1_000;
 
 export const createLockController = (options: LockControllerOptions): LockController => {
   let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
   let currentUrlMatchesLoginPattern = false;
   let lockoutState: LockoutState = options.lockoutStateStore.load();
-  let activeSession: UnlockSession | null = null;
   let unlockExpiresAtMs: number | null = null;
-  let unlockTimer: ReturnType<typeof setTimeout> | null = null;
+  const auditSessions = createAuditSessionTracker({
+    appVersion: options.appVersion,
+    auditLogStore: options.auditLogStore
+  });
+  const timers = createLockTimers();
 
   const applyVisibility = (): boolean => {
     const visible = shouldShowQrView(state, currentUrlMatchesLoginPattern);
@@ -78,7 +95,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
       unlockExpiresAtMs === null ? null : Math.max(0, unlockExpiresAtMs - nowMs);
 
     return {
-      activeUserId: activeSession?.userId ?? null,
+      activeUserId: auditSessions.getActiveUserId(),
       now: new Date(nowMs).toISOString(),
       qrVisible: shouldShowQrView(state, currentUrlMatchesLoginPattern),
       remainingMs,
@@ -92,63 +109,83 @@ export const createLockController = (options: LockControllerOptions): LockContro
   };
 
   const setState = (nextState: GuardState): void => {
+    const previousState = state;
+
     state = nextState;
+    syncModeTimers(previousState, nextState);
     applyVisibility();
     emitState();
   };
 
-  const clearUnlockTimer = (): void => {
-    if (unlockTimer === null) {
-      return;
-    }
-
-    clearTimeout(unlockTimer);
-    unlockTimer = null;
-  };
-
-  const finishUnlockSession = (reason: AuditLockReason, lockedAtMs: number): void => {
-    if (activeSession === null) {
-      return;
-    }
-
-    options.auditLogStore.append(
-      buildAuditEvent({
-        appVersion: options.appVersion,
-        lockedAtMs,
-        reason,
-        unlockedAtMs: activeSession.unlockedAtMs,
-        userId: activeSession.userId
-      })
-    );
-    activeSession = null;
-    unlockExpiresAtMs = null;
-  };
-
   const relock = (reason: AuditLockReason): void => {
-    clearUnlockTimer();
-    finishUnlockSession(reason, Date.now());
+    timers.clearUnlockTimer();
+    timers.clearIdleTimer();
+    auditSessions.finishUnlockSession(reason, Date.now());
+    unlockExpiresAtMs = null;
     setState(reason === "timer" ? timerExpired(state) : manualLock(state));
   };
 
-  const updateLastAuthenticatedAt = (
-    settings: Settings,
-    userId: string,
-    authenticatedAtMs: number
-  ): Settings => ({
-    ...settings,
-    users: settings.users.map((user) =>
-      user.userId === userId
-        ? { ...user, lastAuthenticatedAt: new Date(authenticatedAtMs).toISOString() }
-        : user
-    )
-  });
-
-  const startUnlockTimer = (durationSeconds: number): void => {
-    clearUnlockTimer();
-    unlockTimer = setTimeout(() => {
-      relock("timer");
-    }, durationSeconds * 1_000);
+  const startLoginModeTimer = (): void => {
+    timers.startLoginModeTimer(options.loginModeTimeoutOverrideMs ?? DEFAULT_LOGIN_MODE_TIMEOUT_MS, () => {
+      setState(exitLoginMode(state));
+    });
   };
+
+  const startIdleTimer = (): void => {
+    timers.startIdleTimer(options.idlePollIntervalMs ?? DEFAULT_IDLE_POLL_INTERVAL_MS, () => {
+      const settings = options.repository.load();
+      const idleSource = options.idleSource ?? (() => 0);
+
+      if (
+        shouldRelockForIdle({
+          idleAutoLockSeconds: settings.idleAutoLockSeconds,
+          state,
+          systemIdleSeconds: idleSource()
+        })
+      ) {
+        relock("idle");
+      }
+    });
+  };
+
+  const syncModeTimers = (previousState: GuardState, nextState: GuardState): void => {
+    if (previousState !== "loginMode" && nextState === "loginMode") {
+      auditSessions.beginLoginModeSession(Date.now());
+      startLoginModeTimer();
+    }
+
+    if (previousState === "loginMode" && nextState !== "loginMode") {
+      timers.clearLoginModeTimer();
+      auditSessions.finishLoginModeSession(Date.now());
+    }
+
+    if (previousState !== "unlocked" && nextState === "unlocked") {
+      startIdleTimer();
+    }
+
+    if (previousState === "unlocked" && nextState !== "unlocked") {
+      timers.clearIdleTimer();
+    }
+  };
+
+  const evaluateQrNavigation = (): void => {
+    const settings = options.repository.load();
+    const snapshot = readQrNavigationSnapshot(options.qrWebContents);
+    const classification = classify(snapshot.url, snapshot.title, settings.loginDetection);
+
+    currentUrlMatchesLoginPattern = matchesLoginUrl(snapshot.url, settings.loginDetection);
+    const nextState = applyLoginDetection(state, classification, currentUrlMatchesLoginPattern);
+
+    if (state === "unlocked" && nextState === "loginMode") {
+      timers.clearUnlockTimer();
+      auditSessions.finishUnlockSession("login-mode", Date.now());
+      unlockExpiresAtMs = null;
+    }
+
+    setState(nextState);
+  };
+
+  watchQrNavigation(options.qrWebContents, evaluateQrNavigation);
 
   const submitUnlock = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
     const userId = typeof rawUserId === "string" ? rawUserId.trim() : "";
@@ -191,11 +228,13 @@ export const createLockController = (options: LockControllerOptions): LockContro
     lockoutState = recordAuthSuccess(lockoutState, userId);
     options.lockoutStateStore.save(lockoutState);
     options.repository.save(updateLastAuthenticatedAt(settings, userId, nowMs));
-    activeSession = { unlockedAtMs: nowMs, userId };
+    auditSessions.beginUnlockSession(userId, nowMs);
     const durationSeconds = getUnlockDurationSeconds(settings);
     unlockExpiresAtMs = nowMs + durationSeconds * 1_000;
     setState(unlockSucceeded(state));
-    startUnlockTimer(durationSeconds);
+    timers.startUnlockTimer(durationSeconds, () => {
+      relock("timer");
+    });
 
     return {
       ok: true,
@@ -227,11 +266,12 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
   return {
     closeSettings: () => {
-      clearUnlockTimer();
+      timers.clearUnlockTimer();
       setState(closeSettings(state));
     },
     completeSetup: () => {
       setState(completeSetup(state));
+      evaluateQrNavigation();
     },
     getState,
     manualLock: () => {
@@ -245,8 +285,9 @@ export const createLockController = (options: LockControllerOptions): LockContro
       const nextState = openSettings(state);
 
       if (nextState === "settings") {
-        clearUnlockTimer();
-        finishUnlockSession("manual", Date.now());
+        timers.clearUnlockTimer();
+        auditSessions.finishUnlockSession("manual", Date.now());
+        unlockExpiresAtMs = null;
       }
 
       setState(nextState);
