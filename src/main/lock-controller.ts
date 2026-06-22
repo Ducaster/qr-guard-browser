@@ -31,6 +31,7 @@ import { createLockTimers } from "./lock-timers";
 import {
   readQrNavigationSnapshot,
   watchQrNavigation,
+  type QrNavigationTarget,
   type QrWebContentsLike
 } from "./qr-navigation-watcher";
 import type { AuditLogStore, LockoutStateStore } from "./settings-adapters";
@@ -168,9 +169,9 @@ export const createLockController = (options: LockControllerOptions): LockContro
     }
   };
 
-  const evaluateQrNavigation = (): void => {
+  const evaluateQrNavigation = (target?: QrNavigationTarget): void => {
     const settings = options.repository.load();
-    const snapshot = readQrNavigationSnapshot(options.qrWebContents);
+    const snapshot = readQrNavigationSnapshot(options.qrWebContents, target);
     const classification = classify(snapshot.url, snapshot.title, settings.loginDetection);
 
     currentUrlMatchesLoginPattern = matchesLoginUrl(snapshot.url, settings.loginDetection);

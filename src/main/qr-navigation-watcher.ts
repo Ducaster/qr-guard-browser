@@ -4,12 +4,19 @@ export type QrNavigationEvent =
   | "did-navigate"
   | "did-navigate-in-page"
   | "did-redirect-navigation"
+  | "did-start-navigation"
   | "page-title-updated";
+
+export interface QrNavigationTarget {
+  readonly url: string;
+}
+
+export type QrNavigationListener = (target?: QrNavigationTarget) => void;
 
 export interface QrWebContentsLike {
   readonly getTitle: () => string;
   readonly getURL: () => string;
-  readonly on: (event: QrNavigationEvent, listener: () => void) => void;
+  readonly on: (event: QrNavigationEvent, listener: QrNavigationListener) => void;
 }
 
 export interface QrNavigationSnapshot {
@@ -21,19 +28,21 @@ const QR_NAVIGATION_EVENTS = [
   "did-navigate",
   "did-navigate-in-page",
   "did-redirect-navigation",
+  "did-start-navigation",
   "page-title-updated"
 ] as const satisfies readonly QrNavigationEvent[];
 
 export const readQrNavigationSnapshot = (
-  webContents: QrWebContentsLike
+  webContents: QrWebContentsLike,
+  target?: QrNavigationTarget
 ): QrNavigationSnapshot => ({
   title: webContents.getTitle(),
-  url: webContents.getURL()
+  url: target?.url ?? webContents.getURL()
 });
 
 export const watchQrNavigation = (
   webContents: QrWebContentsLike,
-  listener: () => void
+  listener: QrNavigationListener
 ): void => {
   for (const event of QR_NAVIGATION_EVENTS) {
     webContents.on(event, listener);
@@ -43,19 +52,34 @@ export const watchQrNavigation = (
 export const createQrWebContentsAdapter = (webContents: WebContents): QrWebContentsLike => ({
   getTitle: () => webContents.getTitle(),
   getURL: () => webContents.getURL(),
-  on: (event: QrNavigationEvent, listener: () => void): void => {
+  on: (event: QrNavigationEvent, listener: QrNavigationListener): void => {
     switch (event) {
       case "did-navigate":
-        webContents.on("did-navigate", listener);
+        webContents.on("did-navigate", () => {
+          listener();
+        });
         return;
       case "did-navigate-in-page":
-        webContents.on("did-navigate-in-page", listener);
+        webContents.on("did-navigate-in-page", () => {
+          listener();
+        });
         return;
       case "did-redirect-navigation":
-        webContents.on("did-redirect-navigation", listener);
+        webContents.on("did-redirect-navigation", () => {
+          listener();
+        });
+        return;
+      case "did-start-navigation":
+        webContents.on("did-start-navigation", (details) => {
+          if (details.isMainFrame) {
+            listener({ url: details.url });
+          }
+        });
         return;
       case "page-title-updated":
-        webContents.on("page-title-updated", listener);
+        webContents.on("page-title-updated", () => {
+          listener();
+        });
         return;
     }
   }

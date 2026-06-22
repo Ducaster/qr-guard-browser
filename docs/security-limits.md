@@ -36,6 +36,8 @@ This still has limits:
 - A local administrator can clear the QR session.
 - If the operating system account is compromised, local app data should be considered compromised.
 
+Admin-code verification paths, including opening settings and clearing the QR session, do not have the per-attempt brute-force lockout used by the user unlock flow. This is accepted within the stated threat model because the control renderer is a trusted local surface with `contextIsolation` and no remote content, and the QR view has no preload or IPC access.
+
 ## Audit Log Integrity
 
 The audit log is an append-style local JSONL file. It records successful unlock and login-mode sessions for operational review.

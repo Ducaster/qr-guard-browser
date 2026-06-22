@@ -182,6 +182,51 @@ describe("lock controller loginMode and idle safety", () => {
     ]);
   });
 
+  it("relocks loginMode on navigation start using the target URL before commit", () => {
+    // Given
+    const harness = createHarness({
+      loginDetection: {
+        loggedInUrlPattern: "/qr",
+        loginUrlPattern: "/login",
+        titleContains: ""
+      },
+      qrUrl: "https://example.test/login"
+    });
+    harness.qrWebContents.trigger("did-navigate");
+
+    // When
+    harness.qrWebContents.trigger("did-start-navigation", {
+      url: "https://example.test/qr"
+    });
+
+    // Then
+    expect(harness.qrWebContents.getURL()).toBe("https://example.test/login");
+    expect(harness.controller.getState().state).toBe("locked");
+    expect(harness.controller.getState().qrVisible).toBe(false);
+  });
+
+  it("enters loginMode on navigation start using the target login URL before commit", () => {
+    // Given
+    const harness = createHarness({
+      loginDetection: {
+        loggedInUrlPattern: "/qr",
+        loginUrlPattern: "/login",
+        titleContains: ""
+      },
+      qrUrl: "https://example.test/qr"
+    });
+
+    // When
+    harness.qrWebContents.trigger("did-start-navigation", {
+      url: "https://example.test/login"
+    });
+
+    // Then
+    expect(harness.qrWebContents.getURL()).toBe("https://example.test/qr");
+    expect(harness.controller.getState().state).toBe("loginMode");
+    expect(harness.controller.getState().qrVisible).toBe(true);
+  });
+
   it("manual login completion relocks loginMode without waiting for navigation", () => {
     // Given
     const harness = createHarness({
@@ -286,10 +331,15 @@ type QrNavigationEvent =
   | "did-navigate"
   | "did-navigate-in-page"
   | "did-redirect-navigation"
+  | "did-start-navigation"
   | "page-title-updated";
 
+interface FakeQrNavigationTarget {
+  readonly url: string;
+}
+
 class FakeQrWebContents {
-  private readonly listeners = new Map<QrNavigationEvent, (() => void)[]>();
+  private readonly listeners = new Map<QrNavigationEvent, ((details?: FakeQrNavigationTarget) => void)[]>();
 
   constructor(
     private url: string,
@@ -304,7 +354,7 @@ class FakeQrWebContents {
     return this.url;
   }
 
-  on(event: QrNavigationEvent, listener: () => void): void {
+  on(event: QrNavigationEvent, listener: (details?: FakeQrNavigationTarget) => void): void {
     const listeners = this.listeners.get(event) ?? [];
 
     this.listeners.set(event, [...listeners, listener]);
@@ -315,9 +365,9 @@ class FakeQrWebContents {
     this.title = title;
   }
 
-  trigger(event: QrNavigationEvent): void {
+  trigger(event: QrNavigationEvent, details?: FakeQrNavigationTarget): void {
     for (const listener of this.listeners.get(event) ?? []) {
-      listener();
+      listener(details);
     }
   }
 }

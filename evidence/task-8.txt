@@ -193,3 +193,88 @@ Run 1: EXIT_CODE=0; 10 passed (24.7s)
 Run 2: EXIT_CODE=0; 10 passed (24.8s)
 Run 3: EXIT_CODE=0; 10 passed (24.2s)
 Result: 3 consecutive full e2e suite runs passed after final config/typecheck fix.
+
+===== security audit polish verification: 2026-06-23 06:43:12 KST =====
+
+===== npm run typecheck =====
+
+> qr-guard-browser@0.1.0 typecheck
+> tsc --noEmit
+
+EXIT_CODE[npm run typecheck]=0
+
+===== npm run lint =====
+
+> qr-guard-browser@0.1.0 lint
+> eslint . --max-warnings=0
+
+EXIT_CODE[npm run lint]=0
+
+===== npm run test =====
+
+> qr-guard-browser@0.1.0 test
+> vitest run
+
+✓ src/main/test-env-overrides.test.ts (3 tests) 2ms
+✓ src/core/login-detector.test.ts (6 tests) 4ms
+✓ src/core/audit-log.test.ts (13 tests) 6ms
+✓ src/core/shell-config.test.ts (4 tests) 7ms
+✓ src/core/state-machine.test.ts (26 tests) 3ms
+✓ src/main/windows-permissions.test.ts (2 tests) 2ms
+✓ src/renderer/settings/first-run-model.test.ts (2 tests) 2ms
+✓ src/core/qr-navigation.test.ts (2 tests) 2ms
+✓ src/core/auth.test.ts (5 tests) 266ms
+✓ src/core/admin-session.test.ts (2 tests) 2ms
+✓ src/core/idle-lock.test.ts (1 test) 2ms
+✓ src/core/sanity.test.ts (1 test) 4ms
+✓ src/core/settings-repo.test.ts (5 tests) 519ms
+✓ src/core/settings-validation.test.ts (11 tests) 630ms
+✓ src/main/lock-controller.test.ts (11 tests) 1475ms
+
+Test Files  15 passed (15)
+Tests  94 passed (94)
+Duration  1.92s
+EXIT_CODE[npm run test]=0
+
+===== npm run test:e2e (run 1) =====
+
+> qr-guard-browser@0.1.0 test:e2e
+> npm run build:e2e && playwright test
+
+> qr-guard-browser@0.1.0 build:e2e
+> vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts
+
+.vite/build/main.js  28.43 kB │ gzip: 9.44 kB │ map: 140.79 kB
+.vite/build/preload.js  2.03 kB │ gzip: 0.63 kB │ map: 8.63 kB
+.vite/renderer/main_window/index.html                   0.40 kB │ gzip:  0.27 kB
+.vite/renderer/main_window/assets/index-CIQLB0UG.css    6.66 kB │ gzip:  1.99 kB
+.vite/renderer/main_window/assets/index-BWs29Ezq.js   218.15 kB │ gzip: 66.36 kB
+
+Running 10 tests using 1 worker
+10 passed (22.8s)
+EXIT_CODE[npm run test:e2e run 1]=0
+
+===== npm run test:e2e (run 2) =====
+
+> qr-guard-browser@0.1.0 test:e2e
+> npm run build:e2e && playwright test
+
+> qr-guard-browser@0.1.0 build:e2e
+> vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts
+
+.vite/build/main.js  28.43 kB │ gzip: 9.44 kB │ map: 140.79 kB
+.vite/build/preload.js  2.03 kB │ gzip: 0.63 kB │ map: 8.63 kB
+.vite/renderer/main_window/index.html                   0.40 kB │ gzip:  0.27 kB
+.vite/renderer/main_window/assets/index-CIQLB0UG.css    6.66 kB │ gzip:  1.99 kB
+.vite/renderer/main_window/assets/index-BWs29Ezq.js   218.15 kB │ gzip: 66.36 kB
+
+Running 10 tests using 1 worker
+10 passed (21.7s)
+EXIT_CODE[npm run test:e2e run 2]=0
+
+===== summary exit codes =====
+typecheck=0
+lint=0
+test=0
+test:e2e run 1=0
+test:e2e run 2=0

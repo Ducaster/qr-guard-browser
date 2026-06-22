@@ -29,8 +29,8 @@ Electron Forge writes artifacts under `out/make/`. The configured macOS makers a
 Typical output paths look like:
 
 ```text
-out/make/QR Guard Browser-0.1.0.dmg
-out/make/zip/darwin/<arch>/qr-guard-browser-darwin-<arch>-0.1.0.zip
+out/make/QR Guard Browser.dmg
+out/make/zip/darwin/arm64/QR Guard Browser-darwin-arm64-0.1.0.zip
 ```
 
 Use the exact paths printed by `npm run make` for release notes or handoff.

@@ -14,6 +14,11 @@ import {
   createElectronSettingsStore,
   createInsecureTestSealer
 } from "./settings-adapters";
+import {
+  hasEnabledTestFlag,
+  readPositiveIntegerTestEnv,
+  type TestOverrideEnvironment
+} from "./test-env-overrides";
 import { createShellWindow, getRendererHtmlPath, type ShellWindow } from "./views";
 import { createQrWebContentsAdapter } from "./qr-navigation-watcher";
 
@@ -52,7 +57,7 @@ const getSettingsRepository = (): SettingsRepository => {
   }
 
   const allowInsecureTestStorage =
-    process.env["QR_GUARD_ALLOW_INSECURE_TEST_STORAGE"] === "1" && !app.isPackaged;
+    hasEnabledTestFlag(getTestOverrideEnvironment(), "QR_GUARD_ALLOW_INSECURE_TEST_STORAGE");
   const sealer = allowInsecureTestStorage
     ? createInsecureTestSealer()
     : createElectronSafeStorageSealer();
@@ -83,32 +88,28 @@ const loadActiveQrUrl = async (url: string): Promise<void> => {
 };
 
 const getUnlockDurationOverrideSeconds = (): number | undefined => {
-  return readPositiveIntegerEnv("QR_GUARD_TEST_UNLOCK_DURATION_SECONDS");
+  return readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_UNLOCK_DURATION_SECONDS");
 };
 
 const getIdlePollIntervalOverrideMs = (): number | undefined =>
-  readPositiveIntegerEnv("QR_GUARD_TEST_IDLE_POLL_MS");
+  readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_IDLE_POLL_MS");
 
 const getLoginModeTimeoutOverrideMs = (): number | undefined =>
-  readPositiveIntegerEnv("QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS");
+  readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS");
 
 const getIdleSource = (): (() => number) => {
-  const fixedIdleSeconds = readPositiveIntegerEnv("QR_GUARD_TEST_SYSTEM_IDLE_SECONDS");
+  const fixedIdleSeconds = readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_SYSTEM_IDLE_SECONDS");
 
   return fixedIdleSeconds === undefined ? () => powerMonitor.getSystemIdleTime() : () => fixedIdleSeconds;
 };
 
-const readPositiveIntegerEnv = (key: string): number | undefined => {
-  const rawValue = process.env[key];
+const getTestOverrideEnvironment = (): TestOverrideEnvironment => ({
+  isPackaged: app.isPackaged,
+  variables: process.env
+});
 
-  if (rawValue === undefined) {
-    return undefined;
-  }
-
-  const parsedValue = Number.parseInt(rawValue, 10);
-
-  return Number.isInteger(parsedValue) && parsedValue >= 1 ? parsedValue : undefined;
-};
+const readPositiveIntegerTestOverrideEnv = (key: string): number | undefined =>
+  readPositiveIntegerTestEnv(getTestOverrideEnvironment(), key);
 
 const createAndLoadShellWindow = (): void => {
   const controlDevServerUrl = getControlDevServerUrl();
