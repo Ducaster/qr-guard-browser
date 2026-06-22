@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
+import type {
+  AuditEvent,
+  AuditExportFormat,
+  AuditLogFilter
+} from "../core/audit-log";
 import { IPC_CHANNELS, type ShellInfo } from "../core/shell-config";
 import type { StateSnapshot, UnlockResponse } from "../core/state-machine";
 import type { SettingsSafeView } from "../core/settings-validation";
@@ -51,6 +56,19 @@ export type SettingsViewResponse =
   | { readonly ok: true; readonly settings: SettingsSafeView }
   | { readonly errors: readonly string[]; readonly ok: false };
 
+export type QueryAuditLogResponse =
+  | {
+      readonly events: readonly AuditEvent[];
+      readonly lastSuccessfulUnlockByUserId: Readonly<Record<string, string>>;
+      readonly ok: true;
+      readonly skippedLines: number;
+    }
+  | { readonly errors: readonly string[]; readonly ok: false };
+
+export type ExportAuditLogResponse =
+  | { readonly canceled: boolean; readonly ok: true }
+  | { readonly errors: readonly string[]; readonly ok: false };
+
 const qrGuardApi = {
   addUser: (payload: SetupUserPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.addUser, payload),
@@ -83,6 +101,10 @@ const qrGuardApi = {
   },
   openSettings: (adminCode: string): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.openSettings, adminCode),
+  exportAuditLog: (format: AuditExportFormat): Promise<ExportAuditLogResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.exportAuditLog, format),
+  queryAuditLog: (filter?: AuditLogFilter): Promise<QueryAuditLogResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.queryAuditLog, filter),
   resetUserCode: (payload: SetupUserPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.resetUserCode, payload),
   saveSettings: (payload: SettingsPatchPayload): Promise<ActionResponse> =>

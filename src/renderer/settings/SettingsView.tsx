@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState, type JSX, type SyntheticEvent } from 
 
 import type { SettingsSafeView } from "../../core/settings-validation";
 import { ErrorList, Message } from "./Feedback";
-import { isValidHttpUrl, parseSeconds, validateAdminCode } from "./validation";
+import { AuditLogView } from "../logs/AuditLogView";
+import { isValidHttpUrl, parseSeconds } from "./validation";
+import { QrSessionTools } from "./QrSessionTools";
 import { UserManagement } from "./UserManagement";
 
 interface SettingsViewProps {
@@ -17,7 +19,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
   const [loginUrlPattern, setLoginUrlPattern] = useState("");
   const [loggedInUrlPattern, setLoggedInUrlPattern] = useState("");
   const [titleContains, setTitleContains] = useState("");
-  const [clearAdminCode, setClearAdminCode] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [message, setMessage] = useState("");
   const [isBusy, setIsBusy] = useState(false);
@@ -89,34 +90,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
       })
       .catch(() => {
         setErrors(["Settings could not be saved."]);
-      })
-      .finally(() => {
-        setIsBusy(false);
-      });
-  };
-
-  const clearQrSession = (): void => {
-    const validationErrors = validateAdminCode(clearAdminCode);
-
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    setIsBusy(true);
-    void window.qrGuard.clearQrSession(clearAdminCode.trim())
-      .then((response) => {
-        if (!response.ok) {
-          setErrors(response.errors ?? ["QR session could not be cleared."]);
-          return;
-        }
-
-        setErrors([]);
-        setMessage("QR session cleared.");
-        setClearAdminCode("");
-      })
-      .catch(() => {
-        setErrors(["QR session could not be cleared."]);
       })
       .finally(() => {
         setIsBusy(false);
@@ -225,28 +198,13 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
 
         {settings === null ? null : <UserManagement onChanged={loadSettings} users={settings.users} />}
 
-        <section className="form-section" aria-label="QR session">
-          <div className="section-heading">
-            <h2>QR session</h2>
-          </div>
-          <div className="inline-form">
-            <label className="field">
-              <span>Admin code</span>
-              <input
-                data-testid="clear-session-admin-code"
-                disabled={isBusy}
-                onChange={(event) => {
-                  setClearAdminCode(event.target.value);
-                }}
-                type="password"
-                value={clearAdminCode}
-              />
-            </label>
-            <button className="button button--danger" disabled={isBusy} onClick={clearQrSession} type="button">
-              Clear QR session
-            </button>
-          </div>
-        </section>
+        <AuditLogView />
+        <QrSessionTools
+          isBusy={isBusy}
+          onSetBusy={setIsBusy}
+          onSetErrors={setErrors}
+          onSetMessage={setMessage}
+        />
 
         <Message text={message} />
         <ErrorList errors={errors} />

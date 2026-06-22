@@ -1,0 +1,91 @@
+import { expect, test, type Page } from "@playwright/test";
+
+import { startFixtureQrSiteServer, type FixtureQrSiteServer } from "../fixtures/qr-site-server";
+import {
+  closeLaunchedApp,
+  completeFirstRunSetup,
+  findPage,
+  getQrVisible,
+  launchApp
+} from "./harness";
+
+test.describe("audit log settings view", () => {
+  let fixtureServer: FixtureQrSiteServer;
+
+  test.beforeEach(async () => {
+    fixtureServer = await startFixtureQrSiteServer();
+  });
+
+  test.afterEach(async () => {
+    await fixtureServer.close();
+  });
+
+  test("shows two users' successful unlock history and excludes failed auth", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`, {
+        unlockDurationSeconds: "1"
+      });
+      await openSettings(controlPage);
+      await addUser(controlPage, "staff02", "1357");
+      await lockSettings(controlPage);
+
+      // When
+      await submitFailedUnlock(controlPage, "staff02", "9999");
+      await unlockAndWaitForRelock(controlPage, "staff01", "2468");
+      await unlockAndWaitForRelock(controlPage, "staff02", "1357");
+      await openSettings(controlPage);
+
+      // Then
+      const rows = controlPage.getByTestId("audit-event-row");
+      await expect(rows).toHaveCount(2);
+      await expect(rows.filter({ hasText: "staff01" })).toHaveCount(1);
+      await expect(rows.filter({ hasText: "staff02" })).toHaveCount(1);
+      await expect(controlPage.getByTestId("audit-last-auth-staff01")).not.toContainText("none");
+      await expect(controlPage.getByTestId("audit-last-auth-staff02")).not.toContainText("none");
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+});
+
+const openSettings = async (page: Page): Promise<void> => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByTestId("admin-code-input").fill("1234");
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await expect(page.getByTestId("settings-qr-url")).toBeVisible();
+};
+
+const addUser = async (page: Page, userId: string, code: string): Promise<void> => {
+  await page.getByTestId("settings-add-user-id").fill(userId);
+  await page.getByTestId("settings-add-user-code").fill(code);
+  await page.getByRole("button", { name: "Add user" }).click();
+  await expect(page.getByText(userId)).toBeVisible();
+};
+
+const lockSettings = async (page: Page): Promise<void> => {
+  await page.getByRole("button", { name: "Lock settings" }).click();
+  await expect(page.getByTestId("locked-screen")).toBeVisible();
+};
+
+const submitFailedUnlock = async (page: Page, userId: string, code: string): Promise<void> => {
+  await page.getByTestId("unlock-user-id").fill(userId);
+  await page.getByTestId("unlock-code").fill(code);
+  await page.getByTestId("unlock-submit").click();
+  await expect(page.getByTestId("unlock-errors")).toContainText("incorrect");
+  await expect(page.getByTestId("locked-screen")).toBeVisible();
+};
+
+const unlockAndWaitForRelock = async (page: Page, userId: string, code: string): Promise<void> => {
+  await page.getByTestId("unlock-user-id").fill(userId);
+  await page.getByTestId("unlock-code").fill(code);
+  await page.getByTestId("unlock-submit").click();
+  await expect(page.getByTestId("unlock-toolbar")).toBeVisible();
+  await expect.poll(() => getQrVisible(page), { timeout: 2_000 }).toBe(true);
+  await expect(page.getByTestId("locked-screen")).toBeVisible({ timeout: 5_000 });
+  await expect.poll(() => getQrVisible(page), { timeout: 2_000 }).toBe(false);
+};

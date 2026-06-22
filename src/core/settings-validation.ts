@@ -1,4 +1,5 @@
 import { hashCode } from "./auth";
+import { LOGIN_MODE_AUDIT_USER_ID } from "./audit-log";
 import { createDefaultSettings, type Settings, type UserSettings } from "./settings-repo";
 import {
   readFirstRunSetupInput,
@@ -45,6 +46,10 @@ export const createSettingsFromFirstRunSetup = (payload: unknown): ValidationRes
 
   const input = inputResult.value;
 
+  if (input.users.some((user) => user.userId === LOGIN_MODE_AUDIT_USER_ID)) {
+    return reservedUserIdFailure();
+  }
+
   return ok({
     ...createDefaultSettings(),
     admin: hashCode(input.adminCode),
@@ -85,6 +90,10 @@ export const addUserToSettings = (
     return userResult;
   }
 
+  if (userResult.value.userId === LOGIN_MODE_AUDIT_USER_ID) {
+    return reservedUserIdFailure();
+  }
+
   if (settings.users.some((user) => user.userId === userResult.value.userId)) {
     return fail(["Duplicate user IDs are not allowed."]);
   }
@@ -106,6 +115,10 @@ export const updateUserInSettings = (
   }
 
   const { nextUserId, userId } = inputResult.value;
+
+  if (nextUserId === LOGIN_MODE_AUDIT_USER_ID) {
+    return reservedUserIdFailure();
+  }
 
   if (!settings.users.some((user) => user.userId === userId)) {
     return fail(["User was not found."]);
@@ -175,3 +188,6 @@ const toUserSettings = (user: UserCodeInput): UserSettings => ({
   lastAuthenticatedAt: null,
   userId: user.userId
 });
+
+const reservedUserIdFailure = (): ValidationResult<never> =>
+  fail([`${LOGIN_MODE_AUDIT_USER_ID} is reserved and cannot be used as a user ID.`]);

@@ -21,10 +21,13 @@ import {
 } from "../core/settings-validation";
 import type { ValidationResult } from "../core/settings-validation-types";
 import { authorizeSender, isSenderAuthorized, revokeSender } from "./admin-session-gate";
+import { registerAuditLogIpc } from "./audit-log-ipc";
+import type { AuditLogStore } from "./settings-adapters";
 
 export type ShellInfoProvider = () => Pick<ShellInfo, "qrVisible">;
 
 export interface SettingsIpcOptions {
+  readonly auditLogStore: AuditLogStore;
   readonly loadQrUrl: (url: string) => Promise<void>;
   readonly onSettingsClosed: () => void;
   readonly onSettingsOpened: () => void;
@@ -71,6 +74,8 @@ export const registerShellIpc = (getShellInfoState: ShellInfoProvider): void => 
 };
 
 export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
+  registerAuditLogIpc({ auditLogStore: options.auditLogStore });
+
   ipcMain.handle(IPC_CHANNELS.isFirstRun, (): FirstRunResponse => {
     const loadResult = loadSettingsForIpc(options.repository);
 

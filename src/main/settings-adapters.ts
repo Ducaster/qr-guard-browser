@@ -8,7 +8,13 @@ import {
   serializeLockoutState,
   type LockoutState
 } from "../core/auth";
-import { parseAuditLog, serializeAuditEvent, type AuditEvent } from "../core/audit-log";
+import {
+  parseAuditLog,
+  serializeAuditEvent,
+  type AuditEvent,
+  type AuditLogFilter,
+  type AuditLogReadResult
+} from "../core/audit-log";
 import type { Sealer, SettingsStore } from "../core/settings-repo";
 
 const SETTINGS_FILE_NAME = "settings.json";
@@ -22,7 +28,7 @@ export interface LockoutStateStore {
 
 export interface AuditLogStore {
   readonly append: (event: AuditEvent) => void;
-  readonly read: () => readonly AuditEvent[];
+  readonly read: (filter?: AuditLogFilter) => AuditLogReadResult;
 }
 
 export const createElectronSettingsStore = (): SettingsStore =>
@@ -67,10 +73,10 @@ export const createFileAuditLogStore = (filePath: string): AuditLogStore => ({
     fs.mkdirSync(path.dirname(filePath), { mode: 0o700, recursive: true });
     fs.appendFileSync(filePath, serializeAuditEvent(event), { encoding: "utf8", mode: 0o600 });
   },
-  read: () => {
+  read: (filter?: AuditLogFilter) => {
     const data = readOptionalTextFile(filePath);
 
-    return data === null ? [] : parseAuditLog(data);
+    return parseAuditLog(data ?? "", filter);
   }
 });
 

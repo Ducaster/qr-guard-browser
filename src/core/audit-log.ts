@@ -1,4 +1,6 @@
 export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode";
+export type AuditExportFormat = "jsonl" | "csv";
+export const LOGIN_MODE_AUDIT_USER_ID = "login-mode";
 
 export interface AuditEvent {
   readonly appVersion: string;
@@ -7,6 +9,16 @@ export interface AuditEvent {
   readonly reason: AuditLockReason;
   readonly unlockedAt: string;
   readonly userId: string;
+}
+
+export interface AuditLogFilter {
+  readonly userId?: string;
+}
+
+export interface AuditLogReadResult {
+  readonly events: readonly AuditEvent[];
+  readonly lastSuccessfulUnlockByUserId: Readonly<Record<string, string>>;
+  readonly skippedLines: number;
 }
 
 export interface AuditEventInput {
@@ -38,7 +50,7 @@ export const buildLoginModeAuditEvent = (input: LoginModeAuditEventInput): Audit
     lockedAtMs: input.lockedAtMs,
     reason: "login-mode",
     unlockedAtMs: input.enteredAtMs,
-    userId: "login-mode"
+    userId: LOGIN_MODE_AUDIT_USER_ID
   });
 
 export const serializeAuditEvent = (event: AuditEvent): string =>
@@ -54,27 +66,114 @@ export const serializeAuditEvent = (event: AuditEvent): string =>
 export const appendAuditEvent = (jsonl: string, event: AuditEvent): string =>
   `${jsonl}${serializeAuditEvent(event)}`;
 
-export const parseAuditLog = (jsonl: string): readonly AuditEvent[] =>
-  jsonl.split("\n").flatMap((line) => parseAuditLogLine(line));
+export const parseAuditLog = (
+  jsonl: string,
+  filter: AuditLogFilter = {}
+): AuditLogReadResult => {
+  const events: AuditEvent[] = [];
+  let skippedLines = 0;
 
-const parseAuditLogLine = (line: string): readonly AuditEvent[] => {
+  for (const line of jsonl.split("\n")) {
+    const parsed = parseAuditLogLine(line);
+
+    switch (parsed.kind) {
+      case "empty":
+        break;
+      case "event":
+        events.push(parsed.event);
+        break;
+      case "skipped":
+        skippedLines += 1;
+        break;
+    }
+  }
+
+  const filteredEvents =
+    filter.userId === undefined
+      ? events
+      : events.filter((event) => event.userId === filter.userId);
+
+  return {
+    events: filteredEvents,
+    // Last-auth is intentionally derived from all parsed events, not the user-filtered view.
+    lastSuccessfulUnlockByUserId: deriveLastSuccessfulUnlocks(events),
+    skippedLines
+  };
+};
+
+export const toJsonl = (events: readonly AuditEvent[]): string =>
+  events.map((event) => serializeAuditEvent(event)).join("");
+
+export const toCsv = (events: readonly AuditEvent[]): string => {
+  const rows = events.map((event) =>
+    AUDIT_CSV_FIELDS.map((field) => escapeCsvField(String(event[field]))).join(",")
+  );
+
+  return `${[AUDIT_CSV_FIELDS.join(","), ...rows].join("\n")}\n`;
+};
+
+type ParsedAuditLogLine =
+  | { readonly event: AuditEvent; readonly kind: "event" }
+  | { readonly kind: "empty" }
+  | { readonly kind: "skipped" };
+
+const AUDIT_CSV_FIELDS = [
+  "userId",
+  "unlockedAt",
+  "lockedAt",
+  "durationSeconds",
+  "reason",
+  "appVersion"
+] as const satisfies readonly (keyof AuditEvent)[];
+const CSV_FORMULA_PREFIX_PATTERN = /^[\t\r=+\-@]/;
+
+const parseAuditLogLine = (line: string): ParsedAuditLogLine => {
   const trimmedLine = line.trim();
 
   if (trimmedLine.length === 0) {
-    return [];
+    return { kind: "empty" };
   }
 
   try {
     const parsed: unknown = JSON.parse(trimmedLine);
 
-    return isAuditEvent(parsed) ? [parsed] : [];
+    return isAuditEvent(parsed) ? { event: parsed, kind: "event" } : { kind: "skipped" };
   } catch (error: unknown) {
     if (error instanceof SyntaxError) {
-      return [];
+      return { kind: "skipped" };
     }
 
     throw error;
   }
+};
+
+const deriveLastSuccessfulUnlocks = (
+  events: readonly AuditEvent[]
+): Readonly<Record<string, string>> => {
+  const lastSuccessfulUnlockByUserId: Record<string, string> = {};
+
+  for (const event of events) {
+    const previousUnlockedAt = lastSuccessfulUnlockByUserId[event.userId];
+
+    if (
+      event.userId !== LOGIN_MODE_AUDIT_USER_ID &&
+      (previousUnlockedAt === undefined || event.unlockedAt > previousUnlockedAt)
+    ) {
+      lastSuccessfulUnlockByUserId[event.userId] = event.unlockedAt;
+    }
+  }
+
+  return lastSuccessfulUnlockByUserId;
+};
+
+const escapeCsvField = (value: string): string => {
+  const neutralizedValue = CSV_FORMULA_PREFIX_PATTERN.test(value) ? `'${value}` : value;
+
+  if (!/[",\n\r]/.test(neutralizedValue)) {
+    return neutralizedValue;
+  }
+
+  return `"${neutralizedValue.replaceAll('"', '""')}"`;
 };
 
 const isAuditEvent = (value: unknown): value is AuditEvent => {

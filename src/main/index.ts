@@ -183,6 +183,7 @@ if (!gotSingleInstanceLock) {
   app.whenReady()
     .then(() => {
       registerSettingsIpc({
+        auditLogStore: createElectronAuditLogStore(),
         loadQrUrl: loadActiveQrUrl,
         onSettingsClosed: () => {
           activeLockController?.closeSettings();

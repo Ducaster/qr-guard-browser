@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createLockoutState, hashCode, type LockoutState } from "../core/auth";
-import type { AuditEvent } from "../core/audit-log";
+import {
+  parseAuditLog,
+  toJsonl,
+  type AuditEvent,
+  type AuditLogFilter,
+  type AuditLogReadResult
+} from "../core/audit-log";
 import { createDefaultSettings, type Settings, type SettingsRepository } from "../core/settings-repo";
 import type { StateSnapshot } from "../core/state-machine";
 import { createLockController, type LockControllerOptions } from "./lock-controller";
@@ -44,8 +50,8 @@ class MemoryAuditLogStore implements AuditLogStore {
     this.events.push(event);
   }
 
-  read(): readonly AuditEvent[] {
-    return this.events;
+  read(filter?: AuditLogFilter): AuditLogReadResult {
+    return parseAuditLog(toJsonl(this.events), filter);
   }
 }
 

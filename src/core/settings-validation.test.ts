@@ -9,7 +9,8 @@ import {
 import {
   addUserToSettings,
   createSettingsFromFirstRunSetup,
-  resetUserCodeInSettings
+  resetUserCodeInSettings,
+  updateUserInSettings
 } from "./settings-validation";
 
 describe("settings validation", () => {
@@ -56,6 +57,47 @@ describe("settings validation", () => {
       throw new Error("Expected duplicate user validation to fail.");
     }
     expect(result.errors).toEqual(["Duplicate user IDs are not allowed."]);
+  });
+
+  it.each([
+    {
+      action: "first-run setup",
+      run: () =>
+        createSettingsFromFirstRunSetup({
+          adminCode: "1234",
+          qrUrl: "https://qr.example.test/login",
+          users: [{ code: "1111", userId: "login-mode" }]
+        })
+    },
+    {
+      action: "add-user",
+      run: () =>
+        addUserToSettings(settingsWithUser("staff01"), {
+          code: "1111",
+          userId: "login-mode"
+        })
+    },
+    {
+      action: "update-user",
+      run: () =>
+        updateUserInSettings(settingsWithUser("staff01"), {
+          nextUserId: "login-mode",
+          userId: "staff01"
+        })
+    }
+  ])("rejects the reserved login-mode user ID during $action", ({ run }) => {
+    // Given
+    const expectedErrors = ["login-mode is reserved and cannot be used as a user ID."];
+
+    // When
+    const result = run();
+
+    // Then
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("Expected reserved user ID validation to fail.");
+    }
+    expect(result.errors).toEqual(expectedErrors);
   });
 
   it("rejects first-run setup when a user code is shorter than the minimum", () => {
@@ -197,4 +239,9 @@ describe("settings validation", () => {
 const verifyCodeFixture = () => ({
   hash: "fixture-hash",
   salt: "fixture-salt"
+});
+
+const settingsWithUser = (userId: string) => ({
+  ...createDefaultSettings(),
+  users: [{ ...verifyCodeFixture(), lastAuthenticatedAt: null, userId }]
 });
