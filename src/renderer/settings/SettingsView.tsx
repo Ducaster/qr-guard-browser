@@ -47,7 +47,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
 
   useEffect(() => {
     void loadSettings().catch(() => {
-      setErrors(["Settings could not be loaded."]);
+      setErrors(["설정을 불러올 수 없습니다."]);
     });
   }, [loadSettings]);
 
@@ -80,16 +80,16 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
     })
       .then(async (response) => {
         if (!response.ok) {
-          setErrors(response.errors ?? ["Settings could not be saved."]);
+          setErrors(response.errors ?? ["설정을 저장할 수 없습니다."]);
           return;
         }
 
         setErrors([]);
-        setMessage("Settings saved.");
+        setMessage("설정이 저장되었습니다.");
         await loadSettings();
       })
       .catch(() => {
-        setErrors(["Settings could not be saved."]);
+        setErrors(["설정을 저장할 수 없습니다."]);
       })
       .finally(() => {
         setIsBusy(false);
@@ -98,23 +98,23 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
 
   return (
     <main className="app-shell">
-      <section className="operator-panel settings-layout" aria-label="Settings">
+      <section className="operator-panel settings-layout" aria-label="설정">
         <div className="panel-header panel-header--split">
           <div>
-            <p className="eyebrow">QR Guard Browser</p>
-            <h1>Settings</h1>
+            <p className="eyebrow">QR 가드 브라우저</p>
+            <h1>설정</h1>
           </div>
           <button className="button button--ghost" disabled={isBusy} onClick={lockSettings} type="button">
-            Lock settings
+            설정 잠그기
           </button>
         </div>
 
-        {settings === null ? <p className="muted">Loading settings</p> : null}
+        {settings === null ? <p className="muted">설정 불러오는 중</p> : null}
 
         <form className="form-grid" onSubmit={saveSettings}>
           <div className="form-section">
             <label className="field">
-              <span>QR URL</span>
+              <span>QR 사이트 주소</span>
               <input
                 data-testid="settings-qr-url"
                 disabled={isBusy || settings === null}
@@ -128,7 +128,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
           </div>
           <div className="form-section form-section--two">
             <label className="field">
-              <span>Unlock seconds</span>
+              <span>노출 시간(초)</span>
               <input
                 data-testid="settings-unlock-duration"
                 disabled={isBusy || settings === null}
@@ -141,7 +141,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
               />
             </label>
             <label className="field">
-              <span>Idle seconds</span>
+              <span>유휴 자동잠금(초)</span>
               <input
                 data-testid="settings-idle-timeout"
                 disabled={isBusy || settings === null}
@@ -155,10 +155,10 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
             </label>
           </div>
           <fieldset className="form-section">
-            <legend>Login detection</legend>
+            <legend>로그인 감지</legend>
             <div className="form-section form-section--three">
               <label className="field">
-                <span>Login URL pattern</span>
+                <span>로그인 URL 패턴</span>
                 <input
                   disabled={isBusy || settings === null}
                   onChange={(event) => {
@@ -168,7 +168,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                 />
               </label>
               <label className="field">
-                <span>Logged-in URL pattern</span>
+                <span>로그인 완료 URL 패턴</span>
                 <input
                   disabled={isBusy || settings === null}
                   onChange={(event) => {
@@ -178,7 +178,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                 />
               </label>
               <label className="field">
-                <span>Title contains</span>
+                <span>제목 포함 문구</span>
                 <input
                   disabled={isBusy || settings === null}
                   onChange={(event) => {
@@ -191,7 +191,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
           </fieldset>
           <div className="button-row button-row--end">
             <button className="button button--primary" disabled={isBusy || settings === null} type="submit">
-              Save settings
+              설정 저장
             </button>
           </div>
         </form>
@@ -221,15 +221,15 @@ const validateSettingsForm = (
   const errors: string[] = [];
 
   if (!isValidHttpUrl(qrUrl)) {
-    errors.push(qrUrl.trim().length === 0 ? "QR URL is required." : "QR URL must be valid.");
+    errors.push(qrUrl.trim().length === 0 ? "QR 사이트 주소를 입력하세요." : "QR 사이트 주소가 올바르지 않습니다.");
   }
 
   if (unlockSeconds === null) {
-    errors.push("Unlock duration must be at least 1 second.");
+    errors.push("노출 시간은 최소 1초 이상이어야 합니다.");
   }
 
   if (idleSeconds === null) {
-    errors.push("Idle timeout must be at least 1 second.");
+    errors.push("유휴 자동잠금은 최소 1초 이상이어야 합니다.");
   }
 
   return errors;

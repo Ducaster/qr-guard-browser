@@ -1,0 +1,651 @@
+
+===== i18n verification 2026-06-23 08:07:54 KST =====
+
+$ npm run typecheck
+
+> qr-guard-browser@0.1.0 typecheck
+> tsc --noEmit
+
+
+$ npm run lint
+
+> qr-guard-browser@0.1.0 lint
+> eslint . --max-warnings=0
+
+
+$ npm run test
+
+> qr-guard-browser@0.1.0 test
+> vitest run
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v3.2.6 /Users/inthek/Documents/tele_proj/qr-guard-browser
+
+ ✓ src/core/idle-lock.test.ts (1 test) 1ms
+ ✓ src/core/qr-navigation.test.ts (2 tests) 2ms
+ ✓ src/core/admin-session.test.ts (2 tests) 3ms
+ ✓ src/core/audit-log.test.ts (13 tests) 8ms
+ ✓ src/core/shell-config.test.ts (4 tests) 10ms
+ ✓ src/core/state-machine.test.ts (26 tests) 4ms
+ ✓ src/renderer/settings/first-run-model.test.ts (2 tests) 3ms
+ ✓ src/core/sanity.test.ts (1 test) 2ms
+ ✓ src/core/login-detector.test.ts (6 tests) 2ms
+ ✓ src/main/windows-permissions.test.ts (2 tests) 2ms
+ ✓ src/main/test-env-overrides.test.ts (3 tests) 3ms
+ ✓ src/core/auth.test.ts (5 tests) 302ms
+ ✓ src/core/settings-repo.test.ts (5 tests) 550ms
+ ✓ src/core/settings-validation.test.ts (11 tests) 641ms
+ ✓ src/main/lock-controller.test.ts (11 tests) 1500ms
+
+ Test Files  15 passed (15)
+      Tests  94 passed (94)
+   Start at  08:08:40
+   Duration  2.06s (transform 510ms, setup 0ms, collect 992ms, tests 3.03s, environment 2ms, prepare 1.44s)
+
+
+$ npm run test:e2e (pass 1)
+
+> qr-guard-browser@0.1.0 test:e2e
+> npm run build:e2e && playwright test
+
+
+> qr-guard-browser@0.1.0 build:e2e
+> vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 29 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/main.js  29.06 kB │ gzip: 9.85 kB │ map: 141.41 kB
+✓ built in 140ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 2 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/preload.js  2.03 kB │ gzip: 0.63 kB │ map: 8.63 kB
+✓ built in 37ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/renderer/main_window/index.html                   0.40 kB │ gzip:  0.27 kB
+.vite/renderer/main_window/assets/index-CIQLB0UG.css    6.66 kB │ gzip:  1.99 kB
+.vite/renderer/main_window/assets/index-Bh0OMwNA.js   219.34 kB │ gzip: 66.88 kB
+✓ built in 488ms
+
+Running 10 tests using 1 worker
+
+  ✓   1 e2e/audit-log.spec.ts:23:7 › audit log settings view › shows two users' successful unlock history and excludes failed auth (9.5s)
+  ✓   2 e2e/smoke.spec.ts:27:7 › secure Electron shell › starts with a hardened control renderer and loads the fixture QR site (617ms)
+  ✓   3 e2e/smoke.spec.ts:58:7 › secure Electron shell › blocks fixture window.open calls from creating a new Electron window (1.4s)
+  ✓   4 e2e/smoke.spec.ts:90:7 › secure Electron shell › completes first-run setup and lands on the locked screen (890ms)
+  ✓   5 e2e/smoke.spec.ts:110:7 › secure Electron shell › unlocks with the correct code, counts down, and relocks without reloading QR contents (4.9s)
+  ✓   6 e2e/smoke.spec.ts:152:7 › secure Electron shell › keeps QR locked and writes no success audit event when the code is wrong (1.1s)
+  ✓   7 e2e/smoke.spec.ts:178:7 › secure Electron shell › keeps settings closed when the admin code is wrong (1.0s)
+  ✓   8 e2e/smoke.spec.ts:200:7 › secure Electron shell › shows an expired login page without an app code and relocks on QR navigation (894ms)
+  ✓   9 e2e/smoke.spec.ts:229:7 › secure Electron shell › manual login completion relocks when automatic completion detection is disabled (914ms)
+  ✓  10 e2e/smoke.spec.ts:252:7 › secure Electron shell › idle auto-lock relocks an unlocked QR page before the unlock timer (1.1s)
+
+  10 passed (23.0s)
+
+$ npm run test:e2e (pass 2)
+
+> qr-guard-browser@0.1.0 test:e2e
+> npm run build:e2e && playwright test
+
+
+> qr-guard-browser@0.1.0 build:e2e
+> vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 29 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/main.js  29.06 kB │ gzip: 9.85 kB │ map: 141.41 kB
+✓ built in 144ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 2 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/preload.js  2.03 kB │ gzip: 0.63 kB │ map: 8.63 kB
+✓ built in 35ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/renderer/main_window/index.html                   0.40 kB │ gzip:  0.27 kB
+.vite/renderer/main_window/assets/index-CIQLB0UG.css    6.66 kB │ gzip:  1.99 kB
+.vite/renderer/main_window/assets/index-Bh0OMwNA.js   219.34 kB │ gzip: 66.88 kB
+✓ built in 477ms
+
+Running 10 tests using 1 worker
+
+  ✓   1 e2e/audit-log.spec.ts:23:7 › audit log settings view › shows two users' successful unlock history and excludes failed auth (8.8s)
+  ✓   2 e2e/smoke.spec.ts:27:7 › secure Electron shell › starts with a hardened control renderer and loads the fixture QR site (599ms)
+  ✓   3 e2e/smoke.spec.ts:58:7 › secure Electron shell › blocks fixture window.open calls from creating a new Electron window (1.4s)
+  ✓   4 e2e/smoke.spec.ts:90:7 › secure Electron shell › completes first-run setup and lands on the locked screen (868ms)
+  ✓   5 e2e/smoke.spec.ts:110:7 › secure Electron shell › unlocks with the correct code, counts down, and relocks without reloading QR contents (4.9s)
+  ✓   6 e2e/smoke.spec.ts:152:7 › secure Electron shell › keeps QR locked and writes no success audit event when the code is wrong (1.1s)
+  ✓   7 e2e/smoke.spec.ts:178:7 › secure Electron shell › keeps settings closed when the admin code is wrong (986ms)
+  ✓   8 e2e/smoke.spec.ts:200:7 › secure Electron shell › shows an expired login page without an app code and relocks on QR navigation (899ms)
+  ✓   9 e2e/smoke.spec.ts:229:7 › secure Electron shell › manual login completion relocks when automatic completion detection is disabled (881ms)
+  ✓  10 e2e/smoke.spec.ts:252:7 › secure Electron shell › idle auto-lock relocks an unlocked QR page before the unlock timer (1.1s)
+
+  10 passed (22.0s)
+
+Exit codes:
+  npm run typecheck: 0
+  npm run lint: 0
+  npm run test: 0
+  npm run test:e2e pass 1: 0
+  npm run test:e2e pass 2: 0
+
+$ stale English user-facing string grep
+e2e/audit-log.spec.ts:8:  getQrVisible,
+e2e/audit-log.spec.ts:23:  test("shows two users' successful unlock history and excludes failed auth", async () => {
+e2e/audit-log.spec.ts:26:      unlockDurationSeconds: "3"
+e2e/audit-log.spec.ts:33:        unlockDurationSeconds: "3"
+e2e/audit-log.spec.ts:35:      await openSettings(controlPage);
+e2e/audit-log.spec.ts:37:      await lockSettings(controlPage);
+e2e/audit-log.spec.ts:43:      await openSettings(controlPage);
+e2e/audit-log.spec.ts:58:const openSettings = async (page: Page): Promise<void> => {
+e2e/audit-log.spec.ts:62:  await expect(page.getByTestId("settings-qr-url")).toBeVisible();
+e2e/audit-log.spec.ts:69:  await expect(page.getByText(userId)).toBeVisible();
+e2e/audit-log.spec.ts:72:const lockSettings = async (page: Page): Promise<void> => {
+e2e/audit-log.spec.ts:74:  await expect(page.getByTestId("locked-screen")).toBeVisible();
+e2e/audit-log.spec.ts:82:  await expect(page.getByTestId("locked-screen")).toBeVisible();
+e2e/audit-log.spec.ts:89:  await expect(page.getByTestId("unlock-toolbar")).toBeVisible();
+e2e/audit-log.spec.ts:90:  await expect.poll(() => getQrVisible(page), { timeout: 2_000 }).toBe(true);
+e2e/audit-log.spec.ts:91:  await expect(page.getByTestId("locked-screen")).toBeVisible({ timeout: 8_000 });
+e2e/audit-log.spec.ts:92:  await expect.poll(() => getQrVisible(page), { timeout: 8_000 }).toBe(false);
+e2e/smoke.spec.ts:10:  getQrVisible,
+e2e/smoke.spec.ts:40:      await expect(controlPage.getByText("QR 가드 브라우저")).toBeVisible();
+e2e/smoke.spec.ts:41:      await expect(controlPage.getByRole("heading", { name: "초기 설정" })).toBeVisible();
+e2e/smoke.spec.ts:51:        qrVisible: false
+e2e/smoke.spec.ts:103:      expect(shellInfo.qrVisible).toBe(false);
+e2e/smoke.spec.ts:104:      await expect(controlPage.getByRole("button", { name: "설정" })).toBeVisible();
+e2e/smoke.spec.ts:113:      unlockDurationSeconds: "3"
+e2e/smoke.spec.ts:121:        unlockDurationSeconds: "3"
+e2e/smoke.spec.ts:134:      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
+e2e/smoke.spec.ts:136:      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+e2e/smoke.spec.ts:137:      await expect.poll(() => getQrVisible(controlPage), { timeout: 8_000 }).toBe(false);
+e2e/smoke.spec.ts:138:      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+e2e/smoke.spec.ts:168:      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+e2e/smoke.spec.ts:169:      expect(await getQrVisible(controlPage)).toBe(false);
+e2e/smoke.spec.ts:214:      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
+e2e/smoke.spec.ts:215:      await expect(controlPage.getByText("로그인 모드 (인증 없이 표시 중)")).toBeVisible();
+e2e/smoke.spec.ts:216:      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+e2e/smoke.spec.ts:220:      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+e2e/smoke.spec.ts:221:      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(false);
+e2e/smoke.spec.ts:239:      await expect(controlPage.getByTestId("manual-login-complete")).toBeVisible();
+e2e/smoke.spec.ts:245:      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+e2e/smoke.spec.ts:246:      expect(await getQrVisible(controlPage)).toBe(false);
+e2e/smoke.spec.ts:257:      unlockDurationSeconds: "60"
+e2e/smoke.spec.ts:265:        unlockDurationSeconds: "60"
+e2e/smoke.spec.ts:267:      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
+e2e/smoke.spec.ts:275:      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
+e2e/smoke.spec.ts:276:      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+e2e/smoke.spec.ts:277:      await expect.poll(() => getQrVisible(controlPage), { timeout: 3_000 }).toBe(false);
+src/core/audit-log.test.ts:18:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:30:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:38:      '{"userId":"staff01","unlockedAt":"1970-01-01T00:00:01.000Z","lockedAt":"1970-01-01T00:00:03.000Z","durationSeconds":2,"reason":"timer","appVersion":"0.1.0"}\n'
+src/core/audit-log.test.ts:45:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:52:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:77:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:84:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:91:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:116:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:123:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:142:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:149:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:179:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:191:      '{"userId":"staff01","unlockedAt":"1970-01-01T00:00:01.000Z","lockedAt":"1970-01-01T00:00:02.000Z","durationSeconds":1,"reason":"manual","appVersion":"0.1.0"}\n'
+src/core/audit-log.test.ts:198:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:211:      'userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n"staff, ""ops""",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n'
+src/core/audit-log.test.ts:229:      `userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n${escapedUserId},1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n`
+src/core/audit-log.test.ts:242:      'userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n"\'=SUM(A1),staff",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n'
+src/core/audit-log.test.ts:249:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:259:      appVersion: "0.1.0",
+src/core/audit-log.test.ts:275:  appVersion: "0.1.0",
+src/main/lock-controller.ts:8:import type { AuditLockReason } from "../core/audit-log";
+src/main/lock-controller.ts:13:  closeSettings,
+src/main/lock-controller.ts:17:  openSettings,
+src/main/lock-controller.ts:26:import type { Settings, SettingsRepository } from "../core/settings-repo";
+src/main/lock-controller.ts:27:import { isFirstRunSettings } from "../core/settings-validation";
+src/main/lock-controller.ts:45:  readonly setQrVisible: (visible: boolean) => void;
+src/main/lock-controller.ts:49:  readonly closeSettings: () => void;
+src/main/lock-controller.ts:54:  readonly openSettings: () => void;
+src/main/lock-controller.ts:59:  readonly appVersion: string;
+src/main/lock-controller.ts:63:  readonly repository: SettingsRepository;
+src/main/lock-controller.ts:68:  readonly unlockDurationOverrideSeconds?: number;
+src/main/lock-controller.ts:75:  let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
+src/main/lock-controller.ts:80:    appVersion: options.appVersion,
+src/main/lock-controller.ts:88:    options.shellWindow.setQrVisible(visible);
+src/main/lock-controller.ts:101:      qrVisible: shouldShowQrView(state, currentUrlMatchesLoginPattern),
+src/main/lock-controller.ts:121:  const relock = (reason: AuditLockReason): void => {
+src/main/lock-controller.ts:233:    const durationSeconds = getUnlockDurationSeconds(settings);
+src/main/lock-controller.ts:263:  const getUnlockDurationSeconds = (settings: Settings): number =>
+src/main/lock-controller.ts:264:    options.unlockDurationOverrideSeconds ?? settings.unlockDurationSeconds;
+src/main/lock-controller.ts:269:    closeSettings: () => {
+src/main/lock-controller.ts:271:      setState(closeSettings(state));
+src/main/lock-controller.ts:285:    openSettings: () => {
+src/main/lock-controller.ts:286:      const nextState = openSettings(state);
+src/core/settings-validation-readers.ts:2:  createDefaultSettings,
+src/core/settings-validation-readers.ts:5:  type Settings
+src/core/settings-validation-readers.ts:9:  readDurationSeconds,
+src/core/settings-validation-readers.ts:20:  type SettingsPatchInput,
+src/core/settings-validation-readers.ts:33:  const defaults = createDefaultSettings();
+src/core/settings-validation-readers.ts:38:  const unlockDurationSeconds = readDurationSeconds(
+src/core/settings-validation-readers.ts:40:    "unlockDurationSeconds",
+src/core/settings-validation-readers.ts:41:    defaults.unlockDurationSeconds,
+src/core/settings-validation-readers.ts:46:  const idleAutoLockSeconds = readDurationSeconds(
+src/core/settings-validation-readers.ts:67:        unlockDurationSeconds,
+src/core/settings-validation-readers.ts:72:export const readSettingsPatchInput = (
+src/core/settings-validation-readers.ts:73:  settings: Settings,
+src/core/settings-validation-readers.ts:75:): ValidationResult<SettingsPatchInput> => {
+src/core/settings-validation-readers.ts:84:  const unlockDurationSeconds = readDurationSeconds(
+src/core/settings-validation-readers.ts:86:    "unlockDurationSeconds",
+src/core/settings-validation-readers.ts:87:    settings.unlockDurationSeconds,
+src/core/settings-validation-readers.ts:92:  const idleAutoLockSeconds = readDurationSeconds(
+src/core/settings-validation-readers.ts:106:    : ok({ idleAutoLockSeconds, loginDetection, qrUrl, unlockDurationSeconds });
+e2e/harness.ts:27:  readonly unlockDurationSeconds?: string;
+e2e/harness.ts:35:  readonly unlockDurationSeconds?: string;
+e2e/harness.ts:82:export const getQrVisible = async (controlPage: Page): Promise<boolean> => {
+e2e/harness.ts:85:  return shellInfo.qrVisible;
+e2e/harness.ts:100:  await page.getByTestId("setup-unlock-duration").fill(options.unlockDurationSeconds ?? "10");
+e2e/harness.ts:124:  env["QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"] = overrides.unlockDurationSeconds ?? "1";
+src/core/settings-repo.test.ts:5:  createDefaultSettings,
+src/core/settings-repo.test.ts:6:  createSettingsRepository,
+src/core/settings-repo.test.ts:9:  migrateSettings,
+src/core/settings-repo.test.ts:11:  type SettingsStore,
+src/core/settings-repo.test.ts:12:  type SettingsV1
+src/core/settings-repo.test.ts:15:class MemorySettingsStore implements SettingsStore {
+src/core/settings-repo.test.ts:46:    const store = new MemorySettingsStore();
+src/core/settings-repo.test.ts:48:    const repository = createSettingsRepository(store, sealer);
+src/core/settings-repo.test.ts:54:    expect(settings).toEqual(createDefaultSettings());
+src/core/settings-repo.test.ts:55:    expect(settings.unlockDurationSeconds).toBe(10);
+src/core/settings-repo.test.ts:67:    const store = new MemorySettingsStore();
+src/core/settings-repo.test.ts:69:    const repository = createSettingsRepository(store, sealer);
+src/core/settings-repo.test.ts:75:      ...createDefaultSettings(),
+src/core/settings-repo.test.ts:105:    const legacySettings: SettingsV1 = {
+src/core/settings-repo.test.ts:108:      schemaVersion: 1,
+src/core/settings-repo.test.ts:109:      unlockDurationSeconds: 12,
+src/core/settings-repo.test.ts:120:    const migrated = migrateSettings(legacySettings);
+src/core/settings-repo.test.ts:124:      ...createDefaultSettings(),
+src/core/settings-repo.test.ts:127:      unlockDurationSeconds: 12,
+src/core/settings-repo.test.ts:128:      users: legacySettings.users
+src/core/settings-repo.test.ts:130:    expect(migrated.schemaVersion).toBe(2);
+src/core/settings-repo.test.ts:142:    const storedSettings = {
+src/core/settings-repo.test.ts:143:      ...createDefaultSettings(),
+src/core/settings-repo.test.ts:145:      unlockDurationSeconds: 999_999_999
+src/core/settings-repo.test.ts:147:    const store = new MemorySettingsStore(sealer.seal(JSON.stringify(storedSettings)));
+src/core/settings-repo.test.ts:148:    const repository = createSettingsRepository(store, sealer);
+src/core/settings-repo.test.ts:154:    expect(loaded.unlockDurationSeconds).toBe(MAX_UNLOCK_DURATION_SECONDS);
+src/core/settings-repo.test.ts:163:    const rawSettings = {
+src/core/settings-repo.test.ts:164:      ...createDefaultSettings(),
+src/core/settings-repo.test.ts:184:    const parsed = migrateSettings(rawSettings);
+src/core/login-detector.test.ts:4:import type { LoginDetectionSettings } from "./settings-repo";
+src/core/login-detector.test.ts:10:} satisfies LoginDetectionSettings;
+src/core/login-detector.test.ts:52:    } satisfies LoginDetectionSettings;
+src/core/user-settings.ts:1:import type { Settings } from "./settings-repo";
+src/core/user-settings.ts:4:  settings: Settings,
+src/core/user-settings.ts:7:): Settings => ({
+src/core/settings-validation.ts:3:import { createDefaultSettings, type Settings, type UserSettings } from "./settings-repo";
+src/core/settings-validation.ts:7:  readSettingsPatchInput,
+src/core/settings-validation.ts:14:  type SettingsSafeView,
+src/core/settings-validation.ts:22:  type SettingsSafeUserView,
+src/core/settings-validation.ts:23:  type SettingsSafeView
+src/core/settings-validation.ts:26:export const isFirstRunSettings = (settings: Settings): boolean =>
+src/core/settings-validation.ts:29:export const toSettingsSafeView = (settings: Settings): SettingsSafeView => ({
+src/core/settings-validation.ts:33:  unlockDurationSeconds: settings.unlockDurationSeconds,
+src/core/settings-validation.ts:40:export const createSettingsFromFirstRunSetup = (payload: unknown): ValidationResult<Settings> => {
+src/core/settings-validation.ts:54:    ...createDefaultSettings(),
+src/core/settings-validation.ts:59:    unlockDurationSeconds: input.unlockDurationSeconds,
+src/core/settings-validation.ts:60:    users: input.users.map(toUserSettings)
+src/core/settings-validation.ts:64:export const applySettingsPatch = (
+src/core/settings-validation.ts:65:  settings: Settings,
+src/core/settings-validation.ts:67:): ValidationResult<Settings> => {
+src/core/settings-validation.ts:68:  const patchResult = readSettingsPatchInput(settings, payload);
+src/core/settings-validation.ts:79:    unlockDurationSeconds: patchResult.value.unlockDurationSeconds
+src/core/settings-validation.ts:83:export const addUserToSettings = (
+src/core/settings-validation.ts:84:  settings: Settings,
+src/core/settings-validation.ts:86:): ValidationResult<Settings> => {
+src/core/settings-validation.ts:103:    users: [...settings.users, toUserSettings(userResult.value)]
+src/core/settings-validation.ts:107:export const updateUserInSettings = (
+src/core/settings-validation.ts:108:  settings: Settings,
+src/core/settings-validation.ts:110:): ValidationResult<Settings> => {
+src/core/settings-validation.ts:139:export const deleteUserFromSettings = (
+src/core/settings-validation.ts:140:  settings: Settings,
+src/core/settings-validation.ts:142:): ValidationResult<Settings> => {
+src/core/settings-validation.ts:162:export const resetUserCodeInSettings = (
+src/core/settings-validation.ts:163:  settings: Settings,
+src/core/settings-validation.ts:165:): ValidationResult<Settings> => {
+src/core/settings-validation.ts:186:const toUserSettings = (user: UserCodeInput): UserSettings => ({
+src/main/test-env-overrides.test.ts:42:    const unlockDuration = readPositiveIntegerTestEnv(
+src/main/test-env-overrides.test.ts:61:    expect(unlockDuration).toBeUndefined();
+src/main/test-env-overrides.test.ts:80:    const invalid = readPositiveIntegerTestEnv(environment, "INVALID");
+src/main/test-env-overrides.test.ts:85:    expect(invalid).toBeUndefined();
+src/renderer/logs/AuditLogView.tsx:200:                <td>{event.appVersion}</td>
+src/core/login-detector.ts:1:import type { LoginDetectionSettings } from "./settings-repo";
+src/core/login-detector.ts:8:  rules: LoginDetectionSettings
+src/core/login-detector.ts:21:export const matchesLoginUrl = (url: string, rules: LoginDetectionSettings): boolean =>
+src/core/audit-log.ts:1:export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode";
+src/core/audit-log.ts:6:  readonly appVersion: string;
+src/core/audit-log.ts:9:  readonly reason: AuditLockReason;
+src/core/audit-log.ts:25:  readonly appVersion: string;
+src/core/audit-log.ts:27:  readonly reason: AuditLockReason;
+src/core/audit-log.ts:33:  readonly appVersion: string;
+src/core/audit-log.ts:39:  appVersion: input.appVersion,
+src/core/audit-log.ts:49:    appVersion: input.appVersion,
+src/core/audit-log.ts:63:    appVersion: event.appVersion
+src/core/audit-log.ts:126:  "appVersion"
+src/core/audit-log.ts:156:    const previousUnlockedAt = lastSuccessfulUnlockByUserId[event.userId];
+src/core/audit-log.ts:160:      (previousUnlockedAt === undefined || event.unlockedAt > previousUnlockedAt)
+src/core/audit-log.ts:185:    typeof value["appVersion"] === "string" &&
+src/core/audit-log.ts:189:    isAuditReason(value["reason"]) &&
+src/core/audit-log.ts:195:const isAuditReason = (value: unknown): value is AuditLockReason =>
+src/main/audit-session-tracker.ts:4:  type AuditLockReason
+src/main/audit-session-tracker.ts:21:  readonly finishUnlockSession: (reason: AuditLockReason, lockedAtMs: number) => void;
+src/main/audit-session-tracker.ts:26:  readonly appVersion: string;
+src/main/audit-session-tracker.ts:50:          appVersion: options.appVersion,
+src/main/audit-session-tracker.ts:57:    finishUnlockSession: (reason: AuditLockReason, lockedAtMs: number): void => {
+src/main/audit-session-tracker.ts:64:          appVersion: options.appVersion,
+src/main/index.ts:5:import { createSettingsRepository, type SettingsRepository } from "../core/settings-repo";
+src/main/index.ts:9:import { registerSettingsIpc, registerShellIpc } from "./ipc";
+src/main/index.ts:14:  createElectronSettingsStore,
+src/main/index.ts:30:let settingsRepository: SettingsRepository | undefined;
+src/main/index.ts:54:const getSettingsRepository = (): SettingsRepository => {
+src/main/index.ts:65:  settingsRepository = createSettingsRepository(createElectronSettingsStore(), sealer);
+src/main/index.ts:77:  const qrUrl = getSettingsRepository().load().qrUrl;
+src/main/index.ts:90:const getUnlockDurationOverrideSeconds = (): number | undefined => {
+src/main/index.ts:126:  const unlockDurationOverrideSeconds = getUnlockDurationOverrideSeconds();
+src/main/index.ts:130:    appVersion: app.getVersion(),
+src/main/index.ts:135:    repository: getSettingsRepository(),
+src/main/index.ts:139:    ...(unlockDurationOverrideSeconds === undefined ? {} : { unlockDurationOverrideSeconds })
+src/main/index.ts:161:    qrVisible: activeShellWindow?.isQrVisible() ?? false
+src/main/index.ts:184:      registerSettingsIpc({
+src/main/index.ts:187:        onSettingsClosed: () => {
+src/main/index.ts:188:          activeLockController?.closeSettings();
+src/main/index.ts:190:        onSettingsOpened: () => {
+src/main/index.ts:191:          activeLockController?.openSettings();
+src/main/index.ts:196:        repository: getSettingsRepository()
+src/core/state-machine.test.ts:5:  closeSettings,
+src/core/state-machine.test.ts:10:  openSettings,
+src/core/state-machine.test.ts:85:    const state = openSettings("locked");
+src/core/state-machine.test.ts:93:    const state = closeSettings("settings");
+src/core/settings-repo.ts:9:export interface LoginDetectionSettings {
+src/core/settings-repo.ts:15:export interface UserSettings extends AuthHash {
+src/core/settings-repo.ts:20:export interface Settings {
+src/core/settings-repo.ts:23:  readonly loginDetection: LoginDetectionSettings;
+src/core/settings-repo.ts:25:  readonly schemaVersion: typeof CURRENT_SETTINGS_SCHEMA_VERSION;
+src/core/settings-repo.ts:26:  readonly unlockDurationSeconds: number;
+src/core/settings-repo.ts:27:  readonly users: readonly UserSettings[];
+src/core/settings-repo.ts:30:export interface SettingsV1 {
+src/core/settings-repo.ts:33:  readonly schemaVersion: 1;
+src/core/settings-repo.ts:34:  readonly unlockDurationSeconds?: number;
+src/core/settings-repo.ts:35:  readonly users?: readonly UserSettings[];
+src/core/settings-repo.ts:38:export interface SettingsStore {
+src/core/settings-repo.ts:48:export interface SettingsRepository {
+src/core/settings-repo.ts:49:  load(): Settings;
+src/core/settings-repo.ts:50:  save(settings: Settings): void;
+src/core/settings-repo.ts:53:export class SettingsParseError extends Error {
+src/core/settings-repo.ts:56:    this.name = "SettingsParseError";
+src/core/settings-repo.ts:65:const defaultLoginDetection = (): LoginDetectionSettings => ({
+src/core/settings-repo.ts:71:export const createDefaultSettings = (): Settings => ({
+src/core/settings-repo.ts:76:  schemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+src/core/settings-repo.ts:77:  unlockDurationSeconds: 10,
+src/core/settings-repo.ts:81:export const createSettingsRepository = (
+src/core/settings-repo.ts:82:  store: SettingsStore,
+src/core/settings-repo.ts:84:): SettingsRepository => ({
+src/core/settings-repo.ts:89:      return createDefaultSettings();
+src/core/settings-repo.ts:92:    return parseSettingsJson(sealer.unseal(sealed));
+src/core/settings-repo.ts:94:  save: (settings: Settings) => {
+src/core/settings-repo.ts:99:export const parseSettingsJson = (json: string): Settings => {
+src/core/settings-repo.ts:101:    return migrateSettings(JSON.parse(json));
+src/core/settings-repo.ts:104:      throw new SettingsParseError("Settings JSON is not valid", error);
+src/core/settings-repo.ts:111:export const migrateSettings = (rawSettings: unknown): Settings => {
+src/core/settings-repo.ts:112:  if (!isRecord(rawSettings)) {
+src/core/settings-repo.ts:113:    return createDefaultSettings();
+src/core/settings-repo.ts:116:  if (rawSettings["schemaVersion"] === 1) {
+src/core/settings-repo.ts:117:    return migrateV1ToV2(rawSettings);
+src/core/settings-repo.ts:120:  return parseCurrentSettings(rawSettings);
+src/core/settings-repo.ts:123:export const migrateV1ToV2 = (legacySettings: unknown): Settings => {
+src/core/settings-repo.ts:124:  const defaults = createDefaultSettings();
+src/core/settings-repo.ts:126:  if (!isRecord(legacySettings)) {
+src/core/settings-repo.ts:132:    admin: readAuthHash(legacySettings["admin"], defaults.admin),
+src/core/settings-repo.ts:133:    qrUrl: readString(legacySettings, "qrUrl", defaults.qrUrl),
+src/core/settings-repo.ts:134:    unlockDurationSeconds: readPositiveNumber(
+src/core/settings-repo.ts:135:      legacySettings,
+src/core/settings-repo.ts:136:      "unlockDurationSeconds",
+src/core/settings-repo.ts:137:      defaults.unlockDurationSeconds,
+src/core/settings-repo.ts:140:    users: readUsers(legacySettings["users"], defaults.users)
+src/core/settings-repo.ts:144:const parseCurrentSettings = (rawSettings: Readonly<Record<string, unknown>>): Settings => {
+src/core/settings-repo.ts:145:  const defaults = createDefaultSettings();
+src/core/settings-repo.ts:148:    admin: readAuthHash(rawSettings["admin"], defaults.admin),
+src/core/settings-repo.ts:150:      rawSettings,
+src/core/settings-repo.ts:155:    loginDetection: readLoginDetection(rawSettings["loginDetection"], defaults.loginDetection),
+src/core/settings-repo.ts:156:    qrUrl: readString(rawSettings, "qrUrl", defaults.qrUrl),
+src/core/settings-repo.ts:157:    schemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+src/core/settings-repo.ts:158:    unlockDurationSeconds: readPositiveNumber(
+src/core/settings-repo.ts:159:      rawSettings,
+src/core/settings-repo.ts:160:      "unlockDurationSeconds",
+src/core/settings-repo.ts:161:      defaults.unlockDurationSeconds,
+src/core/settings-repo.ts:164:    users: readUsers(rawSettings["users"], defaults.users)
+src/core/settings-repo.ts:170:  fallback: LoginDetectionSettings
+src/core/settings-repo.ts:171:): LoginDetectionSettings => {
+src/core/settings-repo.ts:194:const readUsers = (value: unknown, fallback: readonly UserSettings[]): readonly UserSettings[] => {
+src/core/settings-repo.ts:206:const readUser = (value: unknown): UserSettings | null => {
+src/main/ipc.ts:10:import { SettingsParseError, type Settings, type SettingsRepository } from "../core/settings-repo";
+src/main/ipc.ts:12:  addUserToSettings,
+src/main/ipc.ts:13:  applySettingsPatch,
+src/main/ipc.ts:14:  createSettingsFromFirstRunSetup,
+src/main/ipc.ts:15:  deleteUserFromSettings,
+src/main/ipc.ts:16:  isFirstRunSettings,
+src/main/ipc.ts:17:  resetUserCodeInSettings,
+src/main/ipc.ts:18:  toSettingsSafeView,
+src/main/ipc.ts:19:  updateUserInSettings,
+src/main/ipc.ts:20:  type SettingsSafeView
+src/main/ipc.ts:27:export type ShellInfoProvider = () => Pick<ShellInfo, "qrVisible">;
+src/main/ipc.ts:29:export interface SettingsIpcOptions {
+src/main/ipc.ts:32:  readonly onSettingsClosed: () => void;
+src/main/ipc.ts:33:  readonly onSettingsOpened: () => void;
+src/main/ipc.ts:35:  readonly repository: SettingsRepository;
+src/main/ipc.ts:49:type SettingsViewResponse =
+src/main/ipc.ts:50:  | { readonly ok: true; readonly settings: SettingsSafeView }
+src/main/ipc.ts:57:type SettingsLoadResponse =
+src/main/ipc.ts:58:  | { readonly ok: true; readonly settings: Settings }
+src/main/ipc.ts:71:      qrVisible: state.qrVisible
+src/main/ipc.ts:76:export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
+src/main/ipc.ts:80:    const loadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:87:      isFirstRun: isFirstRunSettings(loadResult.settings),
+src/main/ipc.ts:99:      const initialLoadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:105:      if (!isFirstRunSettings(initialLoadResult.settings)) {
+src/main/ipc.ts:109:      const result = createSettingsFromFirstRunSetup(payload);
+src/main/ipc.ts:115:      const finalLoadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:121:      if (!isFirstRunSettings(finalLoadResult.settings)) {
+src/main/ipc.ts:135:    IPC_CHANNELS.openSettings,
+src/main/ipc.ts:137:      const loadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:148:      options.onSettingsOpened();
+src/main/ipc.ts:154:  ipcMain.handle(IPC_CHANNELS.closeSettings, (event: IpcMainInvokeEvent): ActionResponse => {
+src/main/ipc.ts:156:    options.onSettingsClosed();
+src/main/ipc.ts:162:    IPC_CHANNELS.getSettingsView,
+src/main/ipc.ts:163:    (event: IpcMainInvokeEvent): SettingsViewResponse => {
+src/main/ipc.ts:168:      const loadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:176:        settings: toSettingsSafeView(loadResult.settings)
+src/main/ipc.ts:182:    IPC_CHANNELS.saveSettings,
+src/main/ipc.ts:184:      saveSettingsMutation(event, options, (settings) => applySettingsPatch(settings, payload), true)
+src/main/ipc.ts:190:      saveSettingsMutation(event, options, (settings) => addUserToSettings(settings, payload), false)
+src/main/ipc.ts:196:      saveSettingsMutation(event, options, (settings) => updateUserInSettings(settings, payload), false)
+src/main/ipc.ts:202:      saveSettingsMutation(event, options, (settings) => deleteUserFromSettings(settings, payload), false)
+src/main/ipc.ts:208:      saveSettingsMutation(event, options, (settings) => resetUserCodeInSettings(settings, payload), false)
+src/main/ipc.ts:214:      const loadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:236:const saveSettingsMutation = async (
+src/main/ipc.ts:238:  options: SettingsIpcOptions,
+src/main/ipc.ts:239:  mutate: (settings: Settings) => ValidationResult<Settings>,
+src/main/ipc.ts:246:  const loadResult = loadSettingsForIpc(options.repository);
+src/main/ipc.ts:252:  const currentSettings = loadResult.settings;
+src/main/ipc.ts:253:  const result = mutate(currentSettings);
+src/main/ipc.ts:261:  if (reloadQrUrl && result.value.qrUrl !== currentSettings.qrUrl) {
+src/main/ipc.ts:268:const loadSettingsForIpc = (repository: SettingsRepository): SettingsLoadResponse => {
+src/main/ipc.ts:275:    if (error instanceof SettingsParseError) {
+src/renderer/lock/LockScreen.tsx:4:  readonly onOpenSettings: () => void;
+src/renderer/lock/LockScreen.tsx:7:export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => {
+src/renderer/lock/LockScreen.tsx:83:            <button className="button button--ghost" disabled={isSubmitting} onClick={onOpenSettings} type="button">
+src/renderer/App.tsx:7:import { SettingsView } from "./settings/SettingsView";
+src/renderer/App.tsx:39:        setState(createLockedFallbackState());
+src/renderer/App.tsx:79:            onOpenSettings={() => {
+src/renderer/App.tsx:88:        <SettingsView
+src/renderer/App.tsx:101:const createLockedFallbackState = (): StateSnapshot => ({
+src/renderer/App.tsx:104:  qrVisible: false,
+src/renderer/settings/AdminGate.tsx:27:    void window.qrGuard.openSettings(adminCode.trim())
+src/main/lock-controller.test.ts:11:import { createDefaultSettings, type Settings, type SettingsRepository } from "../core/settings-repo";
+src/main/lock-controller.test.ts:16:class MemorySettingsRepository implements SettingsRepository {
+src/main/lock-controller.test.ts:17:  readonly savedSettings: Settings[] = [];
+src/main/lock-controller.test.ts:19:  constructor(private settings: Settings) {}
+src/main/lock-controller.test.ts:21:  load(): Settings {
+src/main/lock-controller.test.ts:25:  save(settings: Settings): void {
+src/main/lock-controller.test.ts:27:    this.savedSettings.push(settings);
+src/main/lock-controller.test.ts:76:    const harness = createHarness({ unlockDurationOverrideSeconds: 60 });
+src/main/lock-controller.test.ts:115:      unlockDurationOverrideSeconds: () => {
+src/main/lock-controller.test.ts:150:    expect(harness.controller.getState().qrVisible).toBe(true);
+src/main/lock-controller.test.ts:175:    expect(harness.controller.getState().qrVisible).toBe(false);
+src/main/lock-controller.test.ts:205:    expect(harness.controller.getState().qrVisible).toBe(false);
+src/main/lock-controller.test.ts:227:    expect(harness.controller.getState().qrVisible).toBe(true);
+src/main/lock-controller.test.ts:247:    expect(harness.controller.getState().qrVisible).toBe(false);
+src/main/lock-controller.test.ts:262:      unlockDurationOverrideSeconds: 60
+src/main/lock-controller.test.ts:276:    expect(harness.controller.getState().qrVisible).toBe(true);
+src/main/lock-controller.test.ts:316:      unlockDurationOverrideSeconds: 60
+src/main/lock-controller.test.ts:379:  readonly loginDetection?: Settings["loginDetection"];
+src/main/lock-controller.test.ts:383:  readonly unlockDurationOverrideSeconds?: number | (() => number);
+src/main/lock-controller.test.ts:391:  const repository = new MemorySettingsRepository(createSettingsWithUser(settingsOverrides));
+src/main/lock-controller.test.ts:400:  const overrideSeconds = options.unlockDurationOverrideSeconds;
+src/main/lock-controller.test.ts:402:    appVersion: "test-version",
+src/main/lock-controller.test.ts:414:      setQrVisible: (visible: boolean): void => {
+src/main/lock-controller.test.ts:426:  } satisfies Omit<LockControllerOptions, "unlockDurationOverrideSeconds">;
+src/main/lock-controller.test.ts:432:          get unlockDurationOverrideSeconds(): number {
+src/main/lock-controller.test.ts:440:            unlockDurationOverrideSeconds: overrideSeconds
+src/main/lock-controller.test.ts:453:const createSettingsWithUser = (
+src/main/lock-controller.test.ts:456:    readonly loginDetection?: Settings["loginDetection"];
+src/main/lock-controller.test.ts:458:): Settings => {
+src/main/lock-controller.test.ts:461:  const defaults = createDefaultSettings();
+src/core/settings-validation.test.ts:5:  createDefaultSettings,
+src/core/settings-validation.test.ts:10:  addUserToSettings,
+src/core/settings-validation.test.ts:11:  createSettingsFromFirstRunSetup,
+src/core/settings-validation.test.ts:12:  resetUserCodeInSettings,
+src/core/settings-validation.test.ts:13:  updateUserInSettings
+src/core/settings-validation.test.ts:17:  it("rejects first-run setup when required fields are missing", () => {
+src/core/settings-validation.test.ts:26:    const result = createSettingsFromFirstRunSetup(payload);
+src/core/settings-validation.test.ts:52:    const result = createSettingsFromFirstRunSetup(payload);
+src/core/settings-validation.test.ts:66:        createSettingsFromFirstRunSetup({
+src/core/settings-validation.test.ts:75:        addUserToSettings(settingsWithUser("staff01"), {
+src/core/settings-validation.test.ts:83:        updateUserInSettings(settingsWithUser("staff01"), {
+src/core/settings-validation.test.ts:112:    const result = createSettingsFromFirstRunSetup(payload);
+src/core/settings-validation.test.ts:128:      unlockDurationSeconds: 999_999_999,
+src/core/settings-validation.test.ts:133:    const result = createSettingsFromFirstRunSetup(payload);
+src/core/settings-validation.test.ts:140:    expect(result.value.unlockDurationSeconds).toBe(MAX_UNLOCK_DURATION_SECONDS);
+src/core/settings-validation.test.ts:146:    const setupResult = createSettingsFromFirstRunSetup({
+src/core/settings-validation.test.ts:163:    const resetResult = resetUserCodeInSettings(setupResult.value, {
+src/core/settings-validation.test.ts:189:      ...createDefaultSettings(),
+src/core/settings-validation.test.ts:194:    const result = addUserToSettings(settings, { code: "123", userId: "staff02" });
+src/core/settings-validation.test.ts:207:      ...createDefaultSettings(),
+src/core/settings-validation.test.ts:212:    const result = resetUserCodeInSettings(settings, { code: "123", userId: "staff01" });
+src/core/settings-validation.test.ts:224:    const settings = createDefaultSettings();
+src/core/settings-validation.test.ts:227:    const result = createSettingsFromFirstRunSetup({
+src/core/settings-validation.test.ts:245:  ...createDefaultSettings(),
+src/renderer/settings/UserManagement.tsx:3:import type { SettingsSafeUserView } from "../../core/settings-validation";
+src/renderer/settings/UserManagement.tsx:9:  readonly users: readonly SettingsSafeUserView[];
+src/renderer/settings/UserManagement.tsx:105:  readonly user: SettingsSafeUserView;
+src/core/state-machine.ts:10:  readonly qrVisible: boolean;
+src/core/state-machine.ts:89:export const openSettings = (state: GuardState): GuardState => {
+src/core/state-machine.ts:101:export const closeSettings = (state: GuardState): GuardState => {
+src/main/views.ts:18:  readonly setQrVisible: (visible: boolean) => void;
+src/main/views.ts:19:  readonly isQrVisible: () => boolean;
+src/main/views.ts:53:  qrVisible: boolean
+src/main/views.ts:59:    qrVisible
+src/main/views.ts:105:    applyFullWindowLayout(window, qrView, controlView, qrView.getVisible());
+src/main/views.ts:117:  const setQrVisible = (visible: boolean): void => {
+src/main/views.ts:118:    qrView.setVisible(visible);
+src/main/views.ts:126:  const isQrVisible = (): boolean => qrView.getVisible();
+src/main/views.ts:130:    isQrVisible,
+src/main/views.ts:133:    setQrVisible,
+src/core/shell-config.ts:10:  closeSettings: "qr-guard:close-settings",
+src/core/shell-config.ts:15:  getSettingsView: "qr-guard:get-settings-view",
+src/core/shell-config.ts:20:  openSettings: "qr-guard:open-settings",
+src/core/shell-config.ts:23:  saveSettings: "qr-guard:save-settings",
+src/core/shell-config.ts:32:  readonly qrVisible: boolean;
+src/core/admin-session.test.ts:18:  it("is invalid once now exceeds the timeout window", () => {
+src/main/settings-adapters.ts:18:import type { Sealer, SettingsStore } from "../core/settings-repo";
+src/main/settings-adapters.ts:35:export const createElectronSettingsStore = (): SettingsStore =>
+src/main/settings-adapters.ts:36:  createFileSettingsStore(path.join(app.getPath("userData"), SETTINGS_FILE_NAME));
+src/main/settings-adapters.ts:38:export const createFileSettingsStore = (filePath: string): SettingsStore => ({
+src/core/settings-validation-types.ts:1:import type { LoginDetectionSettings } from "./settings-repo";
+src/core/settings-validation-types.ts:19:  readonly loginDetection: LoginDetectionSettings;
+src/core/settings-validation-types.ts:21:  readonly unlockDurationSeconds: number;
+src/core/settings-validation-types.ts:25:export interface SettingsPatchInput {
+src/core/settings-validation-types.ts:27:  readonly loginDetection: LoginDetectionSettings;
+src/core/settings-validation-types.ts:29:  readonly unlockDurationSeconds: number;
+src/core/settings-validation-types.ts:32:export interface SettingsSafeUserView {
+src/core/settings-validation-types.ts:37:export interface SettingsSafeView {
+src/core/settings-validation-types.ts:39:  readonly loginDetection: LoginDetectionSettings;
+src/core/settings-validation-types.ts:41:  readonly unlockDurationSeconds: number;
+src/core/settings-validation-types.ts:42:  readonly users: readonly SettingsSafeUserView[];
+src/renderer/settings/FirstRunSetup.tsx:13:  const [unlockDurationSeconds, setUnlockDurationSeconds] = useState("10");
+src/renderer/settings/FirstRunSetup.tsx:42:      unlockDurationSeconds,
+src/renderer/settings/FirstRunSetup.tsx:114:                  setUnlockDurationSeconds(event.target.value);
+src/renderer/settings/FirstRunSetup.tsx:117:                value={unlockDurationSeconds}
+src/core/settings-validation-primitives.ts:1:import type { LoginDetectionSettings } from "./settings-repo";
+src/core/settings-validation-primitives.ts:66:export const readDurationSeconds = (
+src/core/settings-validation-primitives.ts:95:  fallback: LoginDetectionSettings,
+src/core/settings-validation-primitives.ts:97:): LoginDetectionSettings => {
+src/renderer/settings/first-run-model.ts:23:  readonly unlockDurationSeconds: string;
+src/renderer/settings/first-run-model.ts:39:  const unlockSeconds = parseSeconds(input.unlockDurationSeconds);
+src/renderer/settings/first-run-model.ts:104:      unlockDurationSeconds: unlockSeconds,
+src/renderer/settings/SettingsView.tsx:3:import type { SettingsSafeView } from "../../core/settings-validation";
+src/renderer/settings/SettingsView.tsx:10:interface SettingsViewProps {
+src/renderer/settings/SettingsView.tsx:14:export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
+src/renderer/settings/SettingsView.tsx:15:  const [settings, setSettings] = useState<SettingsSafeView | null>(null);
+src/renderer/settings/SettingsView.tsx:17:  const [unlockDurationSeconds, setUnlockDurationSeconds] = useState("10");
+src/renderer/settings/SettingsView.tsx:26:  const lockSettings = useCallback((): void => {
+src/renderer/settings/SettingsView.tsx:27:    void window.qrGuard.closeSettings().then(onClose, onClose);
+src/renderer/settings/SettingsView.tsx:30:  const loadSettings = useCallback(async (): Promise<void> => {
+src/renderer/settings/SettingsView.tsx:31:    const response = await window.qrGuard.getSettingsView();
+src/renderer/settings/SettingsView.tsx:38:    const nextSettings = response.settings;
+src/renderer/settings/SettingsView.tsx:39:    setSettings(nextSettings);
+src/renderer/settings/SettingsView.tsx:40:    setQrUrl(nextSettings.qrUrl);
+src/renderer/settings/SettingsView.tsx:41:    setUnlockDurationSeconds(String(nextSettings.unlockDurationSeconds));
+src/renderer/settings/SettingsView.tsx:42:    setIdleAutoLockSeconds(String(nextSettings.idleAutoLockSeconds));
+src/renderer/settings/SettingsView.tsx:43:    setLoginUrlPattern(nextSettings.loginDetection.loginUrlPattern);
+src/renderer/settings/SettingsView.tsx:44:    setLoggedInUrlPattern(nextSettings.loginDetection.loggedInUrlPattern);
+src/renderer/settings/SettingsView.tsx:45:    setTitleContains(nextSettings.loginDetection.titleContains);
+src/renderer/settings/SettingsView.tsx:49:    void loadSettings().catch(() => {
+src/renderer/settings/SettingsView.tsx:52:  }, [loadSettings]);
+src/renderer/settings/SettingsView.tsx:55:    void window.qrGuard.closeSettings().then(undefined, () => undefined);
+src/renderer/settings/SettingsView.tsx:58:  const saveSettings = (event: SyntheticEvent<HTMLFormElement>): void => {
+src/renderer/settings/SettingsView.tsx:61:    const unlockSeconds = parseSeconds(unlockDurationSeconds);
+src/renderer/settings/SettingsView.tsx:63:    const validationErrors = validateSettingsForm(qrUrl, unlockSeconds, idleSeconds);
+src/renderer/settings/SettingsView.tsx:71:    void window.qrGuard.saveSettings({
+src/renderer/settings/SettingsView.tsx:79:      unlockDurationSeconds: unlockSeconds
+src/renderer/settings/SettingsView.tsx:89:        await loadSettings();
+src/renderer/settings/SettingsView.tsx:107:          <button className="button button--ghost" disabled={isBusy} onClick={lockSettings} type="button">
+src/renderer/settings/SettingsView.tsx:114:        <form className="form-grid" onSubmit={saveSettings}>
+src/renderer/settings/SettingsView.tsx:137:                  setUnlockDurationSeconds(event.target.value);
+src/renderer/settings/SettingsView.tsx:140:                value={unlockDurationSeconds}
+src/renderer/settings/SettingsView.tsx:199:        {settings === null ? null : <UserManagement onChanged={loadSettings} users={settings.users} />}
+src/renderer/settings/SettingsView.tsx:216:const validateSettingsForm = (
+src/renderer/settings/first-run-model.test.ts:12:  unlockDurationSeconds: "10",
+
+$ renderer JSX literal English UI-word grep
+no renderer JSX literal English UI-word matches

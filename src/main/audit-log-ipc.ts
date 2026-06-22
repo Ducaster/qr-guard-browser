@@ -49,7 +49,7 @@ export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
       const exportFormat = readExportFormat(format);
 
       if (exportFormat === null) {
-        return errorResponse(["Audit export format is invalid."]);
+        return errorResponse(["인증 기록 내보내기 형식이 올바르지 않습니다."]);
       }
 
       try {
@@ -57,11 +57,11 @@ export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
         const result = options.auditLogStore.read();
         const data = exportFormat === "jsonl" ? toJsonl(result.events) : toCsv(result.events);
         const saveResult = await dialog.showSaveDialog({
-          defaultPath: `qr-guard-audit-log.${exportFormat}`,
+          defaultPath: `인증-기록.${exportFormat}`,
           filters: [
             {
               extensions: [exportFormat],
-              name: exportFormat === "jsonl" ? "JSON Lines" : "CSV"
+              name: exportFormat === "jsonl" ? "JSONL" : "CSV"
             }
           ]
         });
@@ -73,14 +73,14 @@ export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
         const filePath = readSaveFilePath(saveResult.filePath);
 
         if (filePath === null) {
-          return errorResponse(["Export path is unavailable."]);
+          return errorResponse(["내보내기 경로를 사용할 수 없습니다."]);
         }
 
         fs.writeFileSync(filePath, data, { encoding: "utf8", mode: 0o600 });
 
         return { canceled: false, ok: true };
       } catch {
-        return errorResponse(["Audit log could not be exported."]);
+        return errorResponse(["인증 기록을 내보낼 수 없습니다."]);
       }
     }
   );
@@ -108,7 +108,7 @@ const readSaveFilePath = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
 
 const unauthorizedResponse = (): { readonly errors: readonly string[]; readonly ok: false } =>
-  errorResponse(["Admin authorization is required."]);
+  errorResponse(["관리자 인증이 필요합니다."]);
 
 const errorResponse = (
   errors: readonly string[]

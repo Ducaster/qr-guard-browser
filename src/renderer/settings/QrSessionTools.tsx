@@ -29,16 +29,16 @@ export const QrSessionTools = ({
     void window.qrGuard.clearQrSession(clearAdminCode.trim())
       .then((response) => {
         if (!response.ok) {
-          onSetErrors(response.errors ?? ["QR session could not be cleared."]);
+          onSetErrors(response.errors ?? ["QR 세션을 초기화할 수 없습니다."]);
           return;
         }
 
         onSetErrors([]);
-        onSetMessage("QR session cleared.");
+        onSetMessage("QR 세션이 초기화되었습니다.");
         setClearAdminCode("");
       })
       .catch(() => {
-        onSetErrors(["QR session could not be cleared."]);
+        onSetErrors(["QR 세션을 초기화할 수 없습니다."]);
       })
       .finally(() => {
         onSetBusy(false);
@@ -46,13 +46,13 @@ export const QrSessionTools = ({
   };
 
   return (
-    <section className="form-section" aria-label="QR session">
+    <section className="form-section" aria-label="QR 세션">
       <div className="section-heading">
-        <h2>QR session</h2>
+        <h2>QR 세션</h2>
       </div>
       <div className="inline-form">
         <label className="field">
-          <span>Admin code</span>
+          <span>관리자 코드</span>
           <input
             data-testid="clear-session-admin-code"
             disabled={isBusy}
@@ -64,7 +64,7 @@ export const QrSessionTools = ({
           />
         </label>
         <button className="button button--danger" disabled={isBusy} onClick={clearQrSession} type="button">
-          Clear QR session
+          QR 세션 초기화
         </button>
       </div>
     </section>

@@ -9,7 +9,7 @@ export const readHttpUrl = (
   const value = readTrimmedString(record, key);
 
   if (value.length === 0) {
-    errors.push("QR URL is required.");
+    errors.push("QR 사이트 주소를 입력하세요.");
     return "";
   }
 
@@ -17,14 +17,14 @@ export const readHttpUrl = (
     const parsedUrl = new URL(value);
 
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-      errors.push("QR URL must be an http or https URL.");
+      errors.push("QR 사이트 주소는 http 또는 https URL이어야 합니다.");
       return "";
     }
 
     return value;
   } catch (error: unknown) {
     if (error instanceof TypeError) {
-      errors.push("QR URL must be a valid URL.");
+      errors.push("QR 사이트 주소가 올바르지 않습니다.");
       return "";
     }
 
@@ -42,7 +42,7 @@ export const readRequiredCode = (
   const value = readTrimmedString(record, key);
 
   if (value.length < minLength) {
-    errors.push(`${label} must be at least ${String(minLength)} characters.`);
+    errors.push(`${label}는 최소 ${String(minLength)}자 이상이어야 합니다.`);
   }
 
   return value;
@@ -57,7 +57,7 @@ export const readRequiredString = (
   const value = readTrimmedString(record, key);
 
   if (value.length === 0) {
-    errors.push(`${label} is required.`);
+    errors.push(`${label}을 입력하세요.`);
   }
 
   return value;
@@ -78,12 +78,12 @@ export const readDurationSeconds = (
   const value = record[key];
 
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    errors.push(`${label} must be a number.`);
+    errors.push(`${label}은 숫자여야 합니다.`);
     return fallback;
   }
 
   if (value < 1) {
-    errors.push(`${label} must be at least 1 second.`);
+    errors.push(`${label}은 최소 1초 이상이어야 합니다.`);
     return fallback;
   }
 
@@ -100,7 +100,7 @@ export const readLoginDetection = (
   }
 
   if (!isRecord(payload)) {
-    errors.push("Login detection payload is invalid.");
+    errors.push("로그인 감지 데이터가 올바르지 않습니다.");
     return fallback;
   }
 

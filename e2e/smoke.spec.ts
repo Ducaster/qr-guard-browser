@@ -37,8 +37,8 @@ test.describe("secure Electron shell", () => {
       const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
 
       // Then
-      await expect(controlPage.getByText("QR Guard Browser")).toBeVisible();
-      await expect(controlPage.getByRole("heading", { name: "First-run setup" })).toBeVisible();
+      await expect(controlPage.getByText("QR 가드 브라우저")).toBeVisible();
+      await expect(controlPage.getByRole("heading", { name: "초기 설정" })).toBeVisible();
       expect(qrPage.url()).toBe(`${fixtureServer.baseUrl}/login`);
       expect(nodeGlobals).toEqual({
         moduleType: "undefined",
@@ -101,7 +101,7 @@ test.describe("secure Electron shell", () => {
       // Then
       const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
       expect(shellInfo.qrVisible).toBe(false);
-      await expect(controlPage.getByRole("button", { name: "Settings" })).toBeVisible();
+      await expect(controlPage.getByRole("button", { name: "설정" })).toBeVisible();
     } finally {
       await closeLaunchedApp(launchedApp);
     }
@@ -132,7 +132,7 @@ test.describe("secure Electron shell", () => {
 
       // Then
       await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
-      await expect(controlPage.getByTestId("unlock-countdown")).toContainText("s");
+      await expect(controlPage.getByTestId("unlock-countdown")).toContainText("초");
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
       await expect.poll(() => getQrVisible(controlPage), { timeout: 8_000 }).toBe(false);
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
@@ -164,7 +164,7 @@ test.describe("secure Electron shell", () => {
       await controlPage.getByTestId("unlock-submit").click();
 
       // Then
-      await expect(controlPage.getByTestId("unlock-errors")).toContainText("incorrect");
+      await expect(controlPage.getByTestId("unlock-errors")).toContainText("올바르지 않습니다");
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       expect(await getQrVisible(controlPage)).toBe(false);
       const auditLogPath = getAuditLogPath(launchedApp.userDataDir);
@@ -185,12 +185,12 @@ test.describe("secure Electron shell", () => {
       await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
 
       // When
-      await controlPage.getByRole("button", { name: "Settings" }).click();
+      await controlPage.getByRole("button", { name: "설정" }).click();
       await controlPage.getByTestId("admin-code-input").fill("9999");
-      await controlPage.getByRole("button", { name: "Open settings" }).click();
+      await controlPage.getByRole("button", { name: "설정 열기" }).click();
 
       // Then
-      await expect(controlPage.getByTestId("admin-errors")).toContainText("Admin code is incorrect.");
+      await expect(controlPage.getByTestId("admin-errors")).toContainText("관리자 코드가 올바르지 않습니다.");
       await expect(controlPage.getByTestId("settings-qr-url")).toHaveCount(0);
     } finally {
       await closeLaunchedApp(launchedApp);

@@ -27,20 +27,20 @@ export const readFirstRunSetupInput = (
   payload: unknown
 ): ValidationResult<FirstRunSetupInput> => {
   if (!isRecord(payload)) {
-    return fail(["Settings payload is invalid."]);
+    return fail(["설정 데이터가 올바르지 않습니다."]);
   }
 
   const defaults = createDefaultSettings();
   const errors: string[] = [];
   const qrUrl = readHttpUrl(payload, "qrUrl", errors);
-  const adminCode = readRequiredCode(payload, "adminCode", "Admin code", errors);
+  const adminCode = readRequiredCode(payload, "adminCode", "관리자 코드", errors);
   const usersResult = readUserCodeInputs(payload["users"]);
   const unlockDurationSeconds = readDurationSeconds(
     payload,
     "unlockDurationSeconds",
     defaults.unlockDurationSeconds,
     MAX_UNLOCK_DURATION_SECONDS,
-    "Unlock duration",
+    "노출 시간",
     errors
   );
   const idleAutoLockSeconds = readDurationSeconds(
@@ -48,7 +48,7 @@ export const readFirstRunSetupInput = (
     "idleAutoLockSeconds",
     defaults.idleAutoLockSeconds,
     MAX_IDLE_AUTO_LOCK_SECONDS,
-    "Idle auto-lock",
+    "유휴 자동잠금",
     errors
   );
   const loginDetection = readLoginDetection(payload["loginDetection"], defaults.loginDetection, errors);
@@ -74,7 +74,7 @@ export const readSettingsPatchInput = (
   payload: unknown
 ): ValidationResult<SettingsPatchInput> => {
   if (!isRecord(payload)) {
-    return fail(["Settings payload is invalid."]);
+    return fail(["설정 데이터가 올바르지 않습니다."]);
   }
 
   const errors: string[] = [];
@@ -86,7 +86,7 @@ export const readSettingsPatchInput = (
     "unlockDurationSeconds",
     settings.unlockDurationSeconds,
     MAX_UNLOCK_DURATION_SECONDS,
-    "Unlock duration",
+    "노출 시간",
     errors
   );
   const idleAutoLockSeconds = readDurationSeconds(
@@ -94,7 +94,7 @@ export const readSettingsPatchInput = (
     "idleAutoLockSeconds",
     settings.idleAutoLockSeconds,
     MAX_IDLE_AUTO_LOCK_SECONDS,
-    "Idle auto-lock",
+    "유휴 자동잠금",
     errors
   );
   const loginDetection = Object.hasOwn(payload, "loginDetection")
@@ -108,49 +108,49 @@ export const readSettingsPatchInput = (
 
 export const readSingleUserCodeInput = (payload: unknown): ValidationResult<UserCodeInput> => {
   if (!isRecord(payload)) {
-    return fail(["User payload is invalid."]);
+    return fail(["지역 데이터가 올바르지 않습니다."]);
   }
 
   const errors: string[] = [];
-  const userId = readRequiredString(payload, "userId", "User ID", errors);
-  const code = readRequiredCode(payload, "code", "User code", errors, USER_CODE_MIN_LENGTH);
+  const userId = readRequiredString(payload, "userId", "지역", errors);
+  const code = readRequiredCode(payload, "code", "인증 코드", errors, USER_CODE_MIN_LENGTH);
 
   return errors.length > 0 ? fail(errors) : ok({ code, userId });
 };
 
 export const readUserIdPayload = (payload: unknown): ValidationResult<string> => {
   if (!isRecord(payload)) {
-    return fail(["User payload is invalid."]);
+    return fail(["지역 데이터가 올바르지 않습니다."]);
   }
 
   const errors: string[] = [];
-  const userId = readRequiredString(payload, "userId", "User ID", errors);
+  const userId = readRequiredString(payload, "userId", "지역", errors);
 
   return errors.length > 0 ? fail(errors) : ok(userId);
 };
 
 export const readRenameUserInput = (payload: unknown): ValidationResult<UserRenameInput> => {
   if (!isRecord(payload)) {
-    return fail(["User payload is invalid."]);
+    return fail(["지역 데이터가 올바르지 않습니다."]);
   }
 
   const errors: string[] = [];
-  const userId = readRequiredString(payload, "userId", "User ID", errors);
-  const nextUserId = readRequiredString(payload, "nextUserId", "Updated user ID", errors);
+  const userId = readRequiredString(payload, "userId", "지역", errors);
+  const nextUserId = readRequiredString(payload, "nextUserId", "변경할 지역 이름", errors);
 
   return errors.length > 0 ? fail(errors) : ok({ nextUserId, userId });
 };
 
 const readUserCodeInputs = (payload: unknown): ValidationResult<readonly UserCodeInput[]> => {
   if (!Array.isArray(payload) || payload.length === 0) {
-    return fail(["At least one user is required."]);
+    return fail(["지역은 최소 1개 이상 필요합니다."]);
   }
 
   const errors: string[] = [];
   const users = payload.flatMap((item) => readUserCodeItem(item, errors));
 
   if (hasDuplicateUserIds(users)) {
-    errors.push("Duplicate user IDs are not allowed.");
+    errors.push("지역 이름은 중복될 수 없습니다.");
   }
 
   return errors.length > 0 ? fail(errors) : ok(users);
@@ -158,12 +158,12 @@ const readUserCodeInputs = (payload: unknown): ValidationResult<readonly UserCod
 
 const readUserCodeItem = (item: unknown, errors: string[]): readonly UserCodeInput[] => {
   if (!isRecord(item)) {
-    errors.push("User payload is invalid.");
+    errors.push("지역 데이터가 올바르지 않습니다.");
     return [];
   }
 
-  const userId = readRequiredString(item, "userId", "User ID", errors);
-  const code = readRequiredCode(item, "code", "User code", errors, USER_CODE_MIN_LENGTH);
+  const userId = readRequiredString(item, "userId", "지역", errors);
+  const code = readRequiredCode(item, "code", "인증 코드", errors, USER_CODE_MIN_LENGTH);
 
   return userId.length > 0 && code.length >= USER_CODE_MIN_LENGTH ? [{ code, userId }] : [];
 };

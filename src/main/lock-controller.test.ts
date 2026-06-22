@@ -83,7 +83,7 @@ describe("lock controller unlock submission", () => {
     // Then
     expect(unlock.ok).toBe(true);
     expect(result).toEqual({
-      errors: ["Not in locked state."],
+      errors: ["현재 잠긴 상태가 아닙니다."],
       ok: false,
       retryAfterMs: null
     });
@@ -99,7 +99,7 @@ describe("lock controller unlock submission", () => {
 
     // Then
     expect(result).toEqual({
-      errors: ["User ID and code are required."],
+      errors: ["지역과 인증 코드가 필요합니다."],
       ok: false,
       retryAfterMs: null
     });

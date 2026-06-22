@@ -31,9 +31,9 @@ describe("settings validation", () => {
       throw new Error("Expected setup validation to fail.");
     }
     expect(result.errors).toEqual([
-      "QR URL is required.",
-      "Admin code must be at least 4 characters.",
-      "At least one user is required."
+      "QR 사이트 주소를 입력하세요.",
+      "관리자 코드는 최소 4자 이상이어야 합니다.",
+      "지역은 최소 1개 이상 필요합니다."
     ]);
   });
 
@@ -56,7 +56,7 @@ describe("settings validation", () => {
     if (result.ok) {
       throw new Error("Expected duplicate user validation to fail.");
     }
-    expect(result.errors).toEqual(["Duplicate user IDs are not allowed."]);
+    expect(result.errors).toEqual(["지역 이름은 중복될 수 없습니다."]);
   });
 
   it.each([
@@ -87,7 +87,7 @@ describe("settings validation", () => {
     }
   ])("rejects the reserved login-mode user ID during $action", ({ run }) => {
     // Given
-    const expectedErrors = ["login-mode is reserved and cannot be used as a user ID."];
+    const expectedErrors = ["login-mode는 예약된 값이라 지역으로 사용할 수 없습니다."];
 
     // When
     const result = run();
@@ -116,7 +116,7 @@ describe("settings validation", () => {
     if (result.ok) {
       throw new Error("Expected user code validation to fail.");
     }
-    expect(result.errors).toEqual(["User code must be at least 4 characters."]);
+    expect(result.errors).toEqual(["인증 코드는 최소 4자 이상이어야 합니다."]);
   });
 
   it("clamps duration values above the maximum caps during first-run setup", () => {
@@ -198,7 +198,7 @@ describe("settings validation", () => {
     if (result.ok) {
       throw new Error("Expected add-user validation to fail.");
     }
-    expect(result.errors).toEqual(["User code must be at least 4 characters."]);
+    expect(result.errors).toEqual(["인증 코드는 최소 4자 이상이어야 합니다."]);
   });
 
   it("rejects reset-user-code when the user code is shorter than the minimum", () => {
@@ -216,7 +216,7 @@ describe("settings validation", () => {
     if (result.ok) {
       throw new Error("Expected reset-code validation to fail.");
     }
-    expect(result.errors).toEqual(["User code must be at least 4 characters."]);
+    expect(result.errors).toEqual(["인증 코드는 최소 4자 이상이어야 합니다."]);
   });
 
   it("detects first run when the admin record has not been configured", () => {

@@ -30,7 +30,7 @@ describe("first-run setup form model", () => {
     if (result.ok) {
       throw new Error("Expected setup form validation to fail.");
     }
-    expect(result.errors).toEqual(["User code must be at least 4 characters."]);
+    expect(result.errors).toEqual(["인증 코드는 최소 4자 이상이어야 합니다."]);
   });
 
   it("returns a payload only when validation succeeds", () => {

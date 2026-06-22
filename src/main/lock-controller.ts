@@ -195,7 +195,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
     if (state !== "locked") {
       return {
-        errors: ["Not in locked state."],
+        errors: ["현재 잠긴 상태가 아닙니다."],
         ok: false,
         retryAfterMs: null
       };
@@ -203,7 +203,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
     if (userId.length === 0 || code.length === 0) {
       return {
-        errors: ["User ID and code are required."],
+        errors: ["지역과 인증 코드가 필요합니다."],
         ok: false,
         retryAfterMs: null
       };
@@ -213,7 +213,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
     if (!decision.allowed) {
       return {
-        errors: ["Too many failed attempts. Try again later."],
+        errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
         ok: false,
         retryAfterMs: decision.retryAfterMs ?? null
       };
@@ -223,7 +223,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     const user = settings.users.find((candidate) => candidate.userId === userId);
 
     if (user === undefined || !verifyCode(code, user.salt, user.hash)) {
-      return recordFailedUnlock(userId, nowMs, ["User ID or code is incorrect."]);
+      return recordFailedUnlock(userId, nowMs, ["지역 또는 인증 코드가 올바르지 않습니다."]);
     }
 
     lockoutState = recordAuthSuccess(lockoutState, userId);

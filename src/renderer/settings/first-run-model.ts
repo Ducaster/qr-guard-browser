@@ -45,26 +45,26 @@ export const validateSetupForm = (input: SetupValidationInput): SetupValidationR
   }));
 
   if (!isValidHttpUrl(input.qrUrl)) {
-    errors.push(input.qrUrl.trim().length === 0 ? "QR URL is required." : "QR URL must be valid.");
+    errors.push(input.qrUrl.trim().length === 0 ? "QR 사이트 주소를 입력하세요." : "QR 사이트 주소가 올바르지 않습니다.");
   }
 
   errors.push(...validateAdminCode(input.adminCode));
 
   if (unlockSeconds === null) {
-    errors.push("Unlock duration must be at least 1 second.");
+    errors.push("노출 시간은 최소 1초 이상이어야 합니다.");
   }
 
   if (idleSeconds === null) {
-    errors.push("Idle timeout must be at least 1 second.");
+    errors.push("유휴 자동잠금은 최소 1초 이상이어야 합니다.");
   }
 
   if (users.length === 0) {
-    errors.push("At least one user is required.");
+    errors.push("지역은 최소 1개 이상 필요합니다.");
   }
 
   for (const user of users) {
     if (user.userId.length === 0) {
-      errors.push("Each user needs a user ID.");
+      errors.push("각 지역 이름을 입력하세요.");
       break;
     }
   }
@@ -80,7 +80,7 @@ export const validateSetupForm = (input: SetupValidationInput): SetupValidationR
   }
 
   if (hasDuplicateValues(users.map((user) => user.userId))) {
-    errors.push("Duplicate user IDs are not allowed.");
+    errors.push("지역 이름은 중복될 수 없습니다.");
   }
 
   if (errors.length > 0 || unlockSeconds === null || idleSeconds === null) {

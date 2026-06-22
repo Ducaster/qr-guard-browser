@@ -57,10 +57,10 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
           return;
         }
 
-        setErrors(response.errors ?? ["Setup could not be saved."]);
+          setErrors(response.errors ?? ["초기 설정을 저장할 수 없습니다."]);
       })
       .catch(() => {
-        setErrors(["Setup could not be saved."]);
+        setErrors(["초기 설정을 저장할 수 없습니다."]);
       })
       .finally(() => {
         setIsSaving(false);
@@ -69,15 +69,15 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
 
   return (
     <main className="app-shell">
-      <section className="operator-panel setup-layout" aria-label="First-run setup">
+      <section className="operator-panel setup-layout" aria-label="초기 설정">
         <div className="panel-header">
-          <p className="eyebrow">QR Guard Browser</p>
-          <h1>First-run setup</h1>
+          <p className="eyebrow">QR 가드 브라우저</p>
+          <h1>초기 설정</h1>
         </div>
         <form className="form-grid" onSubmit={submit}>
           <div className="form-section">
             <label className="field">
-              <span>QR URL</span>
+              <span>QR 사이트 주소</span>
               <input
                 autoFocus
                 data-testid="setup-qr-url"
@@ -85,7 +85,6 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
                 onChange={(event) => {
                   setQrUrl(event.target.value);
                 }}
-                placeholder="https://example.com/qr"
                 type="url"
                 value={qrUrl}
               />
@@ -94,7 +93,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
 
           <div className="form-section form-section--two">
             <label className="field">
-              <span>Admin code</span>
+              <span>관리자 코드</span>
               <input
                 data-testid="setup-admin-code"
                 disabled={isSaving}
@@ -106,7 +105,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
               />
             </label>
             <label className="field">
-              <span>Unlock seconds</span>
+              <span>노출 시간(초)</span>
               <input
                 data-testid="setup-unlock-duration"
                 disabled={isSaving}
@@ -119,7 +118,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
               />
             </label>
             <label className="field">
-              <span>Idle seconds</span>
+              <span>유휴 자동잠금(초)</span>
               <input
                 data-testid="setup-idle-timeout"
                 disabled={isSaving}
@@ -134,10 +133,10 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
           </div>
 
           <fieldset className="form-section">
-            <legend>Login detection</legend>
+            <legend>로그인 감지</legend>
             <div className="form-section form-section--three">
               <label className="field">
-                <span>Login URL pattern</span>
+                <span>로그인 URL 패턴</span>
                 <input
                   data-testid="setup-login-pattern"
                   disabled={isSaving}
@@ -148,7 +147,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
                 />
               </label>
               <label className="field">
-                <span>Logged-in URL pattern</span>
+                <span>로그인 완료 URL 패턴</span>
                 <input
                   data-testid="setup-logged-in-pattern"
                   disabled={isSaving}
@@ -159,7 +158,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
                 />
               </label>
               <label className="field">
-                <span>Title contains</span>
+                <span>제목 포함 문구</span>
                 <input
                   data-testid="setup-title-contains"
                   disabled={isSaving}
@@ -173,12 +172,12 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
           </fieldset>
 
           <fieldset className="form-section">
-            <legend>Users</legend>
+            <legend>지역 관리</legend>
             <div className="user-stack">
               {users.map((user) => (
                 <div className="user-edit-row" key={user.rowId}>
                   <label className="field">
-                    <span>User ID</span>
+                    <span>지역</span>
                     <input
                       data-testid="setup-user-id"
                       disabled={isSaving}
@@ -189,7 +188,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
                     />
                   </label>
                   <label className="field">
-                    <span>User code</span>
+                    <span>인증 코드</span>
                     <input
                       data-testid="setup-user-code"
                       disabled={isSaving}
@@ -208,7 +207,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
                     }}
                     type="button"
                   >
-                    Remove
+                    삭제
                   </button>
                 </div>
               ))}
@@ -221,14 +220,14 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
               }}
               type="button"
             >
-              Add user
+              지역 추가
             </button>
           </fieldset>
 
           <ErrorList errors={errors} testId="setup-errors" />
           <div className="button-row button-row--end">
             <button className="button button--primary" data-testid="setup-submit" disabled={isSaving} type="submit">
-              Save setup
+              초기 설정 저장
             </button>
           </div>
         </form>

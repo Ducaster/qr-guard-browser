@@ -30,18 +30,18 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
     void window.qrGuard.addUser({ code: newCode.trim(), userId: newUserId.trim() })
       .then(async (response) => {
         if (!response.ok) {
-          setErrors(response.errors ?? ["User could not be added."]);
+          setErrors(response.errors ?? ["지역을 추가할 수 없습니다."]);
           return;
         }
 
         setNewUserId("");
         setNewCode("");
         setErrors([]);
-        setMessage("User added.");
+        setMessage("지역이 추가되었습니다.");
         await onChanged();
       })
       .catch(() => {
-        setErrors(["User could not be added."]);
+        setErrors(["지역을 추가할 수 없습니다."]);
       })
       .finally(() => {
         setIsBusy(false);
@@ -49,9 +49,9 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
   };
 
   return (
-    <section className="form-section" aria-label="Users">
+    <section className="form-section" aria-label="지역 관리">
       <div className="section-heading">
-        <h2>Users</h2>
+        <h2>지역 관리</h2>
       </div>
       <div className="user-stack">
         {users.map((user) => (
@@ -66,7 +66,7 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
       </div>
       <form className="inline-form" onSubmit={addUser}>
         <label className="field">
-          <span>User ID</span>
+          <span>지역</span>
           <input
             data-testid="settings-add-user-id"
             disabled={isBusy}
@@ -77,7 +77,7 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
           />
         </label>
         <label className="field">
-          <span>User code</span>
+          <span>인증 코드</span>
           <input
             data-testid="settings-add-user-code"
             disabled={isBusy}
@@ -89,7 +89,7 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
           />
         </label>
         <button className="button button--secondary" disabled={isBusy} type="submit">
-          Add user
+          지역 추가
         </button>
       </form>
       <Message text={message} />
@@ -115,7 +115,7 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
     void action()
       .then(async (response) => {
         if (!response.ok) {
-          setErrors(response.errors ?? ["User change could not be saved."]);
+          setErrors(response.errors ?? ["지역 변경사항을 저장할 수 없습니다."]);
           return;
         }
 
@@ -124,7 +124,7 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
         await onChanged();
       })
       .catch(() => {
-        setErrors(["User change could not be saved."]);
+        setErrors(["지역 변경사항을 저장할 수 없습니다."]);
       })
       .finally(() => {
         onSetBusy(false);
@@ -150,7 +150,7 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
       </div>
       <div className="inline-form">
         <label className="field">
-          <span>Rename</span>
+          <span>이름 변경</span>
           <input
             disabled={isBusy}
             onChange={(event) => {
@@ -172,10 +172,10 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
           }}
           type="button"
         >
-          Update
+          변경
         </button>
         <label className="field">
-          <span>New code</span>
+          <span>새 인증 코드</span>
           <input
             disabled={isBusy}
             onChange={(event) => {
@@ -193,7 +193,7 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
           }}
           type="button"
         >
-          Reset code
+          인증 코드 재설정
         </button>
         <button
           className="button button--danger"
@@ -203,7 +203,7 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
           }}
           type="button"
         >
-          Delete
+          삭제
         </button>
       </div>
       <ErrorList errors={errors} />
@@ -215,7 +215,7 @@ const validateNewUser = (userId: string, code: string): readonly string[] => {
   const errors: string[] = [];
 
   if (userId.trim().length === 0) {
-    errors.push("User ID is required.");
+    errors.push("지역을 입력하세요.");
   }
 
   errors.push(...validateUserCode(code));
@@ -225,14 +225,14 @@ const validateNewUser = (userId: string, code: string): readonly string[] => {
 
 const formatLastAuthenticated = (value: string | null): string => {
   if (value === null) {
-    return "Last authentication: none";
+    return "마지막 인증 시각: 없음";
   }
 
   const parsedDate = new Date(value);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return "Last authentication: invalid date";
+    return "마지막 인증 시각: 올바르지 않은 날짜";
   }
 
-  return `Last authentication: ${parsedDate.toLocaleString()}`;
+  return `마지막 인증 시각: ${parsedDate.toLocaleString("ko-KR")}`;
 };

@@ -32,10 +32,10 @@ export const AdminGate = ({ onAuthorized, onCancel }: AdminGateProps): JSX.Eleme
           return;
         }
 
-        setErrors(response.errors ?? ["Admin code is incorrect."]);
+        setErrors(response.errors ?? ["관리자 코드가 올바르지 않습니다."]);
       })
       .catch(() => {
-        setErrors(["Settings could not be opened."]);
+        setErrors(["설정을 열 수 없습니다."]);
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -44,14 +44,14 @@ export const AdminGate = ({ onAuthorized, onCancel }: AdminGateProps): JSX.Eleme
 
   return (
     <main className="app-shell app-shell--center">
-      <section className="operator-panel operator-panel--narrow" aria-label="Admin access">
+      <section className="operator-panel operator-panel--narrow" aria-label="관리자 인증">
         <div className="panel-header">
-          <p className="eyebrow">QR Guard Browser</p>
-          <h1>Admin access</h1>
+          <p className="eyebrow">QR 가드 브라우저</p>
+          <h1>관리자 인증</h1>
         </div>
         <form className="form-grid" onSubmit={submit}>
           <label className="field">
-            <span>Admin code</span>
+            <span>관리자 코드</span>
             <input
               autoFocus
               data-testid="admin-code-input"
@@ -66,10 +66,10 @@ export const AdminGate = ({ onAuthorized, onCancel }: AdminGateProps): JSX.Eleme
           <ErrorList errors={errors} testId="admin-errors" />
           <div className="button-row">
             <button className="button button--ghost" disabled={isSubmitting} onClick={onCancel} type="button">
-              Back
+              뒤로
             </button>
             <button className="button button--primary" disabled={isSubmitting} type="submit">
-              Open settings
+              설정 열기
             </button>
           </div>
         </form>

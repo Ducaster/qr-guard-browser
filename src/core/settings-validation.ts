@@ -95,7 +95,7 @@ export const addUserToSettings = (
   }
 
   if (settings.users.some((user) => user.userId === userResult.value.userId)) {
-    return fail(["Duplicate user IDs are not allowed."]);
+    return fail(["지역 이름은 중복될 수 없습니다."]);
   }
 
   return ok({
@@ -121,11 +121,11 @@ export const updateUserInSettings = (
   }
 
   if (!settings.users.some((user) => user.userId === userId)) {
-    return fail(["User was not found."]);
+    return fail(["지역을 찾을 수 없습니다."]);
   }
 
   if (settings.users.some((user) => user.userId !== userId && user.userId === nextUserId)) {
-    return fail(["Duplicate user IDs are not allowed."]);
+    return fail(["지역 이름은 중복될 수 없습니다."]);
   }
 
   return ok({
@@ -149,11 +149,11 @@ export const deleteUserFromSettings = (
   const users = settings.users.filter((user) => user.userId !== userIdResult.value);
 
   if (users.length === settings.users.length) {
-    return fail(["User was not found."]);
+    return fail(["지역을 찾을 수 없습니다."]);
   }
 
   if (users.length === 0) {
-    return fail(["At least one user is required."]);
+    return fail(["지역은 최소 1개 이상 필요합니다."]);
   }
 
   return ok({ ...settings, users });
@@ -170,7 +170,7 @@ export const resetUserCodeInSettings = (
   }
 
   if (!settings.users.some((user) => user.userId === userResult.value.userId)) {
-    return fail(["User was not found."]);
+    return fail(["지역을 찾을 수 없습니다."]);
   }
 
   return ok({
@@ -190,4 +190,4 @@ const toUserSettings = (user: UserCodeInput): UserSettings => ({
 });
 
 const reservedUserIdFailure = (): ValidationResult<never> =>
-  fail([`${LOGIN_MODE_AUDIT_USER_ID} is reserved and cannot be used as a user ID.`]);
+  fail([`${LOGIN_MODE_AUDIT_USER_ID}는 예약된 값이라 지역으로 사용할 수 없습니다.`]);

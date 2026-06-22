@@ -35,7 +35,7 @@ export const App = (): JSX.Element => {
           return;
         }
 
-        setError("Settings could not be read.");
+        setError("설정을 읽을 수 없습니다.");
         setState(createLockedFallbackState());
       });
 
@@ -109,10 +109,10 @@ const createLockedFallbackState = (): StateSnapshot => ({
 
 const LoadingView = (): JSX.Element => (
   <main className="app-shell app-shell--center">
-    <section className="operator-panel operator-panel--narrow" aria-label="Loading">
+    <section className="operator-panel operator-panel--narrow" aria-label="불러오는 중">
       <div className="panel-header">
-        <p className="eyebrow">QR Guard Browser</p>
-        <h1>Loading</h1>
+        <p className="eyebrow">QR 가드 브라우저</p>
+        <h1>불러오는 중</h1>
       </div>
     </section>
   </main>

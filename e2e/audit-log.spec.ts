@@ -47,8 +47,8 @@ test.describe("audit log settings view", () => {
       await expect(rows).toHaveCount(2);
       await expect(rows.filter({ hasText: "staff01" })).toHaveCount(1);
       await expect(rows.filter({ hasText: "staff02" })).toHaveCount(1);
-      await expect(controlPage.getByTestId("audit-last-auth-staff01")).not.toContainText("none");
-      await expect(controlPage.getByTestId("audit-last-auth-staff02")).not.toContainText("none");
+      await expect(controlPage.getByTestId("audit-last-auth-staff01")).not.toContainText("없음");
+      await expect(controlPage.getByTestId("audit-last-auth-staff02")).not.toContainText("없음");
     } finally {
       await closeLaunchedApp(launchedApp);
     }
@@ -56,21 +56,21 @@ test.describe("audit log settings view", () => {
 });
 
 const openSettings = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "설정" }).click();
   await page.getByTestId("admin-code-input").fill("1234");
-  await page.getByRole("button", { name: "Open settings" }).click();
+  await page.getByRole("button", { name: "설정 열기" }).click();
   await expect(page.getByTestId("settings-qr-url")).toBeVisible();
 };
 
 const addUser = async (page: Page, userId: string, code: string): Promise<void> => {
   await page.getByTestId("settings-add-user-id").fill(userId);
   await page.getByTestId("settings-add-user-code").fill(code);
-  await page.getByRole("button", { name: "Add user" }).click();
+  await page.getByRole("button", { name: "지역 추가" }).click();
   await expect(page.getByText(userId)).toBeVisible();
 };
 
 const lockSettings = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: "Lock settings" }).click();
+  await page.getByRole("button", { name: "설정 잠그기" }).click();
   await expect(page.getByTestId("locked-screen")).toBeVisible();
 };
 
@@ -78,7 +78,7 @@ const submitFailedUnlock = async (page: Page, userId: string, code: string): Pro
   await page.getByTestId("unlock-user-id").fill(userId);
   await page.getByTestId("unlock-code").fill(code);
   await page.getByTestId("unlock-submit").click();
-  await expect(page.getByTestId("unlock-errors")).toContainText("incorrect");
+  await expect(page.getByTestId("unlock-errors")).toContainText("올바르지 않습니다");
   await expect(page.getByTestId("locked-screen")).toBeVisible();
 };
 

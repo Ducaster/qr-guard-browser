@@ -22,11 +22,11 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
     void action()
       .then((response) => {
         if (!response.ok) {
-          setActionError(response.errors?.[0] ?? "Action failed.");
+          setActionError(response.errors?.[0] ?? "작업에 실패했습니다.");
         }
       })
       .catch(() => {
-        setActionError("Action failed.");
+        setActionError("작업에 실패했습니다.");
       });
   };
 
@@ -52,9 +52,9 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
     <main className="toolbar-shell" data-testid="unlock-toolbar">
       <div className="toolbar-status">
         <span className="toolbar-dot" aria-hidden="true" />
-        <strong>{isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "Unlocked"}</strong>
+        <strong>{isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "잠금 해제됨"}</strong>
         {isLoginMode ? (
-          <span data-testid="login-mode-indicator">Login page visible</span>
+          <span data-testid="login-mode-indicator">로그인 화면 표시 중</span>
         ) : (
           <span data-testid="unlock-countdown">{formatRemaining(remainingMs)}</span>
         )}
@@ -80,7 +80,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           }}
           type="button"
         >
-          Lock now
+          지금 잠그기
         </button>
       </div>
       {actionError.length > 0 ? (
@@ -94,8 +94,8 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
 
 const formatRemaining = (remainingMs: number | null): string => {
   if (remainingMs === null) {
-    return "Visible";
+    return "표시 중";
   }
 
-  return `${String(Math.ceil(remainingMs / 1_000))}s`;
+  return `${String(Math.ceil(remainingMs / 1_000))}초`;
 };

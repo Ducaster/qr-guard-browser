@@ -5,7 +5,7 @@ import { getAppName } from "./sanity";
 describe("getAppName", () => {
   it("returns the app name when the shell asks for identity", () => {
     // Given
-    const expectedAppName = "QR Guard Browser";
+    const expectedAppName = "QR 가드 브라우저";
 
     // When
     const actualAppName = getAppName();

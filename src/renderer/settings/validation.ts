@@ -29,12 +29,12 @@ export const isValidHttpUrl = (value: string): boolean => {
 
 export const validateAdminCode = (value: string): readonly string[] =>
   value.trim().length < ADMIN_CODE_MIN_LENGTH
-    ? [`Admin code must be at least ${String(ADMIN_CODE_MIN_LENGTH)} characters.`]
+    ? [`관리자 코드는 최소 ${String(ADMIN_CODE_MIN_LENGTH)}자 이상이어야 합니다.`]
     : [];
 
 export const validateUserCode = (value: string): readonly string[] =>
   value.trim().length < USER_CODE_MIN_LENGTH
-    ? [`User code must be at least ${String(USER_CODE_MIN_LENGTH)} characters.`]
+    ? [`인증 코드는 최소 ${String(USER_CODE_MIN_LENGTH)}자 이상이어야 합니다.`]
     : [];
 
 export const hasDuplicateValues = (values: readonly string[]): boolean => {

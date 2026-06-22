@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 
-import type { AuditEvent, AuditExportFormat } from "../../core/audit-log";
+import { LOGIN_MODE_AUDIT_USER_ID, type AuditEvent, type AuditExportFormat } from "../../core/audit-log";
 import { ErrorList, Message } from "../settings/Feedback";
+
+const AUDIT_REASON_LABELS = {
+  idle: "유휴 잠금",
+  "login-mode": "로그인 모드",
+  manual: "수동 잠금",
+  timer: "시간 만료"
+} as const satisfies Record<AuditEvent["reason"], string>;
 
 export const AuditLogView = (): JSX.Element => {
   const [events, setEvents] = useState<readonly AuditEvent[]>([]);
@@ -35,7 +42,7 @@ export const AuditLogView = (): JSX.Element => {
 
   useEffect(() => {
     void loadAuditLog(selectedUserId).catch(() => {
-      setErrors(["Audit log could not be loaded."]);
+      setErrors(["인증 기록을 불러올 수 없습니다."]);
       setIsLoading(false);
     });
   }, [loadAuditLog, selectedUserId]);
@@ -66,10 +73,14 @@ export const AuditLogView = (): JSX.Element => {
         }
 
         setErrors([]);
-        setMessage(response.canceled ? "Audit export canceled." : `Audit log exported as ${format.toUpperCase()}.`);
+        setMessage(
+          response.canceled
+            ? "인증 기록 내보내기를 취소했습니다."
+            : `인증 기록을 ${format.toUpperCase()} 형식으로 내보냈습니다.`
+        );
       })
       .catch(() => {
-        setErrors(["Audit log could not be exported."]);
+        setErrors(["인증 기록을 내보낼 수 없습니다."]);
       })
       .finally(() => {
         setIsExporting(false);
@@ -77,27 +88,27 @@ export const AuditLogView = (): JSX.Element => {
   };
 
   return (
-    <section className="form-section audit-log" aria-label="Audit log">
+    <section className="form-section audit-log" aria-label="인증 기록">
       <div className="section-heading audit-heading">
-        <h2>Audit log</h2>
+        <h2>인증 기록</h2>
         <button
           className="button button--ghost"
           disabled={isLoading}
           onClick={() => {
             void loadAuditLog(selectedUserId).catch(() => {
-              setErrors(["Audit log could not be loaded."]);
+              setErrors(["인증 기록을 불러올 수 없습니다."]);
               setIsLoading(false);
             });
           }}
           type="button"
         >
-          Refresh
+          새로고침
         </button>
       </div>
 
       <div className="audit-controls">
         <label className="field">
-          <span>User filter</span>
+          <span>지역 필터</span>
           <select
             data-testid="audit-user-filter"
             disabled={isLoading}
@@ -106,7 +117,7 @@ export const AuditLogView = (): JSX.Element => {
             }}
             value={selectedUserId}
           >
-            <option value="">All users</option>
+            <option value="">전체 지역</option>
             {userIds.map((userId) => (
               <option key={userId} value={userId}>
                 {userId}
@@ -123,7 +134,7 @@ export const AuditLogView = (): JSX.Element => {
             }}
             type="button"
           >
-            Export JSONL
+            JSONL 내보내기
           </button>
           <button
             className="button button--secondary"
@@ -133,18 +144,18 @@ export const AuditLogView = (): JSX.Element => {
             }}
             type="button"
           >
-            Export CSV
+            CSV 내보내기
           </button>
         </div>
       </div>
 
       <div className="audit-last-auth-list" data-testid="audit-last-auth-list">
-        {userIds.length === 0 ? <p className="muted">No successful unlocks recorded.</p> : null}
+        {userIds.length === 0 ? <p className="muted">성공한 인증 기록이 없습니다.</p> : null}
         {userIds.map((userId) => (
           <div className="audit-last-auth-item" data-testid={`audit-last-auth-${userId}`} key={userId}>
             <strong>{userId}</strong>
             <span>
-              Last successful unlock: {formatTimestamp(lastSuccessfulUnlockByUserId[userId] ?? null)}
+              마지막 인증 시각: {formatTimestamp(lastSuccessfulUnlockByUserId[userId] ?? null)}
             </span>
           </div>
         ))}
@@ -152,7 +163,7 @@ export const AuditLogView = (): JSX.Element => {
 
       {skippedLines > 0 ? (
         <p className="audit-warning" data-testid="audit-skipped-lines">
-          Skipped malformed audit log lines: {skippedLines}
+          잘못된 인증 기록 줄을 건너뜀: {skippedLines}
         </p>
       ) : null}
 
@@ -160,19 +171,19 @@ export const AuditLogView = (): JSX.Element => {
         <table className="audit-table" data-testid="audit-log-table">
           <thead>
             <tr>
-              <th>User ID</th>
-              <th>Unlocked</th>
-              <th>Locked</th>
-              <th>Duration</th>
-              <th>Reason</th>
-              <th>Version</th>
+              <th>지역</th>
+              <th>잠금 해제 시각</th>
+              <th>잠금 시각</th>
+              <th>노출 시간(초)</th>
+              <th>사유</th>
+              <th>버전</th>
             </tr>
           </thead>
           <tbody>
             {events.length === 0 ? (
               <tr>
                 <td className="audit-empty-cell" colSpan={6}>
-                  No audit events found.
+                  인증 기록이 없습니다.
                 </td>
               </tr>
             ) : null}
@@ -181,11 +192,11 @@ export const AuditLogView = (): JSX.Element => {
                 data-testid="audit-event-row"
                 key={`${event.userId}-${event.unlockedAt}-${event.lockedAt}-${String(index)}`}
               >
-                <td>{event.userId}</td>
+                <td>{formatAuditUserId(event.userId)}</td>
                 <td>{formatTimestamp(event.unlockedAt)}</td>
                 <td>{formatTimestamp(event.lockedAt)}</td>
-                <td>{event.durationSeconds}s</td>
-                <td>{event.reason}</td>
+                <td>{event.durationSeconds}초</td>
+                <td>{AUDIT_REASON_LABELS[event.reason]}</td>
                 <td>{event.appVersion}</td>
               </tr>
             ))}
@@ -201,14 +212,17 @@ export const AuditLogView = (): JSX.Element => {
 
 const formatTimestamp = (value: string | null): string => {
   if (value === null) {
-    return "none";
+    return "없음";
   }
 
   const parsedDate = new Date(value);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return "Invalid timestamp";
+    return "올바르지 않은 시각";
   }
 
-  return parsedDate.toLocaleString();
+  return parsedDate.toLocaleString("ko-KR");
 };
+
+const formatAuditUserId = (userId: string): string =>
+  userId === LOGIN_MODE_AUDIT_USER_ID ? "로그인 모드" : userId;

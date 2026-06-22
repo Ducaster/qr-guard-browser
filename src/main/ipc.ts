@@ -58,7 +58,7 @@ type SettingsLoadResponse =
   | { readonly ok: true; readonly settings: Settings }
   | ActionErrorResponse;
 
-const SETTINGS_READ_ERROR = "Settings could not be read.";
+const SETTINGS_READ_ERROR = "설정을 읽을 수 없습니다.";
 let hasCompletedFirstRunSetupInProcess = false;
 
 export const registerShellIpc = (getShellInfoState: ShellInfoProvider): void => {
@@ -93,7 +93,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
     IPC_CHANNELS.completeFirstRunSetup,
     async (_event: IpcMainInvokeEvent, payload: unknown): Promise<ActionResponse> => {
       if (hasCompletedFirstRunSetupInProcess) {
-        return errorResponse(["Initial setup has already been completed."]);
+        return errorResponse(["초기 설정이 이미 완료되었습니다."]);
       }
 
       const initialLoadResult = loadSettingsForIpc(options.repository);
@@ -103,7 +103,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       }
 
       if (!isFirstRunSettings(initialLoadResult.settings)) {
-        return errorResponse(["Initial setup has already been completed."]);
+        return errorResponse(["초기 설정이 이미 완료되었습니다."]);
       }
 
       const result = createSettingsFromFirstRunSetup(payload);
@@ -119,7 +119,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       }
 
       if (!isFirstRunSettings(finalLoadResult.settings)) {
-        return errorResponse(["Initial setup has already been completed."]);
+        return errorResponse(["초기 설정이 이미 완료되었습니다."]);
       }
 
       options.repository.save(result.value);
@@ -141,7 +141,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       }
 
       if (!verifyAdminCode(loadResult.settings.admin.salt, loadResult.settings.admin.hash, adminCode)) {
-        return errorResponse(["Admin code is incorrect."]);
+        return errorResponse(["관리자 코드가 올바르지 않습니다."]);
       }
 
       authorizeSender(event);
@@ -222,7 +222,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       // This destructive action intentionally re-requires the admin code directly
       // instead of trusting an existing admin session.
       if (!verifyAdminCode(settings.admin.salt, settings.admin.hash, adminCode)) {
-        return errorResponse(["Admin code is incorrect."]);
+        return errorResponse(["관리자 코드가 올바르지 않습니다."]);
       }
 
       await session.fromPartition(QR_SESSION_PARTITION).clearStorageData();
@@ -291,4 +291,4 @@ const errorResponse = (errors: readonly string[]): ActionErrorResponse => ({
 });
 
 const unauthorizedResponse = (): ActionErrorResponse =>
-  errorResponse(["Admin authorization is required."]);
+  errorResponse(["관리자 인증이 필요합니다."]);
