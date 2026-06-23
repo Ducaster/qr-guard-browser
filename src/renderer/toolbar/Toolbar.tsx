@@ -8,7 +8,7 @@ import {
   makeStyles,
   tokens
 } from "@fluentui/react-components";
-import { LockClosed24Regular } from "@fluentui/react-icons";
+import { LockClosed24Regular, QrCode24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, type JSX } from "react";
 
 import type { StateSnapshot } from "../../core/state-machine";
@@ -27,6 +27,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   const [actionError, setActionError] = useState("");
   const [remainingMs, setRemainingMs] = useState(state.remainingMs);
   const isLoginMode = state.state === "loginMode";
+  const isSiteLogin = state.state === "siteLogin";
 
   const runToolbarAction = (action: () => Promise<ToolbarActionResponse>): void => {
     setActionError("");
@@ -62,13 +63,19 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   return (
     <main className={styles.shell} data-testid="unlock-toolbar">
       <div className={styles.status}>
-        <Badge appearance="tint" color={isLoginMode ? "warning" : "danger"} shape="rounded">
-          {isLoginMode ? "로그인 화면 표시 중" : "잠금 해제됨"}
+        <Badge appearance="tint" color={isSiteLogin || isLoginMode ? "warning" : "danger"} shape="rounded">
+          {isSiteLogin ? "사이트 로그인 중" : isLoginMode ? "로그인 화면 표시 중" : "잠금 해제됨"}
         </Badge>
-        <Text weight="semibold">{isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "잠금 해제됨"}</Text>
+        <Text weight="semibold">
+          {isSiteLogin ? "사이트 로그인 중" : isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "잠금 해제됨"}
+        </Text>
         {isLoginMode ? (
           <Badge appearance="outline" color="warning" data-testid="login-mode-indicator" shape="rounded">
             로그인 화면 표시 중
+          </Badge>
+        ) : isSiteLogin ? (
+          <Badge appearance="outline" color="warning" data-testid="site-login-indicator" shape="rounded">
+            사이트 로그인 중
           </Badge>
         ) : (
           <Badge appearance="outline" color="danger" data-testid="unlock-countdown" shape="rounded">
@@ -88,6 +95,19 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             type="button"
           >
             로그인 완료 후 잠금
+          </ToolbarButton>
+        ) : null}
+        {isSiteLogin ? (
+          <ToolbarButton
+            appearance="subtle"
+            data-testid="learn-qr-title"
+            icon={<QrCode24Regular />}
+            onClick={() => {
+              runToolbarAction(() => window.qrGuard.learnCurrentQrTitle());
+            }}
+            type="button"
+          >
+            이 화면이 QR입니다
           </ToolbarButton>
         ) : null}
         <ToolbarButton

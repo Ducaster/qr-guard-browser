@@ -1,4 +1,4 @@
-export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode";
+export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode" | "qr-title";
 export type AuditExportFormat = "jsonl" | "csv";
 export const LOGIN_MODE_AUDIT_USER_ID = "login-mode";
 
@@ -193,7 +193,11 @@ const isAuditEvent = (value: unknown): value is AuditEvent => {
 };
 
 const isAuditReason = (value: unknown): value is AuditLockReason =>
-  value === "timer" || value === "manual" || value === "idle" || value === "login-mode";
+  value === "timer" ||
+  value === "manual" ||
+  value === "idle" ||
+  value === "login-mode" ||
+  value === "qr-title";
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

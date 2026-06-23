@@ -4,6 +4,7 @@ const AUDIT_REASON_LABELS = {
   idle: "유휴 잠금",
   "login-mode": "로그인 모드",
   manual: "수동 잠금",
+  "qr-title": "QR 제목 감지",
   timer: "시간 만료"
 } as const satisfies Record<AuditEvent["reason"], string>;
 

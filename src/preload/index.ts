@@ -37,6 +37,7 @@ export interface FirstRunSetupPayload {
 export interface SettingsPatchPayload {
   readonly idleAutoLockSeconds?: number;
   readonly loginDetection?: LoginDetectionPayload;
+  readonly qrTitlePattern?: string;
   readonly qrUrl?: string;
   readonly unlockDurationSeconds?: number;
 }
@@ -93,6 +94,8 @@ const qrGuardApi = {
   getState: (): Promise<StateSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.getState),
   getShellInfo: (): Promise<ShellInfo> => ipcRenderer.invoke(IPC_CHANNELS.getShellInfo),
   isFirstRun: (): Promise<FirstRunResponse> => ipcRenderer.invoke(IPC_CHANNELS.isFirstRun),
+  learnCurrentQrTitle: (): Promise<ActionResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.learnCurrentQrTitle),
   listSiteCredentials: (): Promise<ListSiteCredentialsResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.siteCredentialList),
   manualLock: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.manualLock),
@@ -133,6 +136,8 @@ const qrGuardApi = {
     ipcRenderer.invoke(IPC_CHANNELS.resetUserCode, payload),
   saveSettings: (payload: SettingsPatchPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.saveSettings, payload),
+  submitSiteLogin: (userId: string, code: string): Promise<UnlockResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.submitSiteLogin, userId, code),
   submitUnlock: (userId: string, code: string): Promise<UnlockResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.submitUnlock, userId, code),
   updateUser: (payload: UpdateUserPayload): Promise<ActionResponse> =>

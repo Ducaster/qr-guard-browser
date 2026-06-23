@@ -24,6 +24,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
   const [loginUrlPattern, setLoginUrlPattern] = useState("");
   const [loggedInUrlPattern, setLoggedInUrlPattern] = useState("");
   const [titleContains, setTitleContains] = useState("");
+  const [qrTitlePattern, setQrTitlePattern] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [message, setMessage] = useState("");
   const [isBusy, setIsBusy] = useState(false);
@@ -48,6 +49,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
     setLoginUrlPattern(nextSettings.loginDetection.loginUrlPattern);
     setLoggedInUrlPattern(nextSettings.loginDetection.loggedInUrlPattern);
     setTitleContains(nextSettings.loginDetection.titleContains);
+    setQrTitlePattern(nextSettings.qrTitlePattern);
   }, []);
 
   useEffect(() => {
@@ -80,6 +82,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
         loginUrlPattern: loginUrlPattern.trim(),
         titleContains: titleContains.trim()
       },
+      qrTitlePattern: qrTitlePattern.trim(),
       qrUrl: qrUrl.trim(),
       unlockDurationSeconds: unlockSeconds
     })
@@ -187,6 +190,16 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                   />
                 </Field>
               </SplitThree>
+              <Field label="QR 화면 제목">
+                <Input
+                  disabled={isBusy || settings === null}
+                  input={inputSlot({ "data-testid": "settings-qr-title-pattern" })}
+                  onChange={(_event, data) => {
+                    setQrTitlePattern(data.value);
+                  }}
+                  value={qrTitlePattern}
+                />
+              </Field>
               <Button
                 appearance="primary"
                 disabled={isBusy || settings === null}

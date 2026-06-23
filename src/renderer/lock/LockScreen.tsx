@@ -1,5 +1,5 @@
 import { Badge, Button, Field, Input, Text, makeStyles, tokens } from "@fluentui/react-components";
-import { Key24Regular, Settings24Regular } from "@fluentui/react-icons";
+import { Globe24Regular, Key24Regular, Settings24Regular } from "@fluentui/react-icons";
 import { useState, type JSX, type SyntheticEvent } from "react";
 
 import { ActionsRow, FormGrid, HeaderBlock, PanelCard, Screen } from "../fluentLayout";
@@ -17,11 +17,13 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submit = (event: SyntheticEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const submitCredentials = (
+    action: () => ReturnType<typeof window.qrGuard.submitUnlock>,
+    failureMessage: string
+  ): void => {
     setIsSubmitting(true);
 
-    void window.qrGuard.submitUnlock(userId, code)
+    void action()
       .then((response) => {
         if (response.ok) {
           setCode("");
@@ -32,11 +34,16 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
         setErrors(formatUnlockErrors(response.errors, response.retryAfterMs));
       })
       .catch(() => {
-        setErrors(["잠금 해제에 실패했습니다."]);
+        setErrors([failureMessage]);
       })
       .finally(() => {
         setIsSubmitting(false);
       });
+  };
+
+  const submit = (event: SyntheticEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    submitCredentials(() => window.qrGuard.submitUnlock(userId, code), "잠금 해제에 실패했습니다.");
   };
 
   return (
@@ -82,6 +89,21 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
                 type="submit"
               >
                 잠금 해제
+              </Button>
+              <Button
+                appearance="secondary"
+                data-testid="site-login-submit"
+                disabled={isSubmitting}
+                icon={<Globe24Regular />}
+                onClick={() => {
+                  submitCredentials(
+                    () => window.qrGuard.submitSiteLogin(userId, code),
+                    "사이트 로그인 모드 진입에 실패했습니다."
+                  );
+                }}
+                type="button"
+              >
+                사이트 로그인
               </Button>
               <Button
                 appearance="secondary"

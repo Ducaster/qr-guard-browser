@@ -13,6 +13,7 @@ export const IPC_CHANNELS = {
   getSettingsView: "qr-guard:get-settings-view",
   getShellInfo: "qr-guard:get-shell-info",
   isFirstRun: "qr-guard:is-first-run",
+  learnCurrentQrTitle: "qr-guard:learn-current-qr-title",
   manualLock: "qr-guard:manual-lock",
   manualLoginComplete: "qr-guard:manual-login-complete",
   openSettings: "qr-guard:open-settings",
@@ -26,6 +27,7 @@ export const IPC_CHANNELS = {
   siteCredentialSaveDecision: "qr-guard:site-credential-save-decision",
   siteCredentialSaveOffered: "qr-guard:site-credential-save-offered",
   stateChanged: "qr-guard:state-changed",
+  submitSiteLogin: "qr-guard:submit-site-login",
   submitUnlock: "qr-guard:submit-unlock",
   updateUser: "qr-guard:update-user"
 } as const;

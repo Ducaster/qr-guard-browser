@@ -7,6 +7,6 @@ export interface IdleLockInput {
 }
 
 export const shouldRelockForIdle = (input: IdleLockInput): boolean =>
-  input.state === "unlocked" &&
+  (input.state === "unlocked" || input.state === "siteLogin") &&
   input.idleAutoLockSeconds >= 1 &&
   input.systemIdleSeconds >= input.idleAutoLockSeconds;

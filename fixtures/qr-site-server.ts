@@ -1,4 +1,5 @@
 import http, { type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import crypto from "node:crypto";
 
 export interface FixtureQrSiteServer {
   readonly baseUrl: string;
@@ -31,13 +32,15 @@ const redirect = (response: ServerResponse, location: string): void => {
   response.end();
 };
 
+const createQrPath = (): string => `/qr?token=${crypto.randomUUID()}`;
+
 const handleLogin = (
   request: IncomingMessage,
   requestUrl: URL,
   response: ServerResponse
 ): void => {
   if (request.method === "POST" || requestUrl.searchParams.get("login") === "1") {
-    redirect(response, "/dashboard");
+    redirect(response, "/step-one");
     return;
   }
 
@@ -66,6 +69,16 @@ const handleRequest = (request: IncomingMessage, response: ServerResponse): void
   const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
 
   switch (requestUrl.pathname) {
+    case "/":
+      sendHtml(
+        response,
+        "Fixture Home",
+        `<main data-route="home">
+          <h1>Main</h1>
+          <a data-testid="fixture-login-link" href="/login">Login</a>
+        </main>`
+      );
+      return;
     case "/login":
       handleLogin(request, requestUrl, response);
       return;
@@ -73,13 +86,33 @@ const handleRequest = (request: IncomingMessage, response: ServerResponse): void
       sendHtml(
         response,
         "Fixture Dashboard",
-        '<main data-route="dashboard"><h1>Dashboard</h1><a href="/qr">QR</a></main>'
+        '<main data-route="dashboard"><h1>Dashboard</h1><a data-testid="fixture-dashboard-qr-link" href="/qr">QR</a></main>'
+      );
+      return;
+    case "/step-one":
+      sendHtml(
+        response,
+        "Fixture Step One",
+        `<main data-route="step-one">
+          <h1>Step one</h1>
+          <a data-testid="fixture-step-one-next" href="/step-two">Next</a>
+        </main>`
+      );
+      return;
+    case "/step-two":
+      sendHtml(
+        response,
+        "Fixture Step Two",
+        `<main data-route="step-two">
+          <h1>Step two</h1>
+          <a data-testid="fixture-step-two-qr" href="${createQrPath()}">QR</a>
+        </main>`
       );
       return;
     case "/qr":
       sendHtml(
         response,
-        "Fixture QR",
+        "QR 코드",
         '<main data-route="qr"><h1>QR</h1><div id="qr-code">fixture-qr-code</div></main>'
       );
       return;

@@ -4,16 +4,10 @@ import { IPC_CHANNELS } from "../core/shell-config";
 import type { StateSnapshot, UnlockResponse } from "../core/state-machine";
 import type { LockController } from "./lock-controller";
 
-interface ActionOkResponse {
-  readonly ok: true;
+interface ActionResponse {
+  readonly errors?: readonly string[];
+  readonly ok: boolean;
 }
-
-interface ActionErrorResponse {
-  readonly errors: readonly string[];
-  readonly ok: false;
-}
-
-type ActionResponse = ActionOkResponse | ActionErrorResponse;
 
 export type LockControllerProvider = () => LockController | undefined;
 
@@ -24,6 +18,12 @@ export const registerLockIpc = (getController: LockControllerProvider): void => 
     IPC_CHANNELS.submitUnlock,
     (_event, userId: unknown, code: unknown): UnlockResponse =>
       getRequiredController(getController).submitUnlock(userId, code)
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.submitSiteLogin,
+    (_event, userId: unknown, code: unknown): UnlockResponse =>
+      getRequiredController(getController).submitSiteLogin(userId, code)
   );
 
   ipcMain.handle(IPC_CHANNELS.manualLock, (): ActionResponse => {
@@ -37,6 +37,10 @@ export const registerLockIpc = (getController: LockControllerProvider): void => 
 
     return { ok: true };
   });
+
+  ipcMain.handle(IPC_CHANNELS.learnCurrentQrTitle, (): ActionResponse =>
+    getRequiredController(getController).learnCurrentQrTitle()
+  );
 };
 
 const getRequiredController = (getController: LockControllerProvider): LockController => {

@@ -22,6 +22,13 @@ describe("idle auto-lock decision", () => {
     expect(
       shouldRelockForIdle({
         idleAutoLockSeconds: 30,
+        state: "siteLogin",
+        systemIdleSeconds: 30
+      })
+    ).toBe(true);
+    expect(
+      shouldRelockForIdle({
+        idleAutoLockSeconds: 30,
         state: "loginMode",
         systemIdleSeconds: 30
       })

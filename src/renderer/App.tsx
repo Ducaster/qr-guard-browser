@@ -125,6 +125,7 @@ export const App = (): JSX.Element => {
         </>
       );
     case "loginMode":
+    case "siteLogin":
     case "unlocked":
       return (
         <>

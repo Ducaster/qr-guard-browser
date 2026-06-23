@@ -9,7 +9,8 @@ import {
   migrateSettings,
   type Sealer,
   type SettingsStore,
-  type SettingsV1
+  type SettingsV1,
+  type SettingsV2
 } from "./settings-repo";
 
 class MemorySettingsStore implements SettingsStore {
@@ -60,6 +61,7 @@ describe("settings repository", () => {
       loginUrlPattern: "",
       titleContains: ""
     });
+    expect(settings.qrTitlePattern).toBe("");
   });
 
   it("round-trips sealed settings without storing plaintext auth codes", () => {
@@ -127,13 +129,85 @@ describe("settings repository", () => {
       unlockDurationSeconds: 12,
       users: legacySettings.users
     });
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(3);
     expect(migrated.idleAutoLockSeconds).toBe(30);
+    expect(migrated.qrTitlePattern).toBe("");
     expect(migrated.loginDetection).toEqual({
       loggedInUrlPattern: "",
       loginUrlPattern: "",
       titleContains: ""
     });
+  });
+
+  it("migrates v2 settings with an existing QR title pattern without field loss", () => {
+    // Given
+    const adminRecord = hashCode("v2-admin-code");
+    const userRecord = hashCode("v2-user-code");
+    const settingsV2: SettingsV2 = {
+      admin: adminRecord,
+      idleAutoLockSeconds: 45,
+      loginDetection: {
+        loggedInUrlPattern: "/qr",
+        loginUrlPattern: "/login",
+        titleContains: "로그인"
+      },
+      qrTitlePattern: "QR 코드",
+      qrUrl: "https://v2.example.test/qr",
+      schemaVersion: 2,
+      unlockDurationSeconds: 120,
+      users: [
+        {
+          ...userRecord,
+          lastAuthenticatedAt: "2026-06-22T12:00:00.000Z",
+          userId: "staff01"
+        }
+      ]
+    };
+
+    // When
+    const migrated = migrateSettings(settingsV2);
+
+    // Then
+    expect(migrated).toEqual({
+      ...settingsV2,
+      schemaVersion: 3
+    });
+  });
+
+  it("migrates v2 settings without a QR title pattern by adding an empty default", () => {
+    // Given
+    const adminRecord = hashCode("v2-admin-code");
+    const userRecord = hashCode("v2-user-code");
+    const settingsV2: SettingsV2 = {
+      admin: adminRecord,
+      idleAutoLockSeconds: 45,
+      loginDetection: {
+        loggedInUrlPattern: "/qr",
+        loginUrlPattern: "/login",
+        titleContains: "로그인"
+      },
+      qrUrl: "https://v2.example.test/qr",
+      schemaVersion: 2,
+      unlockDurationSeconds: 120,
+      users: [
+        {
+          ...userRecord,
+          lastAuthenticatedAt: "2026-06-22T12:00:00.000Z",
+          userId: "staff01"
+        }
+      ]
+    };
+
+    // When
+    const migrated = migrateSettings(settingsV2);
+
+    // Then
+    expect(migrated).toEqual({
+      ...settingsV2,
+      qrTitlePattern: "",
+      schemaVersion: 3
+    });
+    expect(migrated.qrTitlePattern).toBe("");
   });
 
   it("clamps out-of-range stored duration values on load", () => {

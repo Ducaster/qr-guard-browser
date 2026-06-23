@@ -119,10 +119,7 @@ export const readLoginDetection = (
   };
 };
 
-export const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const readOptionalTrimmedString = (
+export const readOptionalTrimmedString = (
   record: Readonly<Record<string, unknown>>,
   key: string,
   fallback: string
@@ -133,6 +130,9 @@ const readOptionalTrimmedString = (
 
   return readTrimmedString(record, key);
 };
+
+export const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const readTrimmedString = (record: Readonly<Record<string, unknown>>, key: string): string => {
   const value = record[key];

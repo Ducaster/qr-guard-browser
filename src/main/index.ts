@@ -115,6 +115,9 @@ const getIdlePollIntervalOverrideMs = (): number | undefined =>
 const getLoginModeTimeoutOverrideMs = (): number | undefined =>
   readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS");
 
+const getSiteLoginTimeoutOverrideMs = (): number | undefined =>
+  readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_SITE_LOGIN_TIMEOUT_MS");
+
 const getIdleSource = (): (() => number) => {
   const fixedIdleSeconds = readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_SYSTEM_IDLE_SECONDS");
 
@@ -145,6 +148,7 @@ const createAndLoadShellWindow = (): void => {
   const unlockDurationOverrideSeconds = getUnlockDurationOverrideSeconds();
   const idlePollIntervalMs = getIdlePollIntervalOverrideMs();
   const loginModeTimeoutOverrideMs = getLoginModeTimeoutOverrideMs();
+  const siteLoginTimeoutOverrideMs = getSiteLoginTimeoutOverrideMs();
   activeLockController = createLockController({
     appVersion: app.getVersion(),
     auditLogStore: createElectronAuditLogStore(),
@@ -155,6 +159,7 @@ const createAndLoadShellWindow = (): void => {
     shellWindow,
     ...(idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs }),
     ...(loginModeTimeoutOverrideMs === undefined ? {} : { loginModeTimeoutOverrideMs }),
+    ...(siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs }),
     ...(unlockDurationOverrideSeconds === undefined ? {} : { unlockDurationOverrideSeconds })
   });
 

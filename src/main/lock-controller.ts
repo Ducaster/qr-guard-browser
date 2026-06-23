@@ -1,22 +1,15 @@
-import {
-  checkLockout,
-  recordAuthFailure,
-  recordAuthSuccess,
-  verifyCode,
-  type LockoutState
-} from "../core/auth";
+import type { LockoutState } from "../core/auth";
 import type { AuditLockReason } from "../core/audit-log";
-import { shouldRelockForIdle } from "../core/idle-lock";
 import { classify, matchesLoginUrl } from "../core/login-detector";
+import { matchesQrTitle } from "../core/qr-title-detector";
 import {
   applyLoginDetection,
   closeSettings,
   completeSetup,
-  exitLoginMode,
-  manualLock,
+  enterSiteLogin,
   openSettings,
+  relockState,
   shouldShowQrView,
-  timerExpired,
   unlockSucceeded,
   type GuardState,
   type StateSnapshot,
@@ -25,15 +18,18 @@ import {
 import { IPC_CHANNELS } from "../core/shell-config";
 import type { Settings, SettingsRepository } from "../core/settings-repo";
 import { isFirstRunSettings } from "../core/settings-validation";
-import { updateLastAuthenticatedAt } from "../core/user-settings";
 import { createAuditSessionTracker } from "./audit-session-tracker";
+import { createLockModeLifecycle } from "./lock-mode-lifecycle";
 import { createLockTimers } from "./lock-timers";
+import { authenticateQrAccess, notLockedResponse, type QrAccessAuthResult } from "./qr-access-auth";
+import { learnQrTitleFromCurrentPage, type ActionResponse } from "./qr-title-learning";
 import {
   readQrNavigationSnapshot,
   watchQrNavigation,
   type QrNavigationTarget,
   type QrWebContentsLike
 } from "./qr-navigation-watcher";
+import { loadSettingsForMainEvent } from "./settings-load-failsafe";
 import type { AuditLogStore, LockoutStateStore } from "./settings-adapters";
 
 interface LockControllerShellWindow {
@@ -49,9 +45,11 @@ export interface LockController {
   readonly closeSettings: () => void;
   readonly completeSetup: () => void;
   readonly getState: () => StateSnapshot;
+  readonly learnCurrentQrTitle: () => ActionResponse;
   readonly manualLock: () => void;
   readonly manualLoginComplete: () => void;
   readonly openSettings: () => void;
+  readonly submitSiteLogin: (userId: unknown, code: unknown) => UnlockResponse;
   readonly submitUnlock: (userId: unknown, code: unknown) => UnlockResponse;
 }
 
@@ -65,11 +63,9 @@ export interface LockControllerOptions {
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
   readonly loginModeTimeoutOverrideMs?: number;
+  readonly siteLoginTimeoutOverrideMs?: number;
   readonly unlockDurationOverrideSeconds?: number;
 }
-
-const DEFAULT_LOGIN_MODE_TIMEOUT_MS = 5 * 60 * 1_000;
-const DEFAULT_IDLE_POLL_INTERVAL_MS = 1_000;
 
 export const createLockController = (options: LockControllerOptions): LockController => {
   let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
@@ -81,6 +77,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     auditLogStore: options.auditLogStore
   });
   const timers = createLockTimers();
+  let syncModeTimers: (previousState: GuardState, nextState: GuardState) => void = () => undefined;
 
   const applyVisibility = (): boolean => {
     const visible = shouldShowQrView(state, currentUrlMatchesLoginPattern);
@@ -121,57 +118,40 @@ export const createLockController = (options: LockControllerOptions): LockContro
   const relock = (reason: AuditLockReason): void => {
     timers.clearUnlockTimer();
     timers.clearIdleTimer();
+    timers.clearSiteLoginTimer();
     auditSessions.finishUnlockSession(reason, Date.now());
     unlockExpiresAtMs = null;
-    setState(reason === "timer" ? timerExpired(state) : manualLock(state));
+    setState(relockState(state));
   };
 
-  const startLoginModeTimer = (): void => {
-    timers.startLoginModeTimer(options.loginModeTimeoutOverrideMs ?? DEFAULT_LOGIN_MODE_TIMEOUT_MS, () => {
-      setState(exitLoginMode(state));
-    });
-  };
-
-  const startIdleTimer = (): void => {
-    timers.startIdleTimer(options.idlePollIntervalMs ?? DEFAULT_IDLE_POLL_INTERVAL_MS, () => {
-      const settings = options.repository.load();
-      const idleSource = options.idleSource ?? (() => 0);
-
-      if (
-        shouldRelockForIdle({
-          idleAutoLockSeconds: settings.idleAutoLockSeconds,
-          state,
-          systemIdleSeconds: idleSource()
-        })
-      ) {
-        relock("idle");
-      }
-    });
-  };
-
-  const syncModeTimers = (previousState: GuardState, nextState: GuardState): void => {
-    if (previousState !== "loginMode" && nextState === "loginMode") {
-      auditSessions.beginLoginModeSession(Date.now());
-      startLoginModeTimer();
-    }
-
-    if (previousState === "loginMode" && nextState !== "loginMode") {
-      timers.clearLoginModeTimer();
-      auditSessions.finishLoginModeSession(Date.now());
-    }
-
-    if (previousState !== "unlocked" && nextState === "unlocked") {
-      startIdleTimer();
-    }
-
-    if (previousState === "unlocked" && nextState !== "unlocked") {
-      timers.clearIdleTimer();
-    }
-  };
+  syncModeTimers = createLockModeLifecycle({
+    auditSessions,
+    getState: () => state,
+    loadSettings: () => options.repository.load(),
+    relock,
+    setState,
+    timers,
+    ...(options.idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs: options.idlePollIntervalMs }),
+    ...(options.idleSource === undefined ? {} : { idleSource: options.idleSource }),
+    ...(options.loginModeTimeoutOverrideMs === undefined ? {} : { loginModeTimeoutOverrideMs: options.loginModeTimeoutOverrideMs }),
+    ...(options.siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs: options.siteLoginTimeoutOverrideMs })
+  }).sync;
 
   const evaluateQrNavigation = (target?: QrNavigationTarget): void => {
-    const settings = options.repository.load();
+    const settings = loadSettingsForMainEvent(options.repository, "QR navigation");
+
+    if (settings === null) { relock("manual"); return; }
+
     const snapshot = readQrNavigationSnapshot(options.qrWebContents, target);
+
+    if (state === "siteLogin") {
+      if (matchesQrTitle(snapshot.title, settings.qrTitlePattern)) {
+        relock("qr-title");
+      }
+
+      return;
+    }
+
     const classification = classify(snapshot.url, snapshot.title, settings.loginDetection);
 
     currentUrlMatchesLoginPattern = matchesLoginUrl(snapshot.url, settings.loginDetection);
@@ -188,49 +168,40 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
   watchQrNavigation(options.qrWebContents, evaluateQrNavigation);
 
+  const authenticate = (
+    rawUserId: unknown,
+    rawCode: unknown,
+    nowMs: number
+  ): QrAccessAuthResult => {
+    const authResult = authenticateQrAccess({
+      lockoutState,
+      lockoutStateStore: options.lockoutStateStore,
+      nowMs,
+      rawCode,
+      rawUserId,
+      repository: options.repository
+    });
+
+    lockoutState = authResult.lockoutState;
+
+    return authResult;
+  };
+
   const submitUnlock = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
-    const userId = typeof rawUserId === "string" ? rawUserId.trim() : "";
-    const code = typeof rawCode === "string" ? rawCode.trim() : "";
     const nowMs = Date.now();
 
     if (state !== "locked") {
-      return {
-        errors: ["현재 잠긴 상태가 아닙니다."],
-        ok: false,
-        retryAfterMs: null
-      };
+      return notLockedResponse();
     }
 
-    if (userId.length === 0 || code.length === 0) {
-      return {
-        errors: ["지역과 인증 코드가 필요합니다."],
-        ok: false,
-        retryAfterMs: null
-      };
+    const authResult = authenticate(rawUserId, rawCode, nowMs);
+
+    if (authResult.kind === "failure") {
+      return authResult.response;
     }
 
-    const decision = checkLockout(lockoutState, userId, nowMs);
-
-    if (!decision.allowed) {
-      return {
-        errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
-        ok: false,
-        retryAfterMs: decision.retryAfterMs ?? null
-      };
-    }
-
-    const settings = options.repository.load();
-    const user = settings.users.find((candidate) => candidate.userId === userId);
-
-    if (user === undefined || !verifyCode(code, user.salt, user.hash)) {
-      return recordFailedUnlock(userId, nowMs, ["지역 또는 인증 코드가 올바르지 않습니다."]);
-    }
-
-    lockoutState = recordAuthSuccess(lockoutState, userId);
-    options.lockoutStateStore.save(lockoutState);
-    options.repository.save(updateLastAuthenticatedAt(settings, userId, nowMs));
-    auditSessions.beginUnlockSession(userId, nowMs);
-    const durationSeconds = getUnlockDurationSeconds(settings);
+    auditSessions.beginUnlockSession(authResult.userId, nowMs);
+    const durationSeconds = getUnlockDurationSeconds(authResult.settings);
     unlockExpiresAtMs = nowMs + durationSeconds * 1_000;
     setState(unlockSucceeded(state));
     timers.startUnlockTimer(durationSeconds, () => {
@@ -243,22 +214,45 @@ export const createLockController = (options: LockControllerOptions): LockContro
     };
   };
 
-  const recordFailedUnlock = (
-    userId: string,
-    nowMs: number,
-    errors: readonly string[]
-  ): UnlockResponse => {
-    const result = recordAuthFailure(lockoutState, userId, nowMs);
+  const submitSiteLogin = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
+    const nowMs = Date.now();
 
-    lockoutState = result.state;
-    options.lockoutStateStore.save(lockoutState);
+    if (state !== "locked") {
+      return notLockedResponse();
+    }
+
+    const authResult = authenticate(rawUserId, rawCode, nowMs);
+
+    if (authResult.kind === "failure") {
+      return authResult.response;
+    }
+
+    if (matchesQrTitle(options.qrWebContents.getTitle(), authResult.settings.qrTitlePattern)) {
+      return {
+        ok: true,
+        state: getState()
+      };
+    }
+
+    auditSessions.beginUnlockSession(authResult.userId, nowMs);
+    unlockExpiresAtMs = null;
+    const nextState = enterSiteLogin(state);
+    setState(nextState);
+    if (nextState === "siteLogin" && matchesQrTitle(options.qrWebContents.getTitle(), authResult.settings.qrTitlePattern)) { relock("qr-title"); }
 
     return {
-      errors,
-      ok: false,
-      retryAfterMs: result.decision.retryAfterMs ?? null
+      ok: true,
+      state: getState()
     };
   };
+
+  const learnCurrentQrTitle = (): ActionResponse =>
+    learnQrTitleFromCurrentPage({
+      qrWebContents: options.qrWebContents,
+      relock,
+      repository: options.repository,
+      state
+    });
 
   const getUnlockDurationSeconds = (settings: Settings): number =>
     options.unlockDurationOverrideSeconds ?? settings.unlockDurationSeconds;
@@ -275,6 +269,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
       evaluateQrNavigation();
     },
     getState,
+    learnCurrentQrTitle,
     manualLock: () => {
       relock("manual");
     },
@@ -293,6 +288,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
       setState(nextState);
     },
+    submitSiteLogin,
     submitUnlock
   };
 };

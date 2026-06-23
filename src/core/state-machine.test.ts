@@ -5,9 +5,11 @@ import {
   closeSettings,
   completeSetup,
   enterLoginMode,
+  enterSiteLogin,
   exitLoginMode,
   manualLock,
   openSettings,
+  relockState,
   shouldShowQrView,
   timerExpired,
   unlockSucceeded,
@@ -24,6 +26,8 @@ describe("QR visibility gate", () => {
     { currentUrlMatchesLoginPattern: true, expected: true, state: "unlocked" },
     { currentUrlMatchesLoginPattern: false, expected: false, state: "loginMode" },
     { currentUrlMatchesLoginPattern: true, expected: true, state: "loginMode" },
+    { currentUrlMatchesLoginPattern: false, expected: true, state: "siteLogin" },
+    { currentUrlMatchesLoginPattern: true, expected: true, state: "siteLogin" },
     { currentUrlMatchesLoginPattern: false, expected: false, state: "settings" },
     { currentUrlMatchesLoginPattern: true, expected: false, state: "settings" },
     { currentUrlMatchesLoginPattern: false, expected: false, state: "unknown" },
@@ -69,11 +73,22 @@ describe("lock state transitions", () => {
     expect(state).toBe("locked");
   });
 
-  it.each(["unlocked", "loginMode"] as const)(
+  it.each(["unlocked", "loginMode", "siteLogin"] as const)(
     "moves %s to locked on manual lock",
     (currentState) => {
       // Given / When
       const state = manualLock(currentState);
+
+      // Then
+      expect(state).toBe("locked");
+    }
+  );
+
+  it.each(["unlocked", "loginMode", "siteLogin"] as const)(
+    "moves %s to locked on reason-independent relock",
+    (currentState) => {
+      // Given / When
+      const state = relockState(currentState);
 
       // Then
       expect(state).toBe("locked");
@@ -102,6 +117,22 @@ describe("lock state transitions", () => {
 
     // Then
     expect(state).toBe("loginMode");
+  });
+
+  it("defines locked to siteLogin transition shape", () => {
+    // Given / When
+    const state = enterSiteLogin("locked");
+
+    // Then
+    expect(state).toBe("siteLogin");
+  });
+
+  it("does not enter siteLogin from unlocked", () => {
+    // Given / When
+    const state = enterSiteLogin("unlocked");
+
+    // Then
+    expect(state).toBe("unlocked");
   });
 
   it("does not enter loginMode from unlocked", () => {
@@ -134,6 +165,13 @@ describe("lock state transitions", () => {
 
     // Then
     expect(state).toBe("loginMode");
+  });
+
+  it("keeps siteLogin open across QR navigation classifications", () => {
+    // Given / When / Then
+    expect(applyLoginDetection("siteLogin", "login", true)).toBe("siteLogin");
+    expect(applyLoginDetection("siteLogin", "loggedIn", false)).toBe("siteLogin");
+    expect(applyLoginDetection("siteLogin", "unknown", false)).toBe("siteLogin");
   });
 
   it("keeps unlocked authenticated sessions unlocked for unknown QR classification", () => {

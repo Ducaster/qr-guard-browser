@@ -120,11 +120,12 @@
 
 ### 3.2 상태 머신 (fail-safe 핵심)
 ```
-states: needsSetup | locked | unlocked | loginMode | settings
+states: needsSetup | locked | unlocked | loginMode | siteLogin | settings
 
 needsSetup --(첫 실행 설정 완료)--> locked
 
 locked --(인증 성공)----------------> unlocked
+locked --(인증 성공 + 사이트 로그인)--> siteLogin
 locked --(QR뷰가 '확실히 로그인페이지'로 판정)--> loginMode
 locked --(관리자 인증)--------------> settings
 
@@ -137,16 +138,22 @@ loginMode --(로그인 페이지에서 '이탈'하는 네비게이션)--> locked
 loginMode --(수동 '로그인 완료 후 잠금')-----------> locked
 loginMode --(loginMode 진입 후 하트비트 타임아웃)----> locked   // 보조 안전장치
 
+siteLogin --(QR 화면 제목 패턴 매치)--------------> locked
+siteLogin --(수동 '지금 잠그기')------------------> locked
+siteLogin --(유휴 타임아웃)----------------------> locked
+siteLogin --(최대 지속시간 5분 도달)--------------> locked   // 운영자가 중간에 자리를 비운 경우의 보조 안전장치
+
 settings --(닫기)-------------------> locked
 
 * 어떤 상태에서든 판정이 unknown이면 -> locked 로 수렴.
-* QR 노출(setVisible true)은 unlocked 또는 (loginMode이면서 현재 URL이 로그인 패턴 매치)일 때만.
+* QR 노출(setVisible true)은 unlocked, siteLogin, 또는 (loginMode이면서 현재 URL이 로그인 패턴 매치)일 때만.
 ```
 
 **QR 노출 가시성 규칙(단일 함수로 강제):**
 ```
 function shouldShowQrView(state, currentUrlMatchesLoginPattern):
     if state == 'unlocked': return true
+    if state == 'siteLogin': return true
     if state == 'loginMode' and currentUrlMatchesLoginPattern: return true
     return false   // locked, settings, needsSetup, loginMode(이탈), unknown → 숨김
 ```
@@ -166,6 +173,7 @@ classify(url, title):
 - `loginMode`에서 빠져나오는 조건: **현재 url이 더 이상 `loginUrlPattern`에 매치되지 않는 네비게이션이 발생** → 즉시 `locked`. (`loggedIn` 패턴 매치를 기다리지 않는다 — 못 잡으면 QR이 새므로.)
 - `locked` 상태에서 `loginMode`로 자동 전환은 `classify=='login'`일 때만. `unknown`이면 그대로 `locked` 유지(인증으로만 진입 가능).
 - 모든 webContents 이벤트(`did-navigate`, `did-navigate-in-page`, `page-title-updated`)에서 재평가.
+- 별도 `siteLogin`은 지역 인증코드 성공 후에만 진입한다. 이 모드에서는 다단계 로그인/중간 페이지 이동을 허용하므로 URL 이탈로 잠그지 않고, 설정의 `qrTitlePattern`을 현재 페이지 제목에 대해 대소문자/공백 정규화된 부분 문자열로 매칭한다. 매칭되면 즉시 `locked`로 돌아가 QR 뷰를 숨긴다. 운영자가 첫 QR 화면에서 `이 화면이 QR입니다`를 누르면 현재 제목을 `qrTitlePattern`으로 저장하고 잠근다.
 
 ### 3.4 폴더 구조 (feature 단위)
 ```
