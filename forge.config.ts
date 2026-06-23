@@ -40,6 +40,11 @@ const config: ForgeConfig = {
           entry: "src/preload/index.ts",
           config: "vite.preload.config.ts",
           target: "preload"
+        },
+        {
+          entry: "src/preload/qr-site.ts",
+          config: "vite.qr-preload.config.ts",
+          target: "preload"
         }
       ],
       renderer: [

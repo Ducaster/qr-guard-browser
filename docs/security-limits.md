@@ -24,11 +24,25 @@ The app does not protect against:
 - Screen capture while the QR code is intentionally unlocked.
 - External tampering with local audit files.
 
-The app also does not store, inject, or automate QR-site usernames and passwords.
+The app never stores, autofills, or automates the regional unlock code. QR-site usernames
+and passwords can be saved only when the operator chooses to save them, and saved
+QR-site passwords are autofilled into the site's login form without auto-submit.
 
 ## Local Storage Limits
 
 Settings are stored in Electron `userData` and sealed with Electron `safeStorage` when available. Admin and user codes are salted `scrypt` hashes, not plaintext codes.
+
+Saved QR-site passwords are stored in a separate `site-credentials.json` file under
+Electron `userData`. The file is sealed with Electron `safeStorage`, which uses the
+operating system's account-bound secret store, similar to Chrome's use of DPAPI,
+Keychain, or libsecret. The saved password is never displayed in the settings UI;
+settings only list the origin and username, with a delete action.
+
+This has the same operational limit as browser password storage on a shared terminal:
+anyone who can use the same operating system account can use a saved QR-site password
+inside this app. If the device is stolen while the OS account is accessible, saved
+QR-site passwords should be considered usable by that attacker. `safeStorage` protects
+against casual disk inspection, not against an active user of the unlocked OS account.
 
 This still has limits:
 
@@ -36,7 +50,14 @@ This still has limits:
 - A local administrator can clear the QR session.
 - If the operating system account is compromised, local app data should be considered compromised.
 
-Admin-code verification paths, including opening settings and clearing the QR session, do not have the per-attempt brute-force lockout used by the user unlock flow. This is accepted within the stated threat model because the control renderer is a trusted local surface with `contextIsolation` and no remote content, and the QR view has no preload or IPC access.
+Admin-code verification paths, including opening settings and clearing the QR session, do not have the per-attempt brute-force lockout used by the user unlock flow. This is accepted within the stated threat model because the control renderer is a trusted local surface with `contextIsolation` and no remote content.
+
+The QR view has a dedicated password-autofill preload. It runs with `contextIsolation`
+enabled, `nodeIntegration` disabled, and no site-facing `contextBridge` API. The preload
+uses Electron IPC only from the isolated world to request saved credentials and report
+submitted login-form credentials. The remote QR site cannot access `ipcRenderer`,
+`require`, or any app bridge. The only password value the QR site receives is the normal
+DOM input value that the site needs in order for the operator to log in.
 
 ## Audit Log Integrity
 

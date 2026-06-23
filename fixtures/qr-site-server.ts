@@ -31,8 +31,12 @@ const redirect = (response: ServerResponse, location: string): void => {
   response.end();
 };
 
-const handleLogin = (requestUrl: URL, response: ServerResponse): void => {
-  if (requestUrl.searchParams.get("login") === "1") {
+const handleLogin = (
+  request: IncomingMessage,
+  requestUrl: URL,
+  response: ServerResponse
+): void => {
+  if (request.method === "POST" || requestUrl.searchParams.get("login") === "1") {
     redirect(response, "/dashboard");
     return;
   }
@@ -45,7 +49,16 @@ const handleLogin = (requestUrl: URL, response: ServerResponse): void => {
   sendHtml(
     response,
     "Fixture Login",
-    `<main data-route="login"><h1>Login</h1><a href="/login?login=1">Sign in</a>${openerScript}</main>`
+    `<main data-route="login">
+      <h1>Login</h1>
+      <form action="/login" method="post">
+        <label>Username <input autocomplete="username" data-testid="fixture-username" name="username" type="text"></label>
+        <label>Password <input autocomplete="current-password" data-testid="fixture-password" name="password" type="password"></label>
+        <button data-testid="fixture-login-submit" type="submit">Sign in</button>
+      </form>
+      <a href="/login?login=1">Sign in link</a>
+      ${openerScript}
+    </main>`
   );
 };
 
@@ -54,7 +67,7 @@ const handleRequest = (request: IncomingMessage, response: ServerResponse): void
 
   switch (requestUrl.pathname) {
     case "/login":
-      handleLogin(requestUrl, response);
+      handleLogin(request, requestUrl, response);
       return;
     case "/dashboard":
       sendHtml(

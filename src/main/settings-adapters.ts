@@ -19,6 +19,7 @@ import type { Sealer, SettingsStore } from "../core/settings-repo";
 import { mainLogger } from "./logger";
 
 const SETTINGS_FILE_NAME = "settings.json";
+const SITE_CREDENTIALS_FILE_NAME = "site-credentials.json";
 const LOCKOUT_FILE_NAME = "lockout-state.json";
 const AUDIT_LOG_FILE_NAME = "audit-log.jsonl";
 
@@ -34,6 +35,9 @@ export interface AuditLogStore {
 
 export const createElectronSettingsStore = (): SettingsStore =>
   createFileSettingsStore(path.join(app.getPath("userData"), SETTINGS_FILE_NAME));
+
+export const createElectronSiteCredentialStore = (): SettingsStore =>
+  createFileSettingsStore(path.join(app.getPath("userData"), SITE_CREDENTIALS_FILE_NAME));
 
 export const createFileSettingsStore = (filePath: string): SettingsStore => ({
   read: () => {

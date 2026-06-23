@@ -21,6 +21,12 @@ export const IPC_CHANNELS = {
   queryAuditLog: "qr-guard:query-audit-log",
   resetUserCode: "qr-guard:reset-user-code",
   saveSettings: "qr-guard:save-settings",
+  siteCredentialAutofillRequest: "qr-guard:site-credential-autofill-request",
+  siteCredentialCaptured: "qr-guard:site-credential-captured",
+  siteCredentialDelete: "qr-guard:site-credential-delete",
+  siteCredentialList: "qr-guard:site-credential-list",
+  siteCredentialSaveDecision: "qr-guard:site-credential-save-decision",
+  siteCredentialSaveOffered: "qr-guard:site-credential-save-offered",
   stateChanged: "qr-guard:state-changed",
   submitUnlock: "qr-guard:submit-unlock",
   updateUser: "qr-guard:update-user"

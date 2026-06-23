@@ -2,7 +2,8 @@ import { app, BaseWindow, Menu, nativeTheme, powerMonitor } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
-import { createSettingsRepository, type SettingsRepository } from "../core/settings-repo";
+import { createSettingsRepository, type Sealer, type SettingsRepository } from "../core/settings-repo";
+import { createSiteCredentialRepository, type SiteCredentialRepository } from "../core/site-credentials";
 import { registerLockIpc } from "./lock-ipc";
 import { createLockController, type LockController } from "./lock-controller";
 import { formatUnknownError, mainLogger } from "./logger";
@@ -12,8 +13,10 @@ import {
   createElectronLockoutStateStore,
   createElectronSafeStorageSealer,
   createElectronSettingsStore,
+  createElectronSiteCredentialStore,
   createInsecureTestSealer
 } from "./settings-adapters";
+import { registerSiteCredentialIpc } from "./site-credential-ipc";
 import {
   hasEnabledTestFlag,
   readPositiveIntegerTestEnv,
@@ -28,6 +31,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 let activeShellWindow: ShellWindow | undefined;
 let activeLockController: LockController | undefined;
 let settingsRepository: SettingsRepository | undefined;
+let siteCredentialRepository: SiteCredentialRepository | undefined;
 
 const configuredUserDataPath = process.env["QR_GUARD_USER_DATA_DIR"];
 
@@ -56,15 +60,29 @@ const getSettingsRepository = (): SettingsRepository => {
     return settingsRepository;
   }
 
-  const allowInsecureTestStorage =
-    hasEnabledTestFlag(getTestOverrideEnvironment(), "QR_GUARD_ALLOW_INSECURE_TEST_STORAGE");
-  const sealer = allowInsecureTestStorage
-    ? createInsecureTestSealer()
-    : createElectronSafeStorageSealer();
-
-  settingsRepository = createSettingsRepository(createElectronSettingsStore(), sealer);
+  settingsRepository = createSettingsRepository(createElectronSettingsStore(), createStorageSealer());
 
   return settingsRepository;
+};
+
+const getSiteCredentialRepository = (): SiteCredentialRepository => {
+  if (siteCredentialRepository !== undefined) {
+    return siteCredentialRepository;
+  }
+
+  siteCredentialRepository = createSiteCredentialRepository(
+    createElectronSiteCredentialStore(),
+    createStorageSealer()
+  );
+
+  return siteCredentialRepository;
+};
+
+const createStorageSealer = (): Sealer => {
+  const allowInsecureTestStorage =
+    hasEnabledTestFlag(getTestOverrideEnvironment(), "QR_GUARD_ALLOW_INSECURE_TEST_STORAGE");
+
+  return allowInsecureTestStorage ? createInsecureTestSealer() : createElectronSafeStorageSealer();
 };
 
 const getConfiguredQrUrl = (): string | undefined => {
@@ -118,6 +136,7 @@ const createAndLoadShellWindow = (): void => {
     controlHtmlPath: getRendererHtmlPath(getRendererName()),
     disableDevTools: app.isPackaged,
     preloadPath: path.join(__dirname, "preload.js"),
+    qrPreloadPath: path.join(__dirname, "qr-site-preload.js"),
     ...(controlDevServerUrl === undefined ? {} : { controlDevServerUrl }),
     ...(qrUrl === undefined ? {} : { qrUrl })
   });
@@ -196,6 +215,11 @@ if (!gotSingleInstanceLock) {
           activeLockController?.completeSetup();
         },
         repository: getSettingsRepository()
+      });
+      registerSiteCredentialIpc({
+        getControlWebContents: () => activeShellWindow?.controlView.webContents,
+        getQrWebContents: () => activeShellWindow?.qrView.webContents,
+        repository: getSiteCredentialRepository()
       });
       createAndLoadShellWindow();
 

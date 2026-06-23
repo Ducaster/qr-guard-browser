@@ -8,6 +8,7 @@ import { inputSlot } from "../fluentSlots";
 import { AuditLogView } from "../logs/AuditLogView";
 import { ErrorList, Message } from "./Feedback";
 import { QrSessionTools } from "./QrSessionTools";
+import { SavedLoginsSection } from "./SavedLoginsSection";
 import { UserManagement } from "./UserManagement";
 import { isValidHttpUrl, parseSeconds } from "./validation";
 
@@ -199,6 +200,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
         </SectionCard>
 
         {settings === null ? null : <UserManagement onChanged={loadSettings} users={settings.users} />}
+        {settings === null ? null : <SavedLoginsSection />}
         <AuditLogView />
         <QrSessionTools
           isBusy={isBusy}

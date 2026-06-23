@@ -24,6 +24,7 @@ export interface ShellWindowOptions {
   readonly controlHtmlPath: string;
   readonly disableDevTools: boolean;
   readonly preloadPath: string;
+  readonly qrPreloadPath: string;
   readonly qrUrl?: string;
 }
 
@@ -86,6 +87,7 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   const qrView = new WebContentsView({
     webPreferences: {
       ...QR_VIEW_WEB_PREFERENCES,
+      preload: options.qrPreloadPath,
       session: qrSession
     }
   });
