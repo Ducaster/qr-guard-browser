@@ -2,8 +2,6 @@ export const QR_SESSION_PARTITION = "persist:qr-site" as const;
 
 export const QR_SURFACE_KIND = "webContentsView" as const;
 
-export const DEFAULT_FIXTURE_QR_URL = "http://127.0.0.1:37655/login" as const;
-
 export const IPC_CHANNELS = {
   addUser: "qr-guard:add-user",
   clearQrSession: "qr-guard:clear-qr-session",

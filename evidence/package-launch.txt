@@ -1,0 +1,39 @@
+## Package launch evidence - 2026-06-23 20:03:45 +0900
+
+### Raw launch log
+[package-check] app=out/QR Guard Browser-darwin-arm64/QR Guard Browser.app/Contents/MacOS/qr-guard-browser
+[package-check] user_data=/tmp/qr-guard-package-user-data.0mnxPe
+[package-check] pid=95247
+[package-check] running_after_7s=true
+[package-check] terminated_after_verification=true
+
+### Crash signature grep
+ABSENT: Unable to load preload
+ABSENT: ENOENT
+ABSENT: Failed to load shell window
+ABSENT: ERR_CONNECTION_REFUSED
+
+## Package launch UI evidence - 2026-06-23 20:07:36 +0900
+
+### Raw UI launch log
+[package-check-ui] app=out/QR Guard Browser-darwin-arm64/QR Guard Browser.app/Contents/MacOS/qr-guard-browser
+[package-check-ui] user_data=/tmp/qr-guard-package-user-data.PgZ9r4
+[package-check-ui] remote_debugging_port=9340
+[package-check-ui] pid=1800
+
+DevTools listening on ws://127.0.0.1:9340/devtools/browser/88b4f085-cc1a-44e9-bedb-b9c45c93ee15
+{"hasAppTitle":true,"hasFirstRunHeading":true,"url":"file:///Users/inthek/Documents/tele_proj/qr-guard-browser/out/QR%20Guard%20Browser-darwin-arm64/QR%20Guard%20Browser.app/Contents/Resources/app.asar/.vite/renderer/main_window/index.html"}
+[package-check-ui] running_after_dom_check=true
+[package-check-ui] terminated_after_verification=true
+
+### Crash signature grep
+ABSENT: Unable to load preload
+ABSENT: ENOENT
+ABSENT: Failed to load shell window
+ABSENT: ERR_CONNECTION_REFUSED
+
+### Packaged asar preload listing
+/.vite/build/main.js
+/.vite/build/preload.js
+/.vite/build/qr-site-preload.js
+

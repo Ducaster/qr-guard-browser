@@ -37,12 +37,16 @@ const config: ForgeConfig = {
           target: "main"
         },
         {
-          entry: "src/preload/index.ts",
+          entry: {
+            preload: "src/preload/index.ts"
+          },
           config: "vite.preload.config.ts",
           target: "preload"
         },
         {
-          entry: "src/preload/qr-site.ts",
+          entry: {
+            "qr-site-preload": "src/preload/qr-site.ts"
+          },
           config: "vite.qr-preload.config.ts",
           target: "preload"
         }

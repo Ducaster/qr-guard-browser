@@ -4,10 +4,10 @@ import path from "node:path";
 import { APP_NAME } from "../core/sanity";
 import {
   CONTROL_VIEW_WEB_PREFERENCES,
-  DEFAULT_FIXTURE_QR_URL,
   QR_SESSION_PARTITION,
   QR_VIEW_WEB_PREFERENCES
 } from "../core/shell-config";
+import { formatUnknownError, mainLogger } from "./logger";
 import { denyDisallowedQrNavigations, hardenWebContents } from "./windows-permissions";
 
 export interface ShellWindow {
@@ -69,8 +69,6 @@ const applyFullWindowLayout = (
   );
 };
 
-const getQrUrl = (qrUrl: string | undefined): string => qrUrl ?? DEFAULT_FIXTURE_QR_URL;
-
 const getSystemNeutralBackground = (): string =>
   nativeTheme.shouldUseDarkColors ? DARK_NEUTRAL_BACKGROUND : LIGHT_NEUTRAL_BACKGROUND;
 
@@ -124,12 +122,18 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   });
 
   const load = async (): Promise<void> => {
-    await Promise.all([
-      qrView.webContents.loadURL(getQrUrl(options.qrUrl)),
-      options.controlDevServerUrl === undefined
-        ? controlView.webContents.loadFile(options.controlHtmlPath)
-        : controlView.webContents.loadURL(options.controlDevServerUrl)
-    ]);
+    if (options.qrUrl !== undefined) {
+      void qrView.webContents.loadURL(options.qrUrl).catch((error: unknown) => {
+        mainLogger.warn("QR site failed to load.", {
+          error: formatUnknownError(error),
+          url: options.qrUrl
+        });
+      });
+    }
+
+    await (options.controlDevServerUrl === undefined
+      ? controlView.webContents.loadFile(options.controlHtmlPath)
+      : controlView.webContents.loadURL(options.controlDevServerUrl));
   };
 
   const setQrVisible = (visible: boolean): void => {
