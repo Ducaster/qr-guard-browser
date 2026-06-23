@@ -1,6 +1,10 @@
+import { Button, Field, Input, Text, makeStyles, tokens } from "@fluentui/react-components";
+import { Add24Regular, Delete24Regular, Key24Regular, Save24Regular } from "@fluentui/react-icons";
 import { useState, type JSX, type SyntheticEvent } from "react";
 
 import type { SettingsSafeUserView } from "../../core/settings-validation";
+import { SectionCard, Stack, WrapGrid } from "../fluentLayout";
+import { inputSlot } from "../fluentSlots";
 import { ErrorList, Message } from "./Feedback";
 import { validateUserCode } from "./validation";
 
@@ -49,11 +53,8 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
   };
 
   return (
-    <section className="form-section" aria-label="지역 관리">
-      <div className="section-heading">
-        <h2>지역 관리</h2>
-      </div>
-      <div className="user-stack">
+    <SectionCard ariaLabel="지역 관리" title="지역 관리">
+      <Stack>
         {users.map((user) => (
           <UserRow
             isBusy={isBusy}
@@ -63,38 +64,38 @@ export const UserManagement = ({ onChanged, users }: UserManagementProps): JSX.E
             user={user}
           />
         ))}
-      </div>
-      <form className="inline-form" onSubmit={addUser}>
-        <label className="field">
-          <span>지역</span>
-          <input
-            data-testid="settings-add-user-id"
-            disabled={isBusy}
-            onChange={(event) => {
-              setNewUserId(event.target.value);
-            }}
-            value={newUserId}
-          />
-        </label>
-        <label className="field">
-          <span>인증 코드</span>
-          <input
-            data-testid="settings-add-user-code"
-            disabled={isBusy}
-            onChange={(event) => {
-              setNewCode(event.target.value);
-            }}
-            type="password"
-            value={newCode}
-          />
-        </label>
-        <button className="button button--secondary" disabled={isBusy} type="submit">
-          지역 추가
-        </button>
+      </Stack>
+      <form onSubmit={addUser}>
+        <WrapGrid>
+          <Field label="지역">
+            <Input
+              disabled={isBusy}
+              input={inputSlot({ "data-testid": "settings-add-user-id" })}
+              onChange={(_event, data) => {
+                setNewUserId(data.value);
+              }}
+              value={newUserId}
+            />
+          </Field>
+          <Field label="인증 코드">
+            <Input
+              disabled={isBusy}
+              input={inputSlot({ "data-testid": "settings-add-user-code" })}
+              onChange={(_event, data) => {
+                setNewCode(data.value);
+              }}
+              type="password"
+              value={newCode}
+            />
+          </Field>
+          <Button appearance="primary" disabled={isBusy} icon={<Add24Regular />} type="submit">
+            지역 추가
+          </Button>
+        </WrapGrid>
       </form>
       <Message text={message} />
       <ErrorList errors={errors} />
-    </section>
+    </SectionCard>
   );
 };
 
@@ -106,6 +107,7 @@ interface UserRowProps {
 }
 
 const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Element => {
+  const styles = useUserManagementStyles();
   const [nextUserId, setNextUserId] = useState(user.userId);
   const [nextCode, setNextCode] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
@@ -143,25 +145,25 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
   };
 
   return (
-    <div className="user-card">
-      <div className="user-meta">
-        <strong>{user.userId}</strong>
-        <span>{formatLastAuthenticated(user.lastAuthenticatedAt)}</span>
+    <div className={styles.userRow}>
+      <div className={styles.userMeta}>
+        <Text weight="semibold">{user.userId}</Text>
+        <Text size={200}>{formatLastAuthenticated(user.lastAuthenticatedAt)}</Text>
       </div>
-      <div className="inline-form">
-        <label className="field">
-          <span>이름 변경</span>
-          <input
+      <WrapGrid>
+        <Field label="이름 변경">
+          <Input
             disabled={isBusy}
-            onChange={(event) => {
-              setNextUserId(event.target.value);
+            onChange={(_event, data) => {
+              setNextUserId(data.value);
             }}
             value={nextUserId}
           />
-        </label>
-        <button
-          className="button button--secondary"
+        </Field>
+        <Button
+          appearance="secondary"
           disabled={isBusy || nextUserId.trim().length === 0}
+          icon={<Save24Regular />}
           onClick={() => {
             runAction(() =>
               window.qrGuard.updateUser({
@@ -173,39 +175,40 @@ const UserRow = ({ isBusy, onChanged, onSetBusy, user }: UserRowProps): JSX.Elem
           type="button"
         >
           변경
-        </button>
-        <label className="field">
-          <span>새 인증 코드</span>
-          <input
+        </Button>
+        <Field label="새 인증 코드">
+          <Input
             disabled={isBusy}
-            onChange={(event) => {
-              setNextCode(event.target.value);
+            onChange={(_event, data) => {
+              setNextCode(data.value);
             }}
             type="password"
             value={nextCode}
           />
-        </label>
-        <button
-          className="button button--secondary"
+        </Field>
+        <Button
+          appearance="secondary"
           disabled={isBusy || nextCode.trim().length === 0}
+          icon={<Key24Regular />}
           onClick={() => {
             resetCode();
           }}
           type="button"
         >
           인증 코드 재설정
-        </button>
-        <button
-          className="button button--danger"
+        </Button>
+        <Button
+          appearance="subtle"
           disabled={isBusy}
+          icon={<Delete24Regular />}
           onClick={() => {
             runAction(() => window.qrGuard.deleteUser({ userId: user.userId }));
           }}
           type="button"
         >
           삭제
-        </button>
-      </div>
+        </Button>
+      </WrapGrid>
       <ErrorList errors={errors} />
     </div>
   );
@@ -236,3 +239,20 @@ const formatLastAuthenticated = (value: string | null): string => {
 
   return `마지막 인증 시각: ${parsedDate.toLocaleString("ko-KR")}`;
 };
+
+const useUserManagementStyles = makeStyles({
+  userMeta: {
+    alignItems: "baseline",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: tokens.spacingHorizontalM,
+    justifyContent: "space-between"
+  },
+  userRow: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: tokens.borderRadiusMedium,
+    display: "grid",
+    gap: tokens.spacingVerticalM,
+    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`
+  }
+});

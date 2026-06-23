@@ -1,4 +1,4 @@
-import { app, BaseWindow, Menu, powerMonitor } from "electron";
+import { app, BaseWindow, Menu, nativeTheme, powerMonitor } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
@@ -177,6 +177,8 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady()
     .then(() => {
+      nativeTheme.themeSource = "system";
+
       if (app.isPackaged) {
         Menu.setApplicationMenu(null);
       }

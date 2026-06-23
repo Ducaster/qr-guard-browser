@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
-import "./styles.css";
+import { FluentThemeProvider } from "./FluentThemeProvider";
 
 const rootElement = document.getElementById("root");
 
@@ -12,6 +12,8 @@ if (rootElement === null) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <FluentThemeProvider>
+      <App />
+    </FluentThemeProvider>
   </StrictMode>
 );

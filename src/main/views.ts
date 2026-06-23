@@ -1,4 +1,4 @@
-import { BaseWindow, session, WebContentsView, type Rectangle } from "electron";
+import { BaseWindow, nativeTheme, session, WebContentsView, type Rectangle } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
@@ -33,7 +33,8 @@ const INITIAL_BOUNDS = {
 } as const;
 
 const CONTROL_TOOLBAR_HEIGHT = 64;
-const transparentColor = "#00000000" as const;
+const DARK_NEUTRAL_BACKGROUND = "#1f1f1f" as const;
+const LIGHT_NEUTRAL_BACKGROUND = "#f3f2f1" as const;
 
 const getContentBounds = (window: BaseWindow): Rectangle => {
   const [width, height] = window.getContentSize();
@@ -69,8 +70,12 @@ const applyFullWindowLayout = (
 
 const getQrUrl = (qrUrl: string | undefined): string => qrUrl ?? DEFAULT_FIXTURE_QR_URL;
 
+const getSystemNeutralBackground = (): string =>
+  nativeTheme.shouldUseDarkColors ? DARK_NEUTRAL_BACKGROUND : LIGHT_NEUTRAL_BACKGROUND;
+
 export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   const window = new BaseWindow({
+    backgroundColor: getSystemNeutralBackground(),
     height: INITIAL_BOUNDS.height,
     show: false,
     title: APP_NAME,
@@ -95,7 +100,18 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   denyDisallowedQrNavigations(qrView.webContents);
   hardenWebContents(controlView.webContents, controlView.webContents.session, options.disableDevTools);
 
-  controlView.setBackgroundColor(transparentColor);
+  const applyThemeBackground = (): void => {
+    const backgroundColor = getSystemNeutralBackground();
+
+    window.setBackgroundColor(backgroundColor);
+    controlView.setBackgroundColor(backgroundColor);
+  };
+
+  applyThemeBackground();
+  nativeTheme.on("updated", applyThemeBackground);
+  window.once("closed", () => {
+    nativeTheme.off("updated", applyThemeBackground);
+  });
 
   window.contentView.addChildView(qrView);
   window.contentView.addChildView(controlView);

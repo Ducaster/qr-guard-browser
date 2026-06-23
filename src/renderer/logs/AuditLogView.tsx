@@ -1,16 +1,29 @@
+import {
+  Button,
+  Dropdown,
+  Field,
+  MessageBar,
+  MessageBarBody,
+  Option,
+  Spinner,
+  Text,
+  makeStyles,
+  tokens
+} from "@fluentui/react-components";
+import { ArrowClockwise24Regular, ArrowExportLtr24Regular } from "@fluentui/react-icons";
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 
-import { LOGIN_MODE_AUDIT_USER_ID, type AuditEvent, type AuditExportFormat } from "../../core/audit-log";
+import type { AuditEvent, AuditExportFormat } from "../../core/audit-log";
+import { ActionsRow, SectionCard, WrapGrid } from "../fluentLayout";
+import { buttonSlot } from "../fluentSlots";
 import { ErrorList, Message } from "../settings/Feedback";
+import { AuditLogTable } from "./AuditLogTable";
+import { createAuditGridRows, formatTimestamp, getAuditUserIds } from "./auditLogFormat";
 
-const AUDIT_REASON_LABELS = {
-  idle: "유휴 잠금",
-  "login-mode": "로그인 모드",
-  manual: "수동 잠금",
-  timer: "시간 만료"
-} as const satisfies Record<AuditEvent["reason"], string>;
+const ALL_USERS_FILTER = "__all__" as const;
 
 export const AuditLogView = (): JSX.Element => {
+  const styles = useAuditStyles();
   const [events, setEvents] = useState<readonly AuditEvent[]>([]);
   const [lastSuccessfulUnlockByUserId, setLastSuccessfulUnlockByUserId] =
     useState<Readonly<Record<string, string>>>({});
@@ -47,21 +60,15 @@ export const AuditLogView = (): JSX.Element => {
     });
   }, [loadAuditLog, selectedUserId]);
 
-  const userIds = useMemo(() => {
-    const ids = new Set<string>();
+  const userIds = useMemo(
+    () => getAuditUserIds(events, lastSuccessfulUnlockByUserId),
+    [events, lastSuccessfulUnlockByUserId]
+  );
 
-    for (const userId of Object.keys(lastSuccessfulUnlockByUserId)) {
-      ids.add(userId);
-    }
-
-    for (const event of events) {
-      if (event.userId !== "login-mode") {
-        ids.add(event.userId);
-      }
-    }
-
-    return [...ids].sort((left, right) => left.localeCompare(right));
-  }, [events, lastSuccessfulUnlockByUserId]);
+  const rows = useMemo(
+    () => createAuditGridRows(events, lastSuccessfulUnlockByUserId),
+    [events, lastSuccessfulUnlockByUserId]
+  );
 
   const exportAuditLog = (format: AuditExportFormat): void => {
     setIsExporting(true);
@@ -88,12 +95,12 @@ export const AuditLogView = (): JSX.Element => {
   };
 
   return (
-    <section className="form-section audit-log" aria-label="인증 기록">
-      <div className="section-heading audit-heading">
-        <h2>인증 기록</h2>
-        <button
-          className="button button--ghost"
+    <SectionCard
+      action={
+        <Button
+          appearance="secondary"
           disabled={isLoading}
+          icon={<ArrowClockwise24Regular />}
           onClick={() => {
             void loadAuditLog(selectedUserId).catch(() => {
               setErrors(["인증 기록을 불러올 수 없습니다."]);
@@ -103,126 +110,97 @@ export const AuditLogView = (): JSX.Element => {
           type="button"
         >
           새로고침
-        </button>
-      </div>
-
-      <div className="audit-controls">
-        <label className="field">
-          <span>지역 필터</span>
-          <select
-            data-testid="audit-user-filter"
+        </Button>
+      }
+      ariaLabel="인증 기록"
+      title="인증 기록"
+    >
+      <WrapGrid>
+        <Field label="지역 필터">
+          <Dropdown
+            button={buttonSlot({ "data-testid": "audit-user-filter" })}
             disabled={isLoading}
-            onChange={(event) => {
-              setSelectedUserId(event.target.value);
+            onOptionSelect={(_event, data) => {
+              setSelectedUserId(data.optionValue === ALL_USERS_FILTER ? "" : data.optionValue ?? "");
             }}
-            value={selectedUserId}
+            selectedOptions={[selectedUserId.length === 0 ? ALL_USERS_FILTER : selectedUserId]}
+            value={selectedUserId.length === 0 ? "전체 지역" : selectedUserId}
           >
-            <option value="">전체 지역</option>
+            <Option value={ALL_USERS_FILTER}>전체 지역</Option>
             {userIds.map((userId) => (
-              <option key={userId} value={userId}>
+              <Option key={userId} value={userId}>
                 {userId}
-              </option>
+              </Option>
             ))}
-          </select>
-        </label>
-        <div className="button-row audit-export-row">
-          <button
-            className="button button--secondary"
+          </Dropdown>
+        </Field>
+        <ActionsRow>
+          <Button
+            appearance="secondary"
             disabled={isExporting}
+            icon={<ArrowExportLtr24Regular />}
             onClick={() => {
               exportAuditLog("jsonl");
             }}
             type="button"
           >
             JSONL 내보내기
-          </button>
-          <button
-            className="button button--secondary"
+          </Button>
+          <Button
+            appearance="secondary"
             disabled={isExporting}
+            icon={<ArrowExportLtr24Regular />}
             onClick={() => {
               exportAuditLog("csv");
             }}
             type="button"
           >
             CSV 내보내기
-          </button>
-        </div>
-      </div>
+          </Button>
+        </ActionsRow>
+      </WrapGrid>
 
-      <div className="audit-last-auth-list" data-testid="audit-last-auth-list">
-        {userIds.length === 0 ? <p className="muted">성공한 인증 기록이 없습니다.</p> : null}
+      {isLoading ? <Spinner label="인증 기록 불러오는 중" size="small" /> : null}
+
+      <div className={styles.lastAuthList} data-testid="audit-last-auth-list">
+        {userIds.length === 0 ? <Text size={200}>성공한 인증 기록이 없습니다.</Text> : null}
         {userIds.map((userId) => (
-          <div className="audit-last-auth-item" data-testid={`audit-last-auth-${userId}`} key={userId}>
-            <strong>{userId}</strong>
-            <span>
+          <div className={styles.lastAuthItem} data-testid={`audit-last-auth-${userId}`} key={userId}>
+            <Text weight="semibold">{userId}</Text>
+            <Text size={200}>
               마지막 인증 시각: {formatTimestamp(lastSuccessfulUnlockByUserId[userId] ?? null)}
-            </span>
+            </Text>
           </div>
         ))}
       </div>
 
       {skippedLines > 0 ? (
-        <p className="audit-warning" data-testid="audit-skipped-lines">
-          잘못된 인증 기록 줄을 건너뜀: {skippedLines}
-        </p>
+        <MessageBar data-testid="audit-skipped-lines" intent="warning">
+          <MessageBarBody>잘못된 인증 기록 줄을 건너뜀: {skippedLines}</MessageBarBody>
+        </MessageBar>
       ) : null}
 
-      <div className="audit-table-wrap">
-        <table className="audit-table" data-testid="audit-log-table">
-          <thead>
-            <tr>
-              <th>지역</th>
-              <th>잠금 해제 시각</th>
-              <th>잠금 시각</th>
-              <th>노출 시간(초)</th>
-              <th>사유</th>
-              <th>버전</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.length === 0 ? (
-              <tr>
-                <td className="audit-empty-cell" colSpan={6}>
-                  인증 기록이 없습니다.
-                </td>
-              </tr>
-            ) : null}
-            {events.map((event, index) => (
-              <tr
-                data-testid="audit-event-row"
-                key={`${event.userId}-${event.unlockedAt}-${event.lockedAt}-${String(index)}`}
-              >
-                <td>{formatAuditUserId(event.userId)}</td>
-                <td>{formatTimestamp(event.unlockedAt)}</td>
-                <td>{formatTimestamp(event.lockedAt)}</td>
-                <td>{event.durationSeconds}초</td>
-                <td>{AUDIT_REASON_LABELS[event.reason]}</td>
-                <td>{event.appVersion}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AuditLogTable rows={rows} />
 
       <Message text={message} />
       <ErrorList errors={errors} />
-    </section>
+    </SectionCard>
   );
 };
 
-const formatTimestamp = (value: string | null): string => {
-  if (value === null) {
-    return "없음";
+const useAuditStyles = makeStyles({
+  lastAuthItem: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: tokens.borderRadiusMedium,
+    display: "grid",
+    gap: tokens.spacingVerticalXXS,
+    minWidth: "220px",
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`
+  },
+  lastAuthList: {
+    alignItems: "stretch",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: tokens.spacingHorizontalM
   }
-
-  const parsedDate = new Date(value);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "올바르지 않은 시각";
-  }
-
-  return parsedDate.toLocaleString("ko-KR");
-};
-
-const formatAuditUserId = (userId: string): string =>
-  userId === LOGIN_MODE_AUDIT_USER_ID ? "로그인 모드" : userId;
+});

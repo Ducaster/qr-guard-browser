@@ -1,5 +1,9 @@
+import { Button, Field, Input } from "@fluentui/react-components";
+import { Delete24Regular } from "@fluentui/react-icons";
 import { useState, type JSX } from "react";
 
+import { SectionCard, WrapGrid } from "../fluentLayout";
+import { inputSlot } from "../fluentSlots";
 import { validateAdminCode } from "./validation";
 
 interface QrSessionToolsProps {
@@ -46,27 +50,23 @@ export const QrSessionTools = ({
   };
 
   return (
-    <section className="form-section" aria-label="QR 세션">
-      <div className="section-heading">
-        <h2>QR 세션</h2>
-      </div>
-      <div className="inline-form">
-        <label className="field">
-          <span>관리자 코드</span>
-          <input
-            data-testid="clear-session-admin-code"
+    <SectionCard ariaLabel="QR 세션" title="QR 세션">
+      <WrapGrid>
+        <Field label="관리자 코드">
+          <Input
             disabled={isBusy}
-            onChange={(event) => {
-              setClearAdminCode(event.target.value);
+            input={inputSlot({ "data-testid": "clear-session-admin-code" })}
+            onChange={(_event, data) => {
+              setClearAdminCode(data.value);
             }}
             type="password"
             value={clearAdminCode}
           />
-        </label>
-        <button className="button button--danger" disabled={isBusy} onClick={clearQrSession} type="button">
+        </Field>
+        <Button appearance="subtle" disabled={isBusy} icon={<Delete24Regular />} onClick={clearQrSession} type="button">
           QR 세션 초기화
-        </button>
-      </div>
-    </section>
+        </Button>
+      </WrapGrid>
+    </SectionCard>
   );
 };

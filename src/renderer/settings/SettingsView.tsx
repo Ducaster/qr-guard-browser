@@ -1,11 +1,15 @@
+import { Button, Field, Input, Spinner } from "@fluentui/react-components";
+import { LockClosed24Regular, Save24Regular } from "@fluentui/react-icons";
 import { useCallback, useEffect, useState, type JSX, type SyntheticEvent } from "react";
 
 import type { SettingsSafeView } from "../../core/settings-validation";
-import { ErrorList, Message } from "./Feedback";
+import { HeaderBlock, PageStack, Screen, SectionCard, SplitThree, SplitTwo, Stack } from "../fluentLayout";
+import { inputSlot } from "../fluentSlots";
 import { AuditLogView } from "../logs/AuditLogView";
-import { isValidHttpUrl, parseSeconds } from "./validation";
+import { ErrorList, Message } from "./Feedback";
 import { QrSessionTools } from "./QrSessionTools";
 import { UserManagement } from "./UserManagement";
+import { isValidHttpUrl, parseSeconds } from "./validation";
 
 interface SettingsViewProps {
   readonly onClose: () => void;
@@ -97,107 +101,104 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
   };
 
   return (
-    <main className="app-shell">
-      <section className="operator-panel settings-layout" aria-label="설정">
-        <div className="panel-header panel-header--split">
-          <div>
-            <p className="eyebrow">QR 가드 브라우저</p>
-            <h1>설정</h1>
-          </div>
-          <button className="button button--ghost" disabled={isBusy} onClick={lockSettings} type="button">
-            설정 잠그기
-          </button>
-        </div>
+    <Screen>
+      <PageStack>
+        <HeaderBlock
+          action={
+            <Button
+              appearance="secondary"
+              disabled={isBusy}
+              icon={<LockClosed24Regular />}
+              onClick={lockSettings}
+              type="button"
+            >
+              설정 잠그기
+            </Button>
+          }
+          title="설정"
+        />
 
-        {settings === null ? <p className="muted">설정 불러오는 중</p> : null}
-
-        <form className="form-grid" onSubmit={saveSettings}>
-          <div className="form-section">
-            <label className="field">
-              <span>QR 사이트 주소</span>
-              <input
-                data-testid="settings-qr-url"
-                disabled={isBusy || settings === null}
-                onChange={(event) => {
-                  setQrUrl(event.target.value);
-                }}
-                type="url"
-                value={qrUrl}
-              />
-            </label>
-          </div>
-          <div className="form-section form-section--two">
-            <label className="field">
-              <span>노출 시간(초)</span>
-              <input
-                data-testid="settings-unlock-duration"
-                disabled={isBusy || settings === null}
-                min="1"
-                onChange={(event) => {
-                  setUnlockDurationSeconds(event.target.value);
-                }}
-                type="number"
-                value={unlockDurationSeconds}
-              />
-            </label>
-            <label className="field">
-              <span>유휴 자동잠금(초)</span>
-              <input
-                data-testid="settings-idle-timeout"
-                disabled={isBusy || settings === null}
-                min="1"
-                onChange={(event) => {
-                  setIdleAutoLockSeconds(event.target.value);
-                }}
-                type="number"
-                value={idleAutoLockSeconds}
-              />
-            </label>
-          </div>
-          <fieldset className="form-section">
-            <legend>로그인 감지</legend>
-            <div className="form-section form-section--three">
-              <label className="field">
-                <span>로그인 URL 패턴</span>
-                <input
+        <SectionCard ariaLabel="기본 설정" title="기본 설정">
+          {settings === null ? <Spinner label="설정 불러오는 중" /> : null}
+          <form onSubmit={saveSettings}>
+            <Stack>
+              <Field label="QR 사이트 주소">
+                <Input
                   disabled={isBusy || settings === null}
-                  onChange={(event) => {
-                    setLoginUrlPattern(event.target.value);
+                  input={inputSlot({ "data-testid": "settings-qr-url" })}
+                  onChange={(_event, data) => {
+                    setQrUrl(data.value);
                   }}
-                  value={loginUrlPattern}
+                  type="url"
+                  value={qrUrl}
                 />
-              </label>
-              <label className="field">
-                <span>로그인 완료 URL 패턴</span>
-                <input
-                  disabled={isBusy || settings === null}
-                  onChange={(event) => {
-                    setLoggedInUrlPattern(event.target.value);
-                  }}
-                  value={loggedInUrlPattern}
-                />
-              </label>
-              <label className="field">
-                <span>제목 포함 문구</span>
-                <input
-                  disabled={isBusy || settings === null}
-                  onChange={(event) => {
-                    setTitleContains(event.target.value);
-                  }}
-                  value={titleContains}
-                />
-              </label>
-            </div>
-          </fieldset>
-          <div className="button-row button-row--end">
-            <button className="button button--primary" disabled={isBusy || settings === null} type="submit">
-              설정 저장
-            </button>
-          </div>
-        </form>
+              </Field>
+              <SplitTwo>
+                <Field label="노출 시간(초)">
+                  <Input
+                    disabled={isBusy || settings === null}
+                    input={inputSlot({ "data-testid": "settings-unlock-duration", min: 1 })}
+                    onChange={(_event, data) => {
+                      setUnlockDurationSeconds(data.value);
+                    }}
+                    type="number"
+                    value={unlockDurationSeconds}
+                  />
+                </Field>
+                <Field label="유휴 자동잠금(초)">
+                  <Input
+                    disabled={isBusy || settings === null}
+                    input={inputSlot({ "data-testid": "settings-idle-timeout", min: 1 })}
+                    onChange={(_event, data) => {
+                      setIdleAutoLockSeconds(data.value);
+                    }}
+                    type="number"
+                    value={idleAutoLockSeconds}
+                  />
+                </Field>
+              </SplitTwo>
+              <SplitThree>
+                <Field label="로그인 URL 패턴">
+                  <Input
+                    disabled={isBusy || settings === null}
+                    onChange={(_event, data) => {
+                      setLoginUrlPattern(data.value);
+                    }}
+                    value={loginUrlPattern}
+                  />
+                </Field>
+                <Field label="로그인 완료 URL 패턴">
+                  <Input
+                    disabled={isBusy || settings === null}
+                    onChange={(_event, data) => {
+                      setLoggedInUrlPattern(data.value);
+                    }}
+                    value={loggedInUrlPattern}
+                  />
+                </Field>
+                <Field label="제목 포함 문구">
+                  <Input
+                    disabled={isBusy || settings === null}
+                    onChange={(_event, data) => {
+                      setTitleContains(data.value);
+                    }}
+                    value={titleContains}
+                  />
+                </Field>
+              </SplitThree>
+              <Button
+                appearance="primary"
+                disabled={isBusy || settings === null}
+                icon={<Save24Regular />}
+                type="submit"
+              >
+                설정 저장
+              </Button>
+            </Stack>
+          </form>
+        </SectionCard>
 
         {settings === null ? null : <UserManagement onChanged={loadSettings} users={settings.users} />}
-
         <AuditLogView />
         <QrSessionTools
           isBusy={isBusy}
@@ -205,11 +206,10 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
           onSetErrors={setErrors}
           onSetMessage={setMessage}
         />
-
         <Message text={message} />
         <ErrorList errors={errors} />
-      </section>
-    </main>
+      </PageStack>
+    </Screen>
   );
 };
 

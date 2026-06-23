@@ -1,10 +1,17 @@
+import { Badge, Button, Field, Input, Text, makeStyles, tokens } from "@fluentui/react-components";
+import { Key24Regular, Settings24Regular } from "@fluentui/react-icons";
 import { useState, type JSX, type SyntheticEvent } from "react";
+
+import { ActionsRow, FormGrid, HeaderBlock, PanelCard, Screen } from "../fluentLayout";
+import { inputSlot } from "../fluentSlots";
+import { ErrorList } from "../settings/Feedback";
 
 interface LockScreenProps {
   readonly onOpenSettings: () => void;
 }
 
 export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => {
+  const styles = useLockScreenStyles();
   const [userId, setUserId] = useState("");
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
@@ -33,62 +40,74 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
   };
 
   return (
-    <main className="app-shell app-shell--center">
-      <section className="operator-panel operator-panel--narrow" aria-label="잠김">
-        <div className="status-rail" aria-hidden="true" />
-        <div className="panel-header">
-          <p className="eyebrow">QR 가드 브라우저</p>
-          <h1>QR 숨김</h1>
+    <Screen center>
+      <PanelCard ariaLabel="잠김" narrow>
+        <HeaderBlock title="QR 숨김" />
+        <div className={styles.statusLine}>
+          <Badge appearance="tint" color="brand" data-testid="locked-screen" shape="rounded">
+            잠김
+          </Badge>
+          <Text size={200}>지역 인증 후 QR 화면을 표시합니다.</Text>
         </div>
-        <div className="lock-status" data-testid="locked-screen">
-          <span className="status-dot" aria-hidden="true" />
-          <span>잠김</span>
-        </div>
-        <form className="form-grid" onSubmit={submit}>
-          <label className="field">
-            <span>지역</span>
-            <input
-              autoFocus
-              data-testid="unlock-user-id"
-              disabled={isSubmitting}
-              onChange={(event) => {
-                setUserId(event.target.value);
-              }}
-              value={userId}
-            />
-          </label>
-          <label className="field">
-            <span>인증 코드</span>
-            <input
-              data-testid="unlock-code"
-              disabled={isSubmitting}
-              onChange={(event) => {
-                setCode(event.target.value);
-              }}
-              type="password"
-              value={code}
-            />
-          </label>
-          {errors.length > 0 ? (
-            <ul className="error-list" data-testid="unlock-errors">
-              {errors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="button-row">
-            <button className="button button--primary" data-testid="unlock-submit" disabled={isSubmitting} type="submit">
-              잠금 해제
-            </button>
-            <button className="button button--ghost" disabled={isSubmitting} onClick={onOpenSettings} type="button">
-              설정
-            </button>
-          </div>
+        <form onSubmit={submit}>
+          <FormGrid>
+            <Field label="지역">
+              <Input
+                disabled={isSubmitting}
+                input={inputSlot({ "data-testid": "unlock-user-id", autoFocus: true })}
+                onChange={(_event, data) => {
+                  setUserId(data.value);
+                }}
+                value={userId}
+              />
+            </Field>
+            <Field label="인증 코드">
+              <Input
+                disabled={isSubmitting}
+                input={inputSlot({ "data-testid": "unlock-code" })}
+                onChange={(_event, data) => {
+                  setCode(data.value);
+                }}
+                type="password"
+                value={code}
+              />
+            </Field>
+            <ErrorList errors={errors} testId="unlock-errors" />
+            <ActionsRow>
+              <Button
+                appearance="primary"
+                data-testid="unlock-submit"
+                disabled={isSubmitting}
+                icon={<Key24Regular />}
+                type="submit"
+              >
+                잠금 해제
+              </Button>
+              <Button
+                appearance="secondary"
+                disabled={isSubmitting}
+                icon={<Settings24Regular />}
+                onClick={onOpenSettings}
+                type="button"
+              >
+                설정
+              </Button>
+            </ActionsRow>
+          </FormGrid>
         </form>
-      </section>
-    </main>
+      </PanelCard>
+    </Screen>
   );
 };
+
+const useLockScreenStyles = makeStyles({
+  statusLine: {
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: tokens.spacingHorizontalS
+  }
+});
 
 const formatUnlockErrors = (
   errors: readonly string[],

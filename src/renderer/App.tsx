@@ -1,6 +1,8 @@
+import { MessageBar, MessageBarBody, Spinner, makeStyles, tokens } from "@fluentui/react-components";
 import { useEffect, useState, type JSX } from "react";
 
 import type { StateSnapshot } from "../core/state-machine";
+import { HeaderBlock, PanelCard, Screen } from "./fluentLayout";
 import { LockScreen } from "./lock/LockScreen";
 import { AdminGate } from "./settings/AdminGate";
 import { FirstRunSetup } from "./settings/FirstRunSetup";
@@ -10,6 +12,7 @@ import { Toolbar } from "./toolbar/Toolbar";
 type LocalMode = "adminGate" | null;
 
 export const App = (): JSX.Element => {
+  const styles = useAppStyles();
   const [state, setState] = useState<StateSnapshot | null>(null);
   const [localMode, setLocalMode] = useState<LocalMode>(null);
   const [error, setError] = useState("");
@@ -80,7 +83,11 @@ export const App = (): JSX.Element => {
               setLocalMode("adminGate");
             }}
           />
-          {error.length > 0 ? <p className="floating-error">{error}</p> : null}
+          {error.length > 0 ? (
+            <MessageBar className={styles.floatingMessage} intent="error">
+              <MessageBarBody>{error}</MessageBarBody>
+            </MessageBar>
+          ) : null}
         </>
       );
     case "settings":
@@ -108,12 +115,20 @@ const createLockedFallbackState = (): StateSnapshot => ({
 });
 
 const LoadingView = (): JSX.Element => (
-  <main className="app-shell app-shell--center">
-    <section className="operator-panel operator-panel--narrow" aria-label="불러오는 중">
-      <div className="panel-header">
-        <p className="eyebrow">QR 가드 브라우저</p>
-        <h1>불러오는 중</h1>
-      </div>
-    </section>
-  </main>
+  <Screen center>
+    <PanelCard ariaLabel="불러오는 중" narrow>
+      <HeaderBlock title="불러오는 중" />
+      <Spinner label="설정 불러오는 중" />
+    </PanelCard>
+  </Screen>
 );
+
+const useAppStyles = makeStyles({
+  floatingMessage: {
+    bottom: tokens.spacingVerticalXL,
+    position: "fixed",
+    right: tokens.spacingHorizontalXL,
+    zIndex: 10,
+    margin: 0
+  }
+});

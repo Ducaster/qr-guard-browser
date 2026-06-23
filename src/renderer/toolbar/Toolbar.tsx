@@ -1,7 +1,17 @@
+import {
+  Badge,
+  MessageBar,
+  MessageBarBody,
+  Text,
+  Toolbar as FluentToolbar,
+  ToolbarButton,
+  makeStyles,
+  tokens
+} from "@fluentui/react-components";
+import { LockClosed24Regular } from "@fluentui/react-icons";
 import { useEffect, useState, type JSX } from "react";
 
 import type { StateSnapshot } from "../../core/state-machine";
-import "./toolbar.css";
 
 interface ToolbarProps {
   readonly state: StateSnapshot;
@@ -13,6 +23,7 @@ interface ToolbarActionResponse {
 }
 
 export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
+  const styles = useToolbarStyles();
   const [actionError, setActionError] = useState("");
   const [remainingMs, setRemainingMs] = useState(state.remainingMs);
   const isLoginMode = state.state === "loginMode";
@@ -49,48 +60,86 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   }, [state.unlockExpiresAt]);
 
   return (
-    <main className="toolbar-shell" data-testid="unlock-toolbar">
-      <div className="toolbar-status">
-        <span className="toolbar-dot" aria-hidden="true" />
-        <strong>{isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "잠금 해제됨"}</strong>
+    <main className={styles.shell} data-testid="unlock-toolbar">
+      <div className={styles.status}>
+        <Badge appearance="tint" color={isLoginMode ? "warning" : "danger"} shape="rounded">
+          {isLoginMode ? "로그인 화면 표시 중" : "잠금 해제됨"}
+        </Badge>
+        <Text weight="semibold">{isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "잠금 해제됨"}</Text>
         {isLoginMode ? (
-          <span data-testid="login-mode-indicator">로그인 화면 표시 중</span>
+          <Badge appearance="outline" color="warning" data-testid="login-mode-indicator" shape="rounded">
+            로그인 화면 표시 중
+          </Badge>
         ) : (
-          <span data-testid="unlock-countdown">{formatRemaining(remainingMs)}</span>
+          <Badge appearance="outline" color="danger" data-testid="unlock-countdown" shape="rounded">
+            {formatRemaining(remainingMs)}
+          </Badge>
         )}
       </div>
-      <div className="toolbar-actions">
+      <FluentToolbar aria-label="잠금 도구" className={styles.actions} size="small">
         {isLoginMode ? (
-          <button
-            className="toolbar-button toolbar-button--secondary"
+          <ToolbarButton
+            appearance="primary"
             data-testid="manual-login-complete"
+            icon={<LockClosed24Regular />}
             onClick={() => {
               runToolbarAction(() => window.qrGuard.manualLoginComplete());
             }}
             type="button"
           >
             로그인 완료 후 잠금
-          </button>
+          </ToolbarButton>
         ) : null}
-        <button
-          className="toolbar-button"
+        <ToolbarButton
+          appearance="primary"
           data-testid="manual-lock"
+          icon={<LockClosed24Regular />}
           onClick={() => {
             runToolbarAction(() => window.qrGuard.manualLock());
           }}
           type="button"
         >
           지금 잠그기
-        </button>
-      </div>
+        </ToolbarButton>
+      </FluentToolbar>
       {actionError.length > 0 ? (
-        <span className="toolbar-error" data-testid="toolbar-action-error" role="alert">
-          {actionError}
-        </span>
+        <MessageBar className={styles.error} data-testid="toolbar-action-error" intent="error" role="alert">
+          <MessageBarBody>{actionError}</MessageBarBody>
+        </MessageBar>
       ) : null}
     </main>
   );
 };
+
+const useToolbarStyles = makeStyles({
+  actions: {
+    flexShrink: 0
+  },
+  error: {
+    maxWidth: "320px"
+  },
+  shell: {
+    alignItems: "center",
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderBottomColor: tokens.colorNeutralStroke2,
+    borderBottomStyle: "solid",
+    borderBottomWidth: tokens.strokeWidthThin,
+    color: tokens.colorNeutralForeground1,
+    display: "flex",
+    gap: tokens.spacingHorizontalM,
+    height: "64px",
+    justifyContent: "space-between",
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalL}`,
+    width: "100vw"
+  },
+  status: {
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: tokens.spacingHorizontalS,
+    minWidth: 0
+  }
+});
 
 const formatRemaining = (remainingMs: number | null): string => {
   if (remainingMs === null) {
