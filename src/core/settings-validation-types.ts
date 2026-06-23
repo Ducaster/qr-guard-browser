@@ -13,6 +13,10 @@ export interface UserRenameInput {
   readonly userId: string;
 }
 
+export interface AdminCodeInput {
+  readonly code: string;
+}
+
 export interface FirstRunSetupInput {
   readonly adminCode: string;
   readonly idleAutoLockSeconds: number;

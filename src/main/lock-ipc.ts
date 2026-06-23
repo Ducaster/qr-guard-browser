@@ -22,8 +22,8 @@ export const registerLockIpc = (getController: LockControllerProvider): void => 
 
   ipcMain.handle(
     IPC_CHANNELS.submitSiteLogin,
-    (_event, userId: unknown, code: unknown): UnlockResponse =>
-      getRequiredController(getController).submitSiteLogin(userId, code)
+    (_event, code: unknown): UnlockResponse =>
+      getRequiredController(getController).submitSiteLogin(code)
   );
 
   ipcMain.handle(IPC_CHANNELS.manualLock, (): ActionResponse => {

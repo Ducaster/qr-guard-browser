@@ -1,4 +1,3 @@
-import type { LockoutState } from "../core/auth";
 import type { AuditLockReason } from "../core/audit-log";
 import { classify, matchesLoginUrl } from "../core/login-detector";
 import { matchesQrTitle } from "../core/qr-title-detector";
@@ -19,9 +18,10 @@ import { IPC_CHANNELS } from "../core/shell-config";
 import type { Settings, SettingsRepository } from "../core/settings-repo";
 import { isFirstRunSettings } from "../core/settings-validation";
 import { createAuditSessionTracker } from "./audit-session-tracker";
+import { createLockAuthenticator } from "./lock-authenticator";
 import { createLockModeLifecycle } from "./lock-mode-lifecycle";
 import { createLockTimers } from "./lock-timers";
-import { authenticateQrAccess, notLockedResponse, type QrAccessAuthResult } from "./qr-access-auth";
+import { notLockedResponse } from "./qr-access-auth";
 import { learnQrTitleFromCurrentPage, type ActionResponse } from "./qr-title-learning";
 import {
   readQrNavigationSnapshot,
@@ -49,7 +49,7 @@ export interface LockController {
   readonly manualLock: () => void;
   readonly manualLoginComplete: () => void;
   readonly openSettings: () => void;
-  readonly submitSiteLogin: (userId: unknown, code: unknown) => UnlockResponse;
+  readonly submitSiteLogin: (code: unknown) => UnlockResponse;
   readonly submitUnlock: (userId: unknown, code: unknown) => UnlockResponse;
 }
 
@@ -70,8 +70,12 @@ export interface LockControllerOptions {
 export const createLockController = (options: LockControllerOptions): LockController => {
   let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
   let currentUrlMatchesLoginPattern = false;
-  let lockoutState: LockoutState = options.lockoutStateStore.load();
   let unlockExpiresAtMs: number | null = null;
+  const authenticator = createLockAuthenticator({
+    initialLockoutState: options.lockoutStateStore.load(),
+    lockoutStateStore: options.lockoutStateStore,
+    repository: options.repository
+  });
   const auditSessions = createAuditSessionTracker({
     appVersion: options.appVersion,
     auditLogStore: options.auditLogStore
@@ -168,25 +172,6 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
   watchQrNavigation(options.qrWebContents, evaluateQrNavigation);
 
-  const authenticate = (
-    rawUserId: unknown,
-    rawCode: unknown,
-    nowMs: number
-  ): QrAccessAuthResult => {
-    const authResult = authenticateQrAccess({
-      lockoutState,
-      lockoutStateStore: options.lockoutStateStore,
-      nowMs,
-      rawCode,
-      rawUserId,
-      repository: options.repository
-    });
-
-    lockoutState = authResult.lockoutState;
-
-    return authResult;
-  };
-
   const submitUnlock = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
     const nowMs = Date.now();
 
@@ -194,7 +179,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
       return notLockedResponse();
     }
 
-    const authResult = authenticate(rawUserId, rawCode, nowMs);
+    const authResult = authenticator.authenticateQrAccess(rawUserId, rawCode, nowMs);
 
     if (authResult.kind === "failure") {
       return authResult.response;
@@ -214,14 +199,14 @@ export const createLockController = (options: LockControllerOptions): LockContro
     };
   };
 
-  const submitSiteLogin = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
+  const submitSiteLogin = (rawCode: unknown): UnlockResponse => {
     const nowMs = Date.now();
 
     if (state !== "locked") {
       return notLockedResponse();
     }
 
-    const authResult = authenticate(rawUserId, rawCode, nowMs);
+    const authResult = authenticator.authenticateAdminSiteLogin(rawCode, nowMs);
 
     if (authResult.kind === "failure") {
       return authResult.response;

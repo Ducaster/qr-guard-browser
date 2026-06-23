@@ -11,6 +11,7 @@ import { SettingsParseError, type Settings, type SettingsRepository } from "../c
 import {
   addUserToSettings,
   applySettingsPatch,
+  changeAdminCodeInSettings,
   createSettingsFromFirstRunSetup,
   deleteUserFromSettings,
   isFirstRunSettings,
@@ -182,6 +183,12 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
     IPC_CHANNELS.saveSettings,
     async (event: IpcMainInvokeEvent, payload: unknown): Promise<ActionResponse> =>
       saveSettingsMutation(event, options, (settings) => applySettingsPatch(settings, payload), true)
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.changeAdminCode,
+    async (event: IpcMainInvokeEvent, payload: unknown): Promise<ActionResponse> =>
+      saveSettingsMutation(event, options, (settings) => changeAdminCodeInSettings(settings, payload), false)
   );
 
   ipcMain.handle(

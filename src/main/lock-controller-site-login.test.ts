@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createLockoutState, hashCode, type LockoutState } from "../core/auth";
 import {
+  ADMIN_SITE_LOGIN_AUDIT_USER_ID,
   parseAuditLog,
   toJsonl,
   type AuditEvent,
@@ -131,33 +132,74 @@ afterEach(() => {
 });
 
 describe("lock controller siteLogin mode", () => {
-  it("enters siteLogin only after a valid regional code", () => {
+  it("enters siteLogin only after a valid admin code", () => {
     // Given
     const harness = createHarness();
 
     // When
-    const result = harness.controller.submitSiteLogin("staff01", "2468");
+    const result = harness.controller.submitSiteLogin("admin-code");
 
     // Then
     expect(result.ok).toBe(true);
     expect(harness.controller.getState().state).toBe("siteLogin");
     expect(harness.controller.getState().qrVisible).toBe(true);
     expect(harness.controller.getState().remainingMs).toBeNull();
+    expect(harness.controller.getState().activeUserId).toBe(ADMIN_SITE_LOGIN_AUDIT_USER_ID);
     expect(harness.visibilityChanges.at(-1)).toBe(true);
   });
 
-  it("keeps QR locked and records a failed attempt when siteLogin receives a wrong code", () => {
+  it("keeps QR locked and records a failed admin attempt when siteLogin receives a wrong code", () => {
     // Given
     const harness = createHarness();
 
     // When
-    const result = harness.controller.submitSiteLogin("staff01", "9999");
+    const result = harness.controller.submitSiteLogin("9999");
 
     // Then
     expect(result.ok).toBe(false);
     expect(harness.controller.getState().state).toBe("locked");
     expect(harness.controller.getState().qrVisible).toBe(false);
     expect(harness.lockoutStateStore.saveCount).toBe(1);
+  });
+
+  it("does not enter siteLogin with a regional code", () => {
+    // Given
+    const harness = createHarness();
+
+    // When
+    const result = harness.controller.submitSiteLogin("2468");
+
+    // Then
+    expect(result.ok).toBe(false);
+    expect(harness.controller.getState().state).toBe("locked");
+    expect(harness.controller.getState().qrVisible).toBe(false);
+  });
+
+  it("applies the admin-code lockout to siteLogin", () => {
+    // Given
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
+    const harness = createHarness();
+
+    // When
+    harness.controller.submitSiteLogin("bad-1");
+    harness.controller.submitSiteLogin("bad-2");
+    const lockedResult = harness.controller.submitSiteLogin("bad-3");
+    const validWhileLockedResult = harness.controller.submitSiteLogin("admin-code");
+
+    // Then
+    expect(lockedResult).toEqual({
+      errors: ["관리자 코드가 올바르지 않습니다."],
+      ok: false,
+      retryAfterMs: 31_000
+    });
+    expect(validWhileLockedResult).toEqual({
+      errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
+      ok: false,
+      retryAfterMs: 31_000
+    });
+    expect(harness.controller.getState().state).toBe("locked");
+    expect(harness.lockoutStateStore.saveCount).toBe(3);
   });
 
   it("does not relock siteLogin when navigation leaves the login URL pattern", () => {
@@ -170,7 +212,7 @@ describe("lock controller siteLogin mode", () => {
       },
       qrUrl: "https://example.test/login"
     });
-    harness.controller.submitSiteLogin("staff01", "2468");
+    harness.controller.submitSiteLogin("admin-code");
 
     // When
     harness.qrWebContents.trigger("did-start-navigation", {
@@ -187,7 +229,7 @@ describe("lock controller siteLogin mode", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const harness = createHarness({ qrTitlePattern: "QR 코드" });
-    harness.controller.submitSiteLogin("staff01", "2468");
+    harness.controller.submitSiteLogin("admin-code");
 
     // When
     vi.setSystemTime(new Date("2026-06-22T00:00:07.000Z"));
@@ -201,7 +243,7 @@ describe("lock controller siteLogin mode", () => {
       expect.objectContaining({
         durationSeconds: 7,
         reason: "qr-title",
-        userId: "staff01"
+        userId: ADMIN_SITE_LOGIN_AUDIT_USER_ID
       })
     );
   });
@@ -215,7 +257,7 @@ describe("lock controller siteLogin mode", () => {
     harness.qrWebContents.setTitleReads(["로그인", "QR 코드"]);
 
     // When
-    const result = harness.controller.submitSiteLogin("staff01", "2468");
+    const result = harness.controller.submitSiteLogin("admin-code");
 
     // Then
     expect(result.ok).toBe(true);
@@ -228,7 +270,7 @@ describe("lock controller siteLogin mode", () => {
     // Given
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const harness = createHarness();
-    harness.controller.submitSiteLogin("staff01", "2468");
+    harness.controller.submitSiteLogin("admin-code");
     harness.repository.loadError = new Error("corrupted settings");
 
     // When
@@ -248,7 +290,7 @@ describe("lock controller siteLogin mode", () => {
   it("learns the current QR title into settings and locks", () => {
     // Given
     const harness = createHarness({ qrTitle: "QR 코드 - 12번 창구" });
-    harness.controller.submitSiteLogin("staff01", "2468");
+    harness.controller.submitSiteLogin("admin-code");
 
     // When
     const result = harness.controller.learnCurrentQrTitle();
@@ -265,7 +307,7 @@ describe("lock controller siteLogin mode", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const manualHarness = createHarness();
-    manualHarness.controller.submitSiteLogin("staff01", "2468");
+    manualHarness.controller.submitSiteLogin("admin-code");
 
     // When
     manualHarness.controller.manualLock();
@@ -280,7 +322,7 @@ describe("lock controller siteLogin mode", () => {
       idlePollIntervalMs: 100,
       idleSource: () => 5
     });
-    idleHarness.controller.submitSiteLogin("staff01", "2468");
+    idleHarness.controller.submitSiteLogin("admin-code");
 
     // When
     vi.advanceTimersByTime(100);
@@ -291,7 +333,7 @@ describe("lock controller siteLogin mode", () => {
 
     // Given
     const capHarness = createHarness({ siteLoginTimeoutOverrideMs: 1_000 });
-    capHarness.controller.submitSiteLogin("staff01", "2468");
+    capHarness.controller.submitSiteLogin("admin-code");
 
     // When
     vi.advanceTimersByTime(1_000);

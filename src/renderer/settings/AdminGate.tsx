@@ -67,6 +67,7 @@ export const AdminGate = ({ onAuthorized, onCancel }: AdminGateProps): JSX.Eleme
             <ActionsRow>
               <Button
                 appearance="secondary"
+                data-testid="admin-gate-cancel"
                 disabled={isSubmitting}
                 icon={<Dismiss24Regular />}
                 onClick={onCancel}

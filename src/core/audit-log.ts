@@ -1,5 +1,6 @@
 export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode" | "qr-title";
 export type AuditExportFormat = "jsonl" | "csv";
+export const ADMIN_SITE_LOGIN_AUDIT_USER_ID = "관리자";
 export const LOGIN_MODE_AUDIT_USER_ID = "login-mode";
 
 export interface AuditEvent {
@@ -155,16 +156,16 @@ const deriveLastSuccessfulUnlocks = (
   for (const event of events) {
     const previousUnlockedAt = lastSuccessfulUnlockByUserId[event.userId];
 
-    if (
-      event.userId !== LOGIN_MODE_AUDIT_USER_ID &&
-      (previousUnlockedAt === undefined || event.unlockedAt > previousUnlockedAt)
-    ) {
+    if (!isSystemAuditUserId(event.userId) && (previousUnlockedAt === undefined || event.unlockedAt > previousUnlockedAt)) {
       lastSuccessfulUnlockByUserId[event.userId] = event.unlockedAt;
     }
   }
 
   return lastSuccessfulUnlockByUserId;
 };
+
+export const isSystemAuditUserId = (userId: string): boolean =>
+  userId === LOGIN_MODE_AUDIT_USER_ID || userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID;
 
 const escapeCsvField = (value: string): string => {
   const neutralizedValue = CSV_FORMULA_PREFIX_PATTERN.test(value) ? `'${value}` : value;

@@ -5,6 +5,7 @@ import {
   verifyCode,
   type LockoutState
 } from "../core/auth";
+import { ADMIN_SITE_LOGIN_AUDIT_USER_ID } from "../core/audit-log";
 import type { Settings, SettingsRepository } from "../core/settings-repo";
 import type { UnlockResponse } from "../core/state-machine";
 import { updateLastAuthenticatedAt } from "../core/user-settings";
@@ -29,6 +30,14 @@ export interface QrAccessAuthInput {
   readonly nowMs: number;
   readonly rawCode: unknown;
   readonly rawUserId: unknown;
+  readonly repository: SettingsRepository;
+}
+
+export interface AdminSiteLoginAuthInput {
+  readonly lockoutState: LockoutState;
+  readonly lockoutStateStore: LockoutStateStore;
+  readonly nowMs: number;
+  readonly rawCode: unknown;
   readonly repository: SettingsRepository;
 }
 
@@ -86,6 +95,62 @@ export const authenticateQrAccess = (input: QrAccessAuthInput): QrAccessAuthResu
     lockoutState: nextLockoutState,
     settings: updatedSettings,
     userId
+  };
+};
+
+export const authenticateAdminSiteLogin = (
+  input: AdminSiteLoginAuthInput
+): QrAccessAuthResult => {
+  const code = typeof input.rawCode === "string" ? input.rawCode.trim() : "";
+
+  if (code.length === 0) {
+    return failure(input.lockoutState, {
+      errors: ["관리자 코드를 입력하세요."],
+      ok: false,
+      retryAfterMs: null
+    });
+  }
+
+  const decision = checkLockout(input.lockoutState, ADMIN_SITE_LOGIN_AUDIT_USER_ID, input.nowMs);
+
+  if (!decision.allowed) {
+    return failure(input.lockoutState, {
+      errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
+      ok: false,
+      retryAfterMs: decision.retryAfterMs ?? null
+    });
+  }
+
+  const settings = input.repository.load();
+
+  if (!verifyCode(code, settings.admin.salt, settings.admin.hash)) {
+    const result = recordAuthFailure(
+      input.lockoutState,
+      ADMIN_SITE_LOGIN_AUDIT_USER_ID,
+      input.nowMs
+    );
+
+    input.lockoutStateStore.save(result.state);
+
+    return failure(result.state, {
+      errors: ["관리자 코드가 올바르지 않습니다."],
+      ok: false,
+      retryAfterMs: result.decision.retryAfterMs ?? null
+    });
+  }
+
+  const nextLockoutState = recordAuthSuccess(
+    input.lockoutState,
+    ADMIN_SITE_LOGIN_AUDIT_USER_ID
+  );
+
+  input.lockoutStateStore.save(nextLockoutState);
+
+  return {
+    kind: "success",
+    lockoutState: nextLockoutState,
+    settings,
+    userId: ADMIN_SITE_LOGIN_AUDIT_USER_ID
   };
 };
 

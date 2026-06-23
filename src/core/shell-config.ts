@@ -4,6 +4,7 @@ export const QR_SURFACE_KIND = "webContentsView" as const;
 
 export const IPC_CHANNELS = {
   addUser: "qr-guard:add-user",
+  changeAdminCode: "qr-guard:change-admin-code",
   clearQrSession: "qr-guard:clear-qr-session",
   closeSettings: "qr-guard:close-settings",
   completeFirstRunSetup: "qr-guard:complete-first-run-setup",

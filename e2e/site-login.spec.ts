@@ -32,7 +32,7 @@ test.describe("site login mode", () => {
       await saveQrTitlePattern(controlPage, "QR 코드");
 
       // When
-      await enterSiteLogin(controlPage, "2468");
+      await enterSiteLogin(controlPage, "1234");
       await navigateFixtureToQr(qrPage);
 
       // Then
@@ -55,7 +55,7 @@ test.describe("site login mode", () => {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
       const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
       await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/`);
-      await enterSiteLogin(controlPage, "2468");
+      await enterSiteLogin(controlPage, "1234");
       await navigateFixtureToQr(qrPage);
       await expect(controlPage.getByTestId("site-login-indicator")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
@@ -73,7 +73,7 @@ test.describe("site login mode", () => {
     }
   });
 
-  test("does not enter siteLogin when the regional code is wrong", async () => {
+  test("does not enter siteLogin when the admin code is wrong", async () => {
     // Given
     const launchedApp = await launchApp(`${fixtureServer.baseUrl}/`);
     const electronApp = launchedApp.app;
@@ -86,7 +86,7 @@ test.describe("site login mode", () => {
       await enterSiteLogin(controlPage, "9999");
 
       // Then
-      await expect(controlPage.getByTestId("unlock-errors")).toContainText("올바르지 않습니다");
+      await expect(controlPage.getByTestId("site-login-admin-errors")).toContainText("관리자 코드가 올바르지 않습니다");
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       await expect(controlPage.getByTestId("site-login-indicator")).toHaveCount(0);
       expect(await getQrVisible(controlPage)).toBe(false);
@@ -97,9 +97,10 @@ test.describe("site login mode", () => {
 });
 
 const enterSiteLogin = async (page: Page, code: string): Promise<void> => {
-  await page.getByTestId("unlock-user-id").fill("staff01");
-  await page.getByTestId("unlock-code").fill(code);
   await page.getByTestId("site-login-submit").click();
+  await expect(page.getByTestId("site-login-admin-dialog")).toBeVisible();
+  await page.getByTestId("site-login-admin-code-input").fill(code);
+  await page.getByTestId("site-login-admin-code-submit").click();
 };
 
 const navigateFixtureToQr = async (page: Page): Promise<void> => {
@@ -110,9 +111,9 @@ const navigateFixtureToQr = async (page: Page): Promise<void> => {
 };
 
 const openSettings = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: "설정" }).click();
-  await page.getByTestId("admin-code-input").fill("1234");
-  await page.getByRole("button", { name: "설정 열기" }).click();
+  const response = await page.evaluate(() => window.qrGuard.openSettings("1234"));
+
+  expect(response.ok).toBe(true);
   await expect(page.getByTestId("settings-qr-title-pattern")).toBeVisible();
 };
 

@@ -47,6 +47,10 @@ export interface UpdateUserPayload {
   readonly userId: string;
 }
 
+export interface ChangeAdminCodePayload {
+  readonly code: string;
+}
+
 export interface ActionResponse {
   readonly errors?: readonly string[];
   readonly ok: boolean;
@@ -79,6 +83,8 @@ export type ExportAuditLogResponse =
 const qrGuardApi = {
   addUser: (payload: SetupUserPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.addUser, payload),
+  changeAdminCode: (payload: ChangeAdminCodePayload): Promise<ActionResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.changeAdminCode, payload),
   clearQrSession: (adminCode: string): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.clearQrSession, adminCode),
   closeSettings: (): Promise<ActionResponse> =>
@@ -136,8 +142,8 @@ const qrGuardApi = {
     ipcRenderer.invoke(IPC_CHANNELS.resetUserCode, payload),
   saveSettings: (payload: SettingsPatchPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.saveSettings, payload),
-  submitSiteLogin: (userId: string, code: string): Promise<UnlockResponse> =>
-    ipcRenderer.invoke(IPC_CHANNELS.submitSiteLogin, userId, code),
+  submitSiteLogin: (code: string): Promise<UnlockResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.submitSiteLogin, code),
   submitUnlock: (userId: string, code: string): Promise<UnlockResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.submitUnlock, userId, code),
   updateUser: (payload: UpdateUserPayload): Promise<ActionResponse> =>

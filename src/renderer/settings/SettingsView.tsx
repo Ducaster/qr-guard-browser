@@ -6,6 +6,7 @@ import type { SettingsSafeView } from "../../core/settings-validation";
 import { HeaderBlock, PageStack, Screen, SectionCard, SplitThree, SplitTwo, Stack } from "../fluentLayout";
 import { inputSlot } from "../fluentSlots";
 import { AuditLogView } from "../logs/AuditLogView";
+import { AdminCodeChange } from "./AdminCodeChange";
 import { ErrorList, Message } from "./Feedback";
 import { QrSessionTools } from "./QrSessionTools";
 import { SavedLoginsSection } from "./SavedLoginsSection";
@@ -213,6 +214,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
         </SectionCard>
 
         {settings === null ? null : <UserManagement onChanged={loadSettings} users={settings.users} />}
+        {settings === null ? null : <AdminCodeChange />}
         {settings === null ? null : <SavedLoginsSection />}
         <AuditLogView />
         <QrSessionTools

@@ -58,8 +58,9 @@ const useLayoutStyles = makeStyles({
     alignItems: "flex-start",
     backgroundColor: tokens.colorNeutralBackground2,
     display: "flex",
+    height: "100vh",
     justifyContent: "center",
-    minHeight: "100vh",
+    minHeight: 0,
     overflowY: "auto",
     padding: tokens.spacingVerticalXXL,
     width: "100vw"

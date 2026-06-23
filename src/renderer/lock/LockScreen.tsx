@@ -1,4 +1,18 @@
-import { Badge, Button, Field, Input, Text, makeStyles, tokens } from "@fluentui/react-components";
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Field,
+  Input,
+  Text,
+  makeStyles,
+  tokens
+} from "@fluentui/react-components";
 import { Globe24Regular, Key24Regular, Settings24Regular } from "@fluentui/react-icons";
 import { useState, type JSX, type SyntheticEvent } from "react";
 
@@ -14,7 +28,10 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
   const styles = useLockScreenStyles();
   const [userId, setUserId] = useState("");
   const [code, setCode] = useState("");
+  const [adminCode, setAdminCode] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
+  const [siteLoginErrors, setSiteLoginErrors] = useState<readonly string[]>([]);
+  const [isSiteLoginOpen, setIsSiteLoginOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitCredentials = (
@@ -44,6 +61,29 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
   const submit = (event: SyntheticEvent<HTMLFormElement>): void => {
     event.preventDefault();
     submitCredentials(() => window.qrGuard.submitUnlock(userId, code), "잠금 해제에 실패했습니다.");
+  };
+
+  const submitSiteLogin = (event: SyntheticEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    setIsSubmitting(true);
+
+    void window.qrGuard.submitSiteLogin(adminCode)
+      .then((response) => {
+        if (response.ok) {
+          setAdminCode("");
+          setSiteLoginErrors([]);
+          setIsSiteLoginOpen(false);
+          return;
+        }
+
+        setSiteLoginErrors(formatUnlockErrors(response.errors, response.retryAfterMs));
+      })
+      .catch(() => {
+        setSiteLoginErrors(["사이트 로그인 모드 진입에 실패했습니다."]);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
@@ -96,10 +136,8 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
                 disabled={isSubmitting}
                 icon={<Globe24Regular />}
                 onClick={() => {
-                  submitCredentials(
-                    () => window.qrGuard.submitSiteLogin(userId, code),
-                    "사이트 로그인 모드 진입에 실패했습니다."
-                  );
+                  setSiteLoginErrors([]);
+                  setIsSiteLoginOpen(true);
                 }}
                 type="button"
               >
@@ -107,6 +145,7 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
               </Button>
               <Button
                 appearance="secondary"
+                data-testid="settings-open"
                 disabled={isSubmitting}
                 icon={<Settings24Regular />}
                 onClick={onOpenSettings}
@@ -117,6 +156,64 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
             </ActionsRow>
           </FormGrid>
         </form>
+        <Dialog
+          onOpenChange={(_event, data) => {
+            setIsSiteLoginOpen(data.open);
+            if (!data.open) {
+              setAdminCode("");
+              setSiteLoginErrors([]);
+            }
+          }}
+          open={isSiteLoginOpen}
+        >
+          <DialogSurface data-testid="site-login-admin-dialog">
+            <form onSubmit={submitSiteLogin}>
+              <DialogBody>
+                <DialogTitle>사이트 로그인</DialogTitle>
+                <DialogContent>
+                  <FormGrid>
+                    <Field label="관리자 코드">
+                      <Input
+                        disabled={isSubmitting}
+                        input={inputSlot({
+                          "data-testid": "site-login-admin-code-input",
+                          autoFocus: true
+                        })}
+                        onChange={(_event, data) => {
+                          setAdminCode(data.value);
+                        }}
+                        type="password"
+                        value={adminCode}
+                      />
+                    </Field>
+                    <ErrorList errors={siteLoginErrors} testId="site-login-admin-errors" />
+                  </FormGrid>
+                </DialogContent>
+                <DialogActions>
+                  <Button
+                    appearance="secondary"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      setIsSiteLoginOpen(false);
+                    }}
+                    type="button"
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    appearance="primary"
+                    data-testid="site-login-admin-code-submit"
+                    disabled={isSubmitting}
+                    icon={<Globe24Regular />}
+                    type="submit"
+                  >
+                    사이트 로그인
+                  </Button>
+                </DialogActions>
+              </DialogBody>
+            </form>
+          </DialogSurface>
+        </Dialog>
       </PanelCard>
     </Screen>
   );

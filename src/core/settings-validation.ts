@@ -1,7 +1,11 @@
 import { hashCode } from "./auth";
-import { LOGIN_MODE_AUDIT_USER_ID } from "./audit-log";
+import {
+  ADMIN_SITE_LOGIN_AUDIT_USER_ID,
+  LOGIN_MODE_AUDIT_USER_ID
+} from "./audit-log";
 import { createDefaultSettings, type Settings, type UserSettings } from "./settings-repo";
 import {
+  readAdminCodeInput,
   readFirstRunSetupInput,
   readRenameUserInput,
   readSettingsPatchInput,
@@ -47,8 +51,10 @@ export const createSettingsFromFirstRunSetup = (payload: unknown): ValidationRes
 
   const input = inputResult.value;
 
-  if (input.users.some((user) => user.userId === LOGIN_MODE_AUDIT_USER_ID)) {
-    return reservedUserIdFailure();
+  const reservedUser = input.users.find((user) => isReservedUserId(user.userId));
+
+  if (reservedUser !== undefined) {
+    return reservedUserIdFailure(reservedUser.userId);
   }
 
   return ok({
@@ -92,8 +98,8 @@ export const addUserToSettings = (
     return userResult;
   }
 
-  if (userResult.value.userId === LOGIN_MODE_AUDIT_USER_ID) {
-    return reservedUserIdFailure();
+  if (isReservedUserId(userResult.value.userId)) {
+    return reservedUserIdFailure(userResult.value.userId);
   }
 
   if (settings.users.some((user) => user.userId === userResult.value.userId)) {
@@ -118,8 +124,8 @@ export const updateUserInSettings = (
 
   const { nextUserId, userId } = inputResult.value;
 
-  if (nextUserId === LOGIN_MODE_AUDIT_USER_ID) {
-    return reservedUserIdFailure();
+  if (isReservedUserId(nextUserId)) {
+    return reservedUserIdFailure(nextUserId);
   }
 
   if (!settings.users.some((user) => user.userId === userId)) {
@@ -185,11 +191,30 @@ export const resetUserCodeInSettings = (
   });
 };
 
+export const changeAdminCodeInSettings = (
+  settings: Settings,
+  payload: unknown
+): ValidationResult<Settings> => {
+  const inputResult = readAdminCodeInput(payload);
+
+  if (!inputResult.ok) {
+    return inputResult;
+  }
+
+  return ok({
+    ...settings,
+    admin: hashCode(inputResult.value.code)
+  });
+};
+
 const toUserSettings = (user: UserCodeInput): UserSettings => ({
   ...hashCode(user.code),
   lastAuthenticatedAt: null,
   userId: user.userId
 });
 
-const reservedUserIdFailure = (): ValidationResult<never> =>
-  fail([`${LOGIN_MODE_AUDIT_USER_ID}는 예약된 값이라 지역으로 사용할 수 없습니다.`]);
+const reservedUserIdFailure = (userId: string): ValidationResult<never> =>
+  fail([`${userId}는 예약된 값이라 지역으로 사용할 수 없습니다.`]);
+
+const isReservedUserId = (userId: string): boolean =>
+  userId === LOGIN_MODE_AUDIT_USER_ID || userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID;

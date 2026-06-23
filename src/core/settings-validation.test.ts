@@ -8,6 +8,7 @@ import {
 } from "./settings-repo";
 import {
   addUserToSettings,
+  changeAdminCodeInSettings,
   createSettingsFromFirstRunSetup,
   resetUserCodeInSettings,
   updateUserInSettings
@@ -181,6 +182,53 @@ describe("settings validation", () => {
     expect(updatedUser.salt).not.toBe(originalUser.salt);
     expect(verifyCode("new-code", updatedUser.salt, updatedUser.hash)).toBe(true);
     expect(verifyCode("old-code", updatedUser.salt, updatedUser.hash)).toBe(false);
+  });
+
+  it("changes the admin code by replacing the stored hash without plaintext", () => {
+    // Given
+    const setupResult = createSettingsFromFirstRunSetup({
+      adminCode: "old-admin-code",
+      qrUrl: "https://qr.example.test/login",
+      users: [{ code: "1111", userId: "staff01" }]
+    });
+
+    if (!setupResult.ok) {
+      throw new Error(setupResult.errors.join("\n"));
+    }
+
+    // When
+    const changeResult = changeAdminCodeInSettings(setupResult.value, {
+      code: "new-admin-code"
+    });
+
+    // Then
+    expect(changeResult.ok).toBe(true);
+    if (!changeResult.ok) {
+      throw new Error(changeResult.errors.join("\n"));
+    }
+    expect(changeResult.value.admin.hash).not.toBe(setupResult.value.admin.hash);
+    expect(changeResult.value.admin.salt).not.toBe(setupResult.value.admin.salt);
+    expect(JSON.stringify(changeResult.value)).not.toContain("new-admin-code");
+    expect(verifyCode("new-admin-code", changeResult.value.admin.salt, changeResult.value.admin.hash)).toBe(true);
+    expect(verifyCode("old-admin-code", changeResult.value.admin.salt, changeResult.value.admin.hash)).toBe(false);
+  });
+
+  it("rejects admin-code changes shorter than the minimum", () => {
+    // Given
+    const settings = {
+      ...createDefaultSettings(),
+      admin: verifyCodeFixture()
+    };
+
+    // When
+    const result = changeAdminCodeInSettings(settings, { code: "123" });
+
+    // Then
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error("Expected change-admin-code validation to fail.");
+    }
+    expect(result.errors).toEqual(["관리자 코드는 최소 4자 이상이어야 합니다."]);
   });
 
   it("rejects add-user when the user code is shorter than the minimum", () => {

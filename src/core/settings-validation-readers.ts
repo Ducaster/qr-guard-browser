@@ -16,6 +16,7 @@ import {
 import {
   fail,
   ok,
+  type AdminCodeInput,
   USER_CODE_MIN_LENGTH,
   type FirstRunSetupInput,
   type SettingsPatchInput,
@@ -23,6 +24,17 @@ import {
   type UserRenameInput,
   type ValidationResult
 } from "./settings-validation-types";
+
+export const readAdminCodeInput = (payload: unknown): ValidationResult<AdminCodeInput> => {
+  if (!isRecord(payload)) {
+    return fail(["관리자 코드 데이터가 올바르지 않습니다."]);
+  }
+
+  const errors: string[] = [];
+  const code = readRequiredCode(payload, "code", "관리자 코드", errors);
+
+  return errors.length > 0 ? fail(errors) : ok({ code });
+};
 
 export const readFirstRunSetupInput = (
   payload: unknown
