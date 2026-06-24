@@ -26,7 +26,6 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   const styles = useToolbarStyles();
   const [actionError, setActionError] = useState("");
   const [remainingMs, setRemainingMs] = useState(state.remainingMs);
-  const isLoginMode = state.state === "loginMode";
   const isSiteLogin = state.state === "siteLogin";
 
   const runToolbarAction = (action: () => Promise<ToolbarActionResponse>): void => {
@@ -63,17 +62,13 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   return (
     <main className={styles.shell} data-testid="unlock-toolbar">
       <div className={styles.status}>
-        <Badge appearance="tint" color={isSiteLogin || isLoginMode ? "warning" : "danger"} shape="rounded">
-          {isSiteLogin ? "사이트 로그인 중" : isLoginMode ? "로그인 화면 표시 중" : "잠금 해제됨"}
+        <Badge appearance="tint" color={isSiteLogin ? "warning" : "danger"} shape="rounded">
+          {isSiteLogin ? "사이트 로그인 중" : "잠금 해제됨"}
         </Badge>
         <Text weight="semibold">
-          {isSiteLogin ? "사이트 로그인 중" : isLoginMode ? "로그인 모드 (인증 없이 표시 중)" : "잠금 해제됨"}
+          {isSiteLogin ? "사이트 로그인 중" : "잠금 해제됨"}
         </Text>
-        {isLoginMode ? (
-          <Badge appearance="outline" color="warning" data-testid="login-mode-indicator" shape="rounded">
-            로그인 화면 표시 중
-          </Badge>
-        ) : isSiteLogin ? (
+        {isSiteLogin ? (
           <Badge appearance="outline" color="warning" data-testid="site-login-indicator" shape="rounded">
             사이트 로그인 중
           </Badge>
@@ -84,19 +79,6 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
         )}
       </div>
       <FluentToolbar aria-label="잠금 도구" className={styles.actions} size="small">
-        {isLoginMode ? (
-          <ToolbarButton
-            appearance="primary"
-            data-testid="manual-login-complete"
-            icon={<LockClosed24Regular />}
-            onClick={() => {
-              runToolbarAction(() => window.qrGuard.manualLoginComplete());
-            }}
-            type="button"
-          >
-            로그인 완료 후 잠금
-          </ToolbarButton>
-        ) : null}
         {isSiteLogin ? (
           <ToolbarButton
             appearance="subtle"

@@ -19,16 +19,9 @@ export interface SetupUserPayload {
   readonly userId: string;
 }
 
-export interface LoginDetectionPayload {
-  readonly loggedInUrlPattern: string;
-  readonly loginUrlPattern: string;
-  readonly titleContains: string;
-}
-
 export interface FirstRunSetupPayload {
   readonly adminCode: string;
   readonly idleAutoLockSeconds?: number;
-  readonly loginDetection?: LoginDetectionPayload;
   readonly qrUrl: string;
   readonly unlockDurationSeconds?: number;
   readonly users: readonly SetupUserPayload[];
@@ -36,7 +29,6 @@ export interface FirstRunSetupPayload {
 
 export interface SettingsPatchPayload {
   readonly idleAutoLockSeconds?: number;
-  readonly loginDetection?: LoginDetectionPayload;
   readonly qrTitlePattern?: string;
   readonly qrUrl?: string;
   readonly unlockDurationSeconds?: number;
@@ -105,8 +97,6 @@ const qrGuardApi = {
   listSiteCredentials: (): Promise<ListSiteCredentialsResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.siteCredentialList),
   manualLock: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.manualLock),
-  manualLoginComplete: (): Promise<ActionResponse> =>
-    ipcRenderer.invoke(IPC_CHANNELS.manualLoginComplete),
   onStateChange: (callback: StateChangeCallback): (() => void) => {
     const listener = (_event: IpcRendererEvent, state: StateSnapshot): void => {
       callback(state);

@@ -205,11 +205,6 @@ describe("lock controller siteLogin mode", () => {
   it("does not relock siteLogin when navigation leaves the login URL pattern", () => {
     // Given
     const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
       qrUrl: "https://example.test/login"
     });
     harness.controller.submitSiteLogin("admin-code");
@@ -348,7 +343,6 @@ const createHarness = (options: {
   readonly idleAutoLockSeconds?: number;
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
-  readonly loginDetection?: Settings["loginDetection"];
   readonly qrTitle?: string;
   readonly qrTitlePattern?: string;
   readonly qrUrl?: string;
@@ -400,7 +394,6 @@ const createHarness = (options: {
 const createSettingsWithUser = (
   options: {
     readonly idleAutoLockSeconds?: number;
-    readonly loginDetection?: Settings["loginDetection"];
     readonly qrTitlePattern?: string;
   } = {}
 ): Settings => {
@@ -411,7 +404,6 @@ const createSettingsWithUser = (
     ...defaults,
     admin: hashCode("admin-code"),
     idleAutoLockSeconds: options.idleAutoLockSeconds ?? defaults.idleAutoLockSeconds,
-    loginDetection: options.loginDetection ?? defaults.loginDetection,
     qrTitlePattern: options.qrTitlePattern ?? defaults.qrTitlePattern,
     users: [
       {

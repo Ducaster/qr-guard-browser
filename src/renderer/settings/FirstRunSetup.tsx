@@ -27,9 +27,6 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
   const [adminCode, setAdminCode] = useState("");
   const [unlockDurationSeconds, setUnlockDurationSeconds] = useState("10");
   const [idleAutoLockSeconds, setIdleAutoLockSeconds] = useState("30");
-  const [loginUrlPattern, setLoginUrlPattern] = useState("");
-  const [loggedInUrlPattern, setLoggedInUrlPattern] = useState("");
-  const [titleContains, setTitleContains] = useState("");
   const [users, setUsers] = useState<readonly SetupUserRow[]>([createUserRow()]);
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,10 +47,7 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
     const validation = validateSetupForm({
       adminCode,
       idleAutoLockSeconds,
-      loggedInUrlPattern,
-      loginUrlPattern,
       qrUrl,
-      titleContains,
       unlockDurationSeconds,
       users
     });
@@ -135,42 +129,6 @@ export const FirstRunSetup = ({ onComplete }: FirstRunSetupProps): JSX.Element =
                 />
               </Field>
             </SplitThree>
-
-            <fieldset className={styles.fieldset}>
-              <legend className={styles.legend}>로그인 감지</legend>
-              <SplitThree>
-                <Field label="로그인 URL 패턴">
-                  <Input
-                    disabled={isSaving}
-                    input={inputSlot({ "data-testid": "setup-login-pattern" })}
-                    onChange={(_event, data) => {
-                      setLoginUrlPattern(data.value);
-                    }}
-                    value={loginUrlPattern}
-                  />
-                </Field>
-                <Field label="로그인 완료 URL 패턴">
-                  <Input
-                    disabled={isSaving}
-                    input={inputSlot({ "data-testid": "setup-logged-in-pattern" })}
-                    onChange={(_event, data) => {
-                      setLoggedInUrlPattern(data.value);
-                    }}
-                    value={loggedInUrlPattern}
-                  />
-                </Field>
-                <Field label="제목 포함 문구">
-                  <Input
-                    disabled={isSaving}
-                    input={inputSlot({ "data-testid": "setup-title-contains" })}
-                    onChange={(_event, data) => {
-                      setTitleContains(data.value);
-                    }}
-                    value={titleContains}
-                  />
-                </Field>
-              </SplitThree>
-            </fieldset>
 
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>지역 관리</legend>

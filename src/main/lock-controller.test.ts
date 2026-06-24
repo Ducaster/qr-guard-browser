@@ -129,15 +129,10 @@ describe("lock controller unlock submission", () => {
   });
 });
 
-describe("lock controller loginMode and idle safety", () => {
-  it("enters loginMode from locked when QR navigation is classified as login", () => {
+describe("lock controller QR navigation and idle safety", () => {
+  it("keeps QR locked when the hidden QR page navigates to a login URL", () => {
     // Given
     const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
       qrTitle: "Fixture Login",
       qrUrl: "https://example.test/login"
     });
@@ -146,163 +141,32 @@ describe("lock controller loginMode and idle safety", () => {
     harness.qrWebContents.trigger("did-navigate");
 
     // Then
-    expect(harness.controller.getState().state).toBe("loginMode");
-    expect(harness.controller.getState().qrVisible).toBe(true);
-    expect(harness.visibilityChanges.at(-1)).toBe(true);
+    expect(harness.controller.getState().state).toBe("locked");
+    expect(harness.controller.getState().qrVisible).toBe(false);
+    expect(harness.visibilityChanges.at(-1)).toBe(false);
+    expect(harness.auditLogStore.events).toEqual([]);
   });
 
-  it("relocks loginMode immediately when QR navigation leaves the login URL pattern", () => {
+  it("keeps an unlocked authenticated session open across login URL navigation", () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
-      qrUrl: "https://example.test/login"
-    });
-    harness.qrWebContents.trigger("did-navigate");
-
-    // When
-    vi.setSystemTime(new Date("2026-06-22T00:00:03.000Z"));
-    harness.qrWebContents.setLocation("https://example.test/qr", "Fixture QR");
-    harness.qrWebContents.trigger("did-navigate");
-
-    // Then
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-    expect(harness.auditLogStore.events).toEqual([
-      expect.objectContaining({
-        durationSeconds: 3,
-        reason: "login-mode",
-        userId: "login-mode"
-      })
-    ]);
-  });
-
-  it("relocks loginMode on navigation start using the target URL before commit", () => {
-    // Given
-    const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
-      qrUrl: "https://example.test/login"
-    });
-    harness.qrWebContents.trigger("did-navigate");
-
-    // When
-    harness.qrWebContents.trigger("did-start-navigation", {
-      url: "https://example.test/qr"
-    });
-
-    // Then
-    expect(harness.qrWebContents.getURL()).toBe("https://example.test/login");
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-  });
-
-  it("enters loginMode on navigation start using the target login URL before commit", () => {
-    // Given
-    const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
-      qrUrl: "https://example.test/qr"
-    });
-
-    // When
-    harness.qrWebContents.trigger("did-start-navigation", {
-      url: "https://example.test/login"
-    });
-
-    // Then
-    expect(harness.qrWebContents.getURL()).toBe("https://example.test/qr");
-    expect(harness.controller.getState().state).toBe("loginMode");
-    expect(harness.controller.getState().qrVisible).toBe(true);
-  });
-
-  it("manual login completion relocks loginMode without waiting for navigation", () => {
-    // Given
-    const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
-      qrUrl: "https://example.test/login"
-    });
-    harness.qrWebContents.trigger("did-navigate");
-
-    // When
-    harness.controller.manualLoginComplete();
-
-    // Then
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-    expect(harness.auditLogStore.events.at(-1)?.reason).toBe("login-mode");
-  });
-
-  it("finishes the active unlock session before entering loginMode from QR navigation", () => {
-    // Given
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
-    const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
-      loginModeTimeoutOverrideMs: 120_000,
       unlockDurationOverrideSeconds: 60
     });
     const unlock = harness.controller.submitUnlock("staff01", "2468");
 
     // When
-    vi.setSystemTime(new Date("2026-06-22T00:00:05.000Z"));
     harness.qrWebContents.setLocation("https://example.test/login", "Fixture Login");
-    harness.qrWebContents.trigger("did-navigate");
-    vi.advanceTimersByTime(60_000);
+    harness.qrWebContents.trigger("did-start-navigation", {
+      url: "https://example.test/login"
+    });
 
     // Then
     expect(unlock.ok).toBe(true);
-    expect(harness.controller.getState().state).toBe("loginMode");
-    expect(harness.controller.getState().remainingMs).toBeNull();
+    expect(harness.controller.getState().state).toBe("unlocked");
     expect(harness.controller.getState().qrVisible).toBe(true);
-    expect(harness.auditLogStore.events).toEqual([
-      expect.objectContaining({
-        durationSeconds: 5,
-        reason: "login-mode",
-        userId: "staff01"
-      })
-    ]);
-  });
-
-  it("heartbeat timeout relocks loginMode when login never completes", () => {
-    // Given
-    vi.useFakeTimers();
-    const harness = createHarness({
-      loginDetection: {
-        loggedInUrlPattern: "",
-        loginUrlPattern: "/login",
-        titleContains: ""
-      },
-      loginModeTimeoutOverrideMs: 1_000,
-      qrUrl: "https://example.test/login"
-    });
-    harness.qrWebContents.trigger("did-navigate");
-
-    // When
-    vi.advanceTimersByTime(1_000);
-
-    // Then
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.auditLogStore.events.at(-1)?.reason).toBe("login-mode");
+    expect(harness.auditLogStore.events).toEqual([]);
   });
 
   it("idle polling relocks an unlocked session with reason idle", () => {
@@ -376,8 +240,6 @@ const createHarness = (options: {
   readonly idleAutoLockSeconds?: number;
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
-  readonly loginDetection?: Settings["loginDetection"];
-  readonly loginModeTimeoutOverrideMs?: number;
   readonly qrTitle?: string;
   readonly qrUrl?: string;
   readonly unlockDurationOverrideSeconds?: number | (() => number);
@@ -385,8 +247,7 @@ const createHarness = (options: {
   const settingsOverrides = {
     ...(options.idleAutoLockSeconds === undefined
       ? {}
-      : { idleAutoLockSeconds: options.idleAutoLockSeconds }),
-    ...(options.loginDetection === undefined ? {} : { loginDetection: options.loginDetection })
+      : { idleAutoLockSeconds: options.idleAutoLockSeconds })
   };
   const repository = new MemorySettingsRepository(createSettingsWithUser(settingsOverrides));
   const lockoutStateStore = new MemoryLockoutStateStore();
@@ -419,10 +280,7 @@ const createHarness = (options: {
       ? {}
       : { idlePollIntervalMs: options.idlePollIntervalMs }),
     ...(options.idleSource === undefined ? {} : { idleSource: options.idleSource }),
-    qrWebContents,
-    ...(options.loginModeTimeoutOverrideMs === undefined
-      ? {}
-      : { loginModeTimeoutOverrideMs: options.loginModeTimeoutOverrideMs })
+    qrWebContents
   } satisfies Omit<LockControllerOptions, "unlockDurationOverrideSeconds">;
 
   const controllerOptions =
@@ -453,7 +311,6 @@ const createHarness = (options: {
 const createSettingsWithUser = (
   overrides: {
     readonly idleAutoLockSeconds?: number;
-    readonly loginDetection?: Settings["loginDetection"];
   } = {}
 ): Settings => {
   const admin = hashCode("admin-code");
@@ -464,7 +321,6 @@ const createSettingsWithUser = (
     ...defaults,
     admin,
     idleAutoLockSeconds: overrides.idleAutoLockSeconds ?? defaults.idleAutoLockSeconds,
-    loginDetection: overrides.loginDetection ?? defaults.loginDetection,
     users: [
       {
         ...user,

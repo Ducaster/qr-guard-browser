@@ -1,8 +1,6 @@
 import type { AuditLockReason } from "../core/audit-log";
-import { classify, matchesLoginUrl } from "../core/login-detector";
 import { matchesQrTitle } from "../core/qr-title-detector";
 import {
-  applyLoginDetection,
   closeSettings,
   completeSetup,
   enterSiteLogin,
@@ -47,7 +45,6 @@ export interface LockController {
   readonly getState: () => StateSnapshot;
   readonly learnCurrentQrTitle: () => ActionResponse;
   readonly manualLock: () => void;
-  readonly manualLoginComplete: () => void;
   readonly openSettings: () => void;
   readonly submitSiteLogin: (code: unknown) => UnlockResponse;
   readonly submitUnlock: (userId: unknown, code: unknown) => UnlockResponse;
@@ -62,14 +59,12 @@ export interface LockControllerOptions {
   readonly shellWindow: LockControllerShellWindow;
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
-  readonly loginModeTimeoutOverrideMs?: number;
   readonly siteLoginTimeoutOverrideMs?: number;
   readonly unlockDurationOverrideSeconds?: number;
 }
 
 export const createLockController = (options: LockControllerOptions): LockController => {
   let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
-  let currentUrlMatchesLoginPattern = false;
   let unlockExpiresAtMs: number | null = null;
   const authenticator = createLockAuthenticator({
     initialLockoutState: options.lockoutStateStore.load(),
@@ -84,7 +79,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
   let syncModeTimers: (previousState: GuardState, nextState: GuardState) => void = () => undefined;
 
   const applyVisibility = (): boolean => {
-    const visible = shouldShowQrView(state, currentUrlMatchesLoginPattern);
+    const visible = shouldShowQrView(state);
 
     options.shellWindow.setQrVisible(visible);
 
@@ -99,7 +94,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     return {
       activeUserId: auditSessions.getActiveUserId(),
       now: new Date(nowMs).toISOString(),
-      qrVisible: shouldShowQrView(state, currentUrlMatchesLoginPattern),
+      qrVisible: shouldShowQrView(state),
       remainingMs,
       state,
       unlockExpiresAt: unlockExpiresAtMs === null ? null : new Date(unlockExpiresAtMs).toISOString()
@@ -137,37 +132,23 @@ export const createLockController = (options: LockControllerOptions): LockContro
     timers,
     ...(options.idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs: options.idlePollIntervalMs }),
     ...(options.idleSource === undefined ? {} : { idleSource: options.idleSource }),
-    ...(options.loginModeTimeoutOverrideMs === undefined ? {} : { loginModeTimeoutOverrideMs: options.loginModeTimeoutOverrideMs }),
     ...(options.siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs: options.siteLoginTimeoutOverrideMs })
   }).sync;
 
   const evaluateQrNavigation = (target?: QrNavigationTarget): void => {
+    if (state !== "siteLogin") {
+      return;
+    }
+
     const settings = loadSettingsForMainEvent(options.repository, "QR navigation");
 
     if (settings === null) { relock("manual"); return; }
 
     const snapshot = readQrNavigationSnapshot(options.qrWebContents, target);
 
-    if (state === "siteLogin") {
-      if (matchesQrTitle(snapshot.title, settings.qrTitlePattern)) {
-        relock("qr-title");
-      }
-
-      return;
+    if (matchesQrTitle(snapshot.title, settings.qrTitlePattern)) {
+      relock("qr-title");
     }
-
-    const classification = classify(snapshot.url, snapshot.title, settings.loginDetection);
-
-    currentUrlMatchesLoginPattern = matchesLoginUrl(snapshot.url, settings.loginDetection);
-    const nextState = applyLoginDetection(state, classification, currentUrlMatchesLoginPattern);
-
-    if (state === "unlocked" && nextState === "loginMode") {
-      timers.clearUnlockTimer();
-      auditSessions.finishUnlockSession("login-mode", Date.now());
-      unlockExpiresAtMs = null;
-    }
-
-    setState(nextState);
   };
 
   watchQrNavigation(options.qrWebContents, evaluateQrNavigation);
@@ -223,7 +204,9 @@ export const createLockController = (options: LockControllerOptions): LockContro
     unlockExpiresAtMs = null;
     const nextState = enterSiteLogin(state);
     setState(nextState);
-    if (nextState === "siteLogin" && matchesQrTitle(options.qrWebContents.getTitle(), authResult.settings.qrTitlePattern)) { relock("qr-title"); }
+    if (nextState === "siteLogin" && matchesQrTitle(options.qrWebContents.getTitle(), authResult.settings.qrTitlePattern)) {
+      relock("qr-title");
+    }
 
     return {
       ok: true,
@@ -256,10 +239,6 @@ export const createLockController = (options: LockControllerOptions): LockContro
     getState,
     learnCurrentQrTitle,
     manualLock: () => {
-      relock("manual");
-    },
-    manualLoginComplete: () => {
-      currentUrlMatchesLoginPattern = false;
       relock("manual");
     },
     openSettings: () => {

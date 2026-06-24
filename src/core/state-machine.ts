@@ -1,10 +1,7 @@
-import type { LoginClassification } from "./login-detector";
-
 export type GuardState =
   | "needsSetup"
   | "locked"
   | "unlocked"
-  | "loginMode"
   | "siteLogin"
   | "settings";
 
@@ -27,16 +24,11 @@ export type UnlockResponse =
       readonly retryAfterMs: number | null;
     };
 
-export const shouldShowQrView = (
-  state: VisibilityState,
-  currentUrlMatchesLoginPattern: boolean
-): boolean => {
+export const shouldShowQrView = (state: VisibilityState): boolean => {
   switch (state) {
     case "unlocked":
     case "siteLogin":
       return true;
-    case "loginMode":
-      return currentUrlMatchesLoginPattern;
     case "locked":
     case "needsSetup":
     case "settings":
@@ -51,7 +43,6 @@ export const completeSetup = (state: GuardState): GuardState => {
       return "locked";
     case "locked":
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
     case "settings":
       return state;
@@ -64,7 +55,6 @@ export const unlockSucceeded = (state: GuardState): GuardState => {
       return "unlocked";
     case "needsSetup":
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
     case "settings":
       return state;
@@ -78,7 +68,6 @@ export const timerExpired = (state: GuardState): GuardState => {
       return "locked";
     case "needsSetup":
     case "locked":
-    case "loginMode":
     case "settings":
       return state;
   }
@@ -87,7 +76,6 @@ export const timerExpired = (state: GuardState): GuardState => {
 export const manualLock = (state: GuardState): GuardState => {
   switch (state) {
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
       return "locked";
     case "needsSetup":
@@ -101,7 +89,6 @@ export const relockState = (state: GuardState): GuardState => {
   switch (state) {
     case "locked":
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
     case "settings":
       return "locked";
@@ -116,7 +103,6 @@ export const openSettings = (state: GuardState): GuardState => {
       return "settings";
     case "needsSetup":
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
     case "settings":
       return state;
@@ -130,21 +116,7 @@ export const closeSettings = (state: GuardState): GuardState => {
     case "needsSetup":
     case "locked":
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
-      return state;
-  }
-};
-
-export const enterLoginMode = (state: GuardState): GuardState => {
-  switch (state) {
-    case "locked":
-      return "loginMode";
-    case "needsSetup":
-    case "unlocked":
-    case "loginMode":
-    case "siteLogin":
-    case "settings":
       return state;
   }
 };
@@ -155,41 +127,7 @@ export const enterSiteLogin = (state: GuardState): GuardState => {
       return "siteLogin";
     case "needsSetup":
     case "unlocked":
-    case "loginMode":
     case "siteLogin":
-    case "settings":
-      return state;
-  }
-};
-
-export const exitLoginMode = (state: GuardState): GuardState => {
-  switch (state) {
-    case "loginMode":
-      return "locked";
-    case "needsSetup":
-    case "locked":
-    case "unlocked":
-    case "siteLogin":
-    case "settings":
-      return state;
-  }
-};
-
-export const applyLoginDetection = (
-  state: GuardState,
-  classification: LoginClassification,
-  currentUrlMatchesLoginPattern: boolean
-): GuardState => {
-  switch (state) {
-    case "locked":
-      return classification === "login" ? "loginMode" : "locked";
-    case "loginMode":
-      return currentUrlMatchesLoginPattern ? "loginMode" : "locked";
-    case "unlocked":
-      return classification === "login" ? "loginMode" : "unlocked";
-    case "siteLogin":
-      return "siteLogin";
-    case "needsSetup":
     case "settings":
       return state;
   }

@@ -3,7 +3,7 @@ import { LockClosed24Regular, Save24Regular } from "@fluentui/react-icons";
 import { useCallback, useEffect, useState, type JSX, type SyntheticEvent } from "react";
 
 import type { SettingsSafeView } from "../../core/settings-validation";
-import { HeaderBlock, PageStack, Screen, SectionCard, SplitThree, SplitTwo, Stack } from "../fluentLayout";
+import { HeaderBlock, PageStack, Screen, SectionCard, SplitTwo, Stack } from "../fluentLayout";
 import { inputSlot } from "../fluentSlots";
 import { AuditLogView } from "../logs/AuditLogView";
 import { AdminCodeChange } from "./AdminCodeChange";
@@ -22,9 +22,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
   const [qrUrl, setQrUrl] = useState("");
   const [unlockDurationSeconds, setUnlockDurationSeconds] = useState("10");
   const [idleAutoLockSeconds, setIdleAutoLockSeconds] = useState("30");
-  const [loginUrlPattern, setLoginUrlPattern] = useState("");
-  const [loggedInUrlPattern, setLoggedInUrlPattern] = useState("");
-  const [titleContains, setTitleContains] = useState("");
   const [qrTitlePattern, setQrTitlePattern] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [message, setMessage] = useState("");
@@ -47,9 +44,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
     setQrUrl(nextSettings.qrUrl);
     setUnlockDurationSeconds(String(nextSettings.unlockDurationSeconds));
     setIdleAutoLockSeconds(String(nextSettings.idleAutoLockSeconds));
-    setLoginUrlPattern(nextSettings.loginDetection.loginUrlPattern);
-    setLoggedInUrlPattern(nextSettings.loginDetection.loggedInUrlPattern);
-    setTitleContains(nextSettings.loginDetection.titleContains);
     setQrTitlePattern(nextSettings.qrTitlePattern);
   }, []);
 
@@ -78,11 +72,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
     setIsBusy(true);
     void window.qrGuard.saveSettings({
       idleAutoLockSeconds: idleSeconds,
-      loginDetection: {
-        loggedInUrlPattern: loggedInUrlPattern.trim(),
-        loginUrlPattern: loginUrlPattern.trim(),
-        titleContains: titleContains.trim()
-      },
       qrTitlePattern: qrTitlePattern.trim(),
       qrUrl: qrUrl.trim(),
       unlockDurationSeconds: unlockSeconds
@@ -162,35 +151,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                   />
                 </Field>
               </SplitTwo>
-              <SplitThree>
-                <Field label="로그인 URL 패턴">
-                  <Input
-                    disabled={isBusy || settings === null}
-                    onChange={(_event, data) => {
-                      setLoginUrlPattern(data.value);
-                    }}
-                    value={loginUrlPattern}
-                  />
-                </Field>
-                <Field label="로그인 완료 URL 패턴">
-                  <Input
-                    disabled={isBusy || settings === null}
-                    onChange={(_event, data) => {
-                      setLoggedInUrlPattern(data.value);
-                    }}
-                    value={loggedInUrlPattern}
-                  />
-                </Field>
-                <Field label="제목 포함 문구">
-                  <Input
-                    disabled={isBusy || settings === null}
-                    onChange={(_event, data) => {
-                      setTitleContains(data.value);
-                    }}
-                    value={titleContains}
-                  />
-                </Field>
-              </SplitThree>
               <Field label="QR 화면 제목">
                 <Input
                   disabled={isBusy || settings === null}

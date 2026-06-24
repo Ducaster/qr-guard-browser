@@ -29,7 +29,7 @@ describe("idle auto-lock decision", () => {
     expect(
       shouldRelockForIdle({
         idleAutoLockSeconds: 30,
-        state: "loginMode",
+        state: "locked",
         systemIdleSeconds: 30
       })
     ).toBe(false);

@@ -1,7 +1,6 @@
-export type AuditLockReason = "timer" | "manual" | "idle" | "login-mode" | "qr-title";
+export type AuditLockReason = "timer" | "manual" | "idle" | "qr-title";
 export type AuditExportFormat = "jsonl" | "csv";
 export const ADMIN_SITE_LOGIN_AUDIT_USER_ID = "관리자";
-export const LOGIN_MODE_AUDIT_USER_ID = "login-mode";
 
 export interface AuditEvent {
   readonly appVersion: string;
@@ -30,12 +29,6 @@ export interface AuditEventInput {
   readonly userId: string;
 }
 
-export interface LoginModeAuditEventInput {
-  readonly appVersion: string;
-  readonly enteredAtMs: number;
-  readonly lockedAtMs: number;
-}
-
 export const buildAuditEvent = (input: AuditEventInput): AuditEvent => ({
   appVersion: input.appVersion,
   durationSeconds: Math.max(0, Math.round((input.lockedAtMs - input.unlockedAtMs) / 1_000)),
@@ -44,15 +37,6 @@ export const buildAuditEvent = (input: AuditEventInput): AuditEvent => ({
   unlockedAt: new Date(input.unlockedAtMs).toISOString(),
   userId: input.userId
 });
-
-export const buildLoginModeAuditEvent = (input: LoginModeAuditEventInput): AuditEvent =>
-  buildAuditEvent({
-    appVersion: input.appVersion,
-    lockedAtMs: input.lockedAtMs,
-    reason: "login-mode",
-    unlockedAtMs: input.enteredAtMs,
-    userId: LOGIN_MODE_AUDIT_USER_ID
-  });
 
 export const serializeAuditEvent = (event: AuditEvent): string =>
   `${JSON.stringify({
@@ -165,7 +149,7 @@ const deriveLastSuccessfulUnlocks = (
 };
 
 export const isSystemAuditUserId = (userId: string): boolean =>
-  userId === LOGIN_MODE_AUDIT_USER_ID || userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID;
+  userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID;
 
 const escapeCsvField = (value: string): string => {
   const neutralizedValue = CSV_FORMULA_PREFIX_PATTERN.test(value) ? `'${value}` : value;
@@ -197,7 +181,6 @@ const isAuditReason = (value: unknown): value is AuditLockReason =>
   value === "timer" ||
   value === "manual" ||
   value === "idle" ||
-  value === "login-mode" ||
   value === "qr-title";
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>

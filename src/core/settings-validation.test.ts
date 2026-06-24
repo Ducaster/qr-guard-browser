@@ -67,7 +67,7 @@ describe("settings validation", () => {
         createSettingsFromFirstRunSetup({
           adminCode: "1234",
           qrUrl: "https://qr.example.test/login",
-          users: [{ code: "1111", userId: "login-mode" }]
+          users: [{ code: "1111", userId: "관리자" }]
         })
     },
     {
@@ -75,20 +75,20 @@ describe("settings validation", () => {
       run: () =>
         addUserToSettings(settingsWithUser("staff01"), {
           code: "1111",
-          userId: "login-mode"
+          userId: "관리자"
         })
     },
     {
       action: "update-user",
       run: () =>
         updateUserInSettings(settingsWithUser("staff01"), {
-          nextUserId: "login-mode",
+          nextUserId: "관리자",
           userId: "staff01"
         })
     }
-  ])("rejects the reserved login-mode user ID during $action", ({ run }) => {
+  ])("rejects the reserved admin audit user ID during $action", ({ run }) => {
     // Given
-    const expectedErrors = ["login-mode는 예약된 값이라 지역으로 사용할 수 없습니다."];
+    const expectedErrors = ["관리자는 예약된 값이라 지역으로 사용할 수 없습니다."];
 
     // When
     const result = run();

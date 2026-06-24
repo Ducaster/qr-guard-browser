@@ -124,7 +124,6 @@ export const App = (): JSX.Element => {
           {credentialPrompt}
         </>
       );
-    case "loginMode":
     case "siteLogin":
     case "unlocked":
       return (

@@ -32,7 +32,6 @@ describe("test environment overrides", () => {
       variables: {
         QR_GUARD_ALLOW_INSECURE_TEST_STORAGE: "1",
         QR_GUARD_TEST_IDLE_POLL_MS: "1",
-        QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS: "1",
         QR_GUARD_TEST_SYSTEM_IDLE_SECONDS: "1",
         QR_GUARD_TEST_UNLOCK_DURATION_SECONDS: "1"
       }
@@ -44,10 +43,6 @@ describe("test environment overrides", () => {
       "QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"
     );
     const idlePoll = readPositiveIntegerTestEnv(environment, "QR_GUARD_TEST_IDLE_POLL_MS");
-    const loginModeTimeout = readPositiveIntegerTestEnv(
-      environment,
-      "QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS"
-    );
     const systemIdle = readPositiveIntegerTestEnv(
       environment,
       "QR_GUARD_TEST_SYSTEM_IDLE_SECONDS"
@@ -60,7 +55,6 @@ describe("test environment overrides", () => {
     // Then
     expect(unlockDuration).toBeUndefined();
     expect(idlePoll).toBeUndefined();
-    expect(loginModeTimeout).toBeUndefined();
     expect(systemIdle).toBeUndefined();
     expect(insecureStorage).toBe(false);
   });

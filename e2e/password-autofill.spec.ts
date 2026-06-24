@@ -28,9 +28,8 @@ test.describe("QR site password autosave and autofill", () => {
     try {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
       const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
-      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`, {
-        loginUrlPattern: "/login"
-      });
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+      await enterSiteLogin(controlPage, "1234");
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
 
       // When
@@ -39,17 +38,20 @@ test.describe("QR site password autosave and autofill", () => {
       await qrPage.getByTestId("fixture-login-submit").click();
       await expect(controlPage.getByTestId("site-credential-save-prompt")).toBeVisible();
       await controlPage.getByTestId("site-credential-save").click();
+      await expect(controlPage.getByTestId("site-credential-save-prompt")).toHaveCount(0);
+      await controlPage.getByTestId("manual-lock").click();
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       await expect(controlPage.getByTestId("unlock-code")).toHaveValue("");
 
       // Then
       await qrPage.goto(`${fixtureServer.baseUrl}/login?visit=next`);
+      await enterSiteLogin(controlPage, "1234");
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
       await expect(qrPage.getByTestId("fixture-username")).toHaveValue("operator01");
       await expect(qrPage.getByTestId("fixture-password")).toHaveValue("site-password-123");
       expect(qrPage.url()).toContain("/login");
 
-      await controlPage.getByTestId("manual-login-complete").click();
+      await controlPage.getByTestId("manual-lock").click();
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       await controlPage.getByTestId("unlock-user-id").fill("staff01");
       await controlPage.getByTestId("unlock-submit").click();
@@ -66,6 +68,7 @@ test.describe("QR site password autosave and autofill", () => {
       await lockSettings(controlPage);
 
       await qrPage.goto(`${fixtureServer.baseUrl}/login?visit=after-delete`);
+      await enterSiteLogin(controlPage, "1234");
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
       await qrPage.waitForTimeout(500);
       await expect(qrPage.getByTestId("fixture-username")).toHaveValue("");
@@ -77,13 +80,22 @@ test.describe("QR site password autosave and autofill", () => {
 });
 
 const openSettings = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: "설정" }).click();
-  await page.getByTestId("admin-code-input").fill("1234");
-  await page.getByRole("button", { name: "설정 열기" }).click();
+  const response = await page.evaluate(() => window.qrGuard.openSettings("1234"));
+
+  expect(response.ok).toBe(true);
   await expect(page.getByTestId("settings-qr-url")).toBeVisible();
 };
 
 const lockSettings = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: "설정 잠그기" }).click();
+  const response = await page.evaluate(() => window.qrGuard.closeSettings());
+
+  expect(response.ok).toBe(true);
   await expect(page.getByTestId("locked-screen")).toBeVisible();
+};
+
+const enterSiteLogin = async (page: Page, adminCode: string): Promise<void> => {
+  await page.getByTestId("site-login-submit").click();
+  await page.getByTestId("site-login-admin-code-input").fill(adminCode);
+  await page.getByTestId("site-login-admin-code-submit").click();
+  await expect(page.getByTestId("site-login-indicator")).toBeVisible();
 };

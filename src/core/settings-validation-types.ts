@@ -1,5 +1,3 @@
-import type { LoginDetectionSettings } from "./settings-repo";
-
 export const ADMIN_CODE_MIN_LENGTH = 4;
 export const USER_CODE_MIN_LENGTH = ADMIN_CODE_MIN_LENGTH;
 
@@ -20,7 +18,6 @@ export interface AdminCodeInput {
 export interface FirstRunSetupInput {
   readonly adminCode: string;
   readonly idleAutoLockSeconds: number;
-  readonly loginDetection: LoginDetectionSettings;
   readonly qrUrl: string;
   readonly unlockDurationSeconds: number;
   readonly users: readonly UserCodeInput[];
@@ -28,7 +25,6 @@ export interface FirstRunSetupInput {
 
 export interface SettingsPatchInput {
   readonly idleAutoLockSeconds: number;
-  readonly loginDetection: LoginDetectionSettings;
   readonly qrTitlePattern: string;
   readonly qrUrl: string;
   readonly unlockDurationSeconds: number;
@@ -41,7 +37,6 @@ export interface SettingsSafeUserView {
 
 export interface SettingsSafeView {
   readonly idleAutoLockSeconds: number;
-  readonly loginDetection: LoginDetectionSettings;
   readonly qrTitlePattern: string;
   readonly qrUrl: string;
   readonly unlockDurationSeconds: number;

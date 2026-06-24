@@ -1,4 +1,3 @@
-import type { LoginDetectionSettings } from "./settings-repo";
 import { ADMIN_CODE_MIN_LENGTH } from "./settings-validation-types";
 
 export const readHttpUrl = (
@@ -88,35 +87,6 @@ export const readDurationSeconds = (
   }
 
   return Math.min(Math.trunc(value), maxValue);
-};
-
-export const readLoginDetection = (
-  payload: unknown,
-  fallback: LoginDetectionSettings,
-  errors: string[]
-): LoginDetectionSettings => {
-  if (payload === undefined) {
-    return fallback;
-  }
-
-  if (!isRecord(payload)) {
-    errors.push("로그인 감지 데이터가 올바르지 않습니다.");
-    return fallback;
-  }
-
-  return {
-    loggedInUrlPattern: readOptionalTrimmedString(
-      payload,
-      "loggedInUrlPattern",
-      fallback.loggedInUrlPattern
-    ),
-    loginUrlPattern: readOptionalTrimmedString(
-      payload,
-      "loginUrlPattern",
-      fallback.loginUrlPattern
-    ),
-    titleContains: readOptionalTrimmedString(payload, "titleContains", fallback.titleContains)
-  };
 };
 
 export const readOptionalTrimmedString = (

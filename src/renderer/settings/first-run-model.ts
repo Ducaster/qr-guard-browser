@@ -16,10 +16,7 @@ export interface SetupUserRow {
 export interface SetupValidationInput {
   readonly adminCode: string;
   readonly idleAutoLockSeconds: string;
-  readonly loggedInUrlPattern: string;
-  readonly loginUrlPattern: string;
   readonly qrUrl: string;
-  readonly titleContains: string;
   readonly unlockDurationSeconds: string;
   readonly users: readonly SetupUserRow[];
 }
@@ -95,11 +92,6 @@ export const validateSetupForm = (input: SetupValidationInput): SetupValidationR
     payload: {
       adminCode: input.adminCode.trim(),
       idleAutoLockSeconds: idleSeconds,
-      loginDetection: {
-        loggedInUrlPattern: input.loggedInUrlPattern.trim(),
-        loginUrlPattern: input.loginUrlPattern.trim(),
-        titleContains: input.titleContains.trim()
-      },
       qrUrl: input.qrUrl.trim(),
       unlockDurationSeconds: unlockSeconds,
       users: users.map((user) => ({

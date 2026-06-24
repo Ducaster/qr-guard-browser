@@ -16,7 +16,6 @@ export const IPC_CHANNELS = {
   isFirstRun: "qr-guard:is-first-run",
   learnCurrentQrTitle: "qr-guard:learn-current-qr-title",
   manualLock: "qr-guard:manual-lock",
-  manualLoginComplete: "qr-guard:manual-login-complete",
   openSettings: "qr-guard:open-settings",
   queryAuditLog: "qr-guard:query-audit-log",
   resetUserCode: "qr-guard:reset-user-code",

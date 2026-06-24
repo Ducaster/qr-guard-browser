@@ -8,7 +8,6 @@ import {
   isRecord,
   readDurationSeconds,
   readHttpUrl,
-  readLoginDetection,
   readOptionalTrimmedString,
   readRequiredCode,
   readRequiredString
@@ -64,8 +63,6 @@ export const readFirstRunSetupInput = (
     "유휴 자동잠금",
     errors
   );
-  const loginDetection = readLoginDetection(payload["loginDetection"], defaults.loginDetection, errors);
-
   if (!usersResult.ok) {
     errors.push(...usersResult.errors);
   }
@@ -73,12 +70,11 @@ export const readFirstRunSetupInput = (
   return errors.length > 0
     ? fail(errors)
     : ok({
-        adminCode,
-        idleAutoLockSeconds,
-        loginDetection,
-        qrUrl,
-        unlockDurationSeconds,
-        users: usersResult.ok ? usersResult.value : []
+      adminCode,
+      idleAutoLockSeconds,
+      qrUrl,
+      unlockDurationSeconds,
+      users: usersResult.ok ? usersResult.value : []
       });
 };
 
@@ -110,16 +106,13 @@ export const readSettingsPatchInput = (
     "유휴 자동잠금",
     errors
   );
-  const loginDetection = Object.hasOwn(payload, "loginDetection")
-    ? readLoginDetection(payload["loginDetection"], settings.loginDetection, errors)
-    : settings.loginDetection;
   const qrTitlePattern = Object.hasOwn(payload, "qrTitlePattern")
     ? readOptionalTrimmedString(payload, "qrTitlePattern", settings.qrTitlePattern)
     : settings.qrTitlePattern;
 
   return errors.length > 0
     ? fail(errors)
-    : ok({ idleAutoLockSeconds, loginDetection, qrTitlePattern, qrUrl, unlockDurationSeconds });
+    : ok({ idleAutoLockSeconds, qrTitlePattern, qrUrl, unlockDurationSeconds });
 };
 
 export const readSingleUserCodeInput = (payload: unknown): ValidationResult<UserCodeInput> => {

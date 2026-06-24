@@ -1,16 +1,10 @@
 import type { AuthHash } from "./auth";
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 3;
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 4;
 export const MAX_UNLOCK_DURATION_SECONDS = 3_600;
 export const MAX_IDLE_AUTO_LOCK_SECONDS = 86_400;
 
 const MIN_DURATION_SECONDS = 1;
-
-export interface LoginDetectionSettings {
-  readonly loggedInUrlPattern: string;
-  readonly loginUrlPattern: string;
-  readonly titleContains: string;
-}
 
 export interface UserSettings extends AuthHash {
   readonly lastAuthenticatedAt: string | null;
@@ -20,7 +14,6 @@ export interface UserSettings extends AuthHash {
 export interface Settings {
   readonly admin: AuthHash;
   readonly idleAutoLockSeconds: number;
-  readonly loginDetection: LoginDetectionSettings;
   readonly qrTitlePattern: string;
   readonly qrUrl: string;
   readonly schemaVersion: typeof CURRENT_SETTINGS_SCHEMA_VERSION;
@@ -39,10 +32,19 @@ export interface SettingsV1 {
 export interface SettingsV2 {
   readonly admin?: AuthHash;
   readonly idleAutoLockSeconds?: number;
-  readonly loginDetection?: LoginDetectionSettings;
   readonly qrTitlePattern?: string | undefined;
   readonly qrUrl?: string;
   readonly schemaVersion: 2;
+  readonly unlockDurationSeconds?: number;
+  readonly users?: readonly UserSettings[];
+}
+
+export interface SettingsV3 {
+  readonly admin?: AuthHash;
+  readonly idleAutoLockSeconds?: number;
+  readonly qrTitlePattern?: string | undefined;
+  readonly qrUrl?: string;
+  readonly schemaVersion: 3;
   readonly unlockDurationSeconds?: number;
   readonly users?: readonly UserSettings[];
 }
@@ -74,16 +76,9 @@ const emptyAuthHash = (): AuthHash => ({
   salt: ""
 });
 
-const defaultLoginDetection = (): LoginDetectionSettings => ({
-  loggedInUrlPattern: "",
-  loginUrlPattern: "",
-  titleContains: ""
-});
-
 export const createDefaultSettings = (): Settings => ({
   admin: emptyAuthHash(),
   idleAutoLockSeconds: 30,
-  loginDetection: defaultLoginDetection(),
   qrTitlePattern: "",
   qrUrl: "",
   schemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
@@ -134,6 +129,10 @@ export const migrateSettings = (rawSettings: unknown): Settings => {
     return migrateV2ToCurrent(rawSettings);
   }
 
+  if (rawSettings["schemaVersion"] === 3) {
+    return migrateV3ToCurrent(rawSettings);
+  }
+
   return parseCurrentSettings(rawSettings);
 };
 
@@ -171,6 +170,14 @@ export const migrateV2ToCurrent = (legacySettings: unknown): Settings => {
   };
 };
 
+export const migrateV3ToCurrent = (legacySettings: unknown): Settings => {
+  if (!isRecord(legacySettings)) {
+    return createDefaultSettings();
+  }
+
+  return parseCurrentSettings(legacySettings);
+};
+
 const parseCurrentSettings = (rawSettings: Readonly<Record<string, unknown>>): Settings => {
   const defaults = createDefaultSettings();
 
@@ -182,7 +189,6 @@ const parseCurrentSettings = (rawSettings: Readonly<Record<string, unknown>>): S
       defaults.idleAutoLockSeconds,
       MAX_IDLE_AUTO_LOCK_SECONDS
     ),
-    loginDetection: readLoginDetection(rawSettings["loginDetection"], defaults.loginDetection),
     qrTitlePattern: readString(rawSettings, "qrTitlePattern", defaults.qrTitlePattern),
     qrUrl: readString(rawSettings, "qrUrl", defaults.qrUrl),
     schemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
@@ -193,21 +199,6 @@ const parseCurrentSettings = (rawSettings: Readonly<Record<string, unknown>>): S
       MAX_UNLOCK_DURATION_SECONDS
     ),
     users: readUsers(rawSettings["users"], defaults.users)
-  };
-};
-
-const readLoginDetection = (
-  value: unknown,
-  fallback: LoginDetectionSettings
-): LoginDetectionSettings => {
-  if (!isRecord(value)) {
-    return fallback;
-  }
-
-  return {
-    loggedInUrlPattern: readString(value, "loggedInUrlPattern", fallback.loggedInUrlPattern),
-    loginUrlPattern: readString(value, "loginUrlPattern", fallback.loginUrlPattern),
-    titleContains: readString(value, "titleContains", fallback.titleContains)
   };
 };
 

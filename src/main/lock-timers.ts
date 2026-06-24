@@ -1,17 +1,14 @@
 export interface LockTimers {
   readonly clearIdleTimer: () => void;
-  readonly clearLoginModeTimer: () => void;
   readonly clearSiteLoginTimer: () => void;
   readonly clearUnlockTimer: () => void;
   readonly startIdleTimer: (intervalMs: number, onTick: () => void) => void;
-  readonly startLoginModeTimer: (timeoutMs: number, onExpired: () => void) => void;
   readonly startSiteLoginTimer: (timeoutMs: number, onExpired: () => void) => void;
   readonly startUnlockTimer: (durationSeconds: number, onExpired: () => void) => void;
 }
 
 export const createLockTimers = (): LockTimers => {
   let unlockTimer: ReturnType<typeof setTimeout> | null = null;
-  let loginModeTimer: ReturnType<typeof setTimeout> | null = null;
   let siteLoginTimer: ReturnType<typeof setTimeout> | null = null;
   let idleTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -19,12 +16,6 @@ export const createLockTimers = (): LockTimers => {
     if (unlockTimer !== null) {
       clearTimeout(unlockTimer);
       unlockTimer = null;
-    }
-  };
-  const clearLoginModeTimer = (): void => {
-    if (loginModeTimer !== null) {
-      clearTimeout(loginModeTimer);
-      loginModeTimer = null;
     }
   };
   const clearSiteLoginTimer = (): void => {
@@ -42,16 +33,11 @@ export const createLockTimers = (): LockTimers => {
 
   return {
     clearIdleTimer,
-    clearLoginModeTimer,
     clearSiteLoginTimer,
     clearUnlockTimer,
     startIdleTimer: (intervalMs: number, onTick: () => void): void => {
       clearIdleTimer();
       idleTimer = setInterval(onTick, intervalMs);
-    },
-    startLoginModeTimer: (timeoutMs: number, onExpired: () => void): void => {
-      clearLoginModeTimer();
-      loginModeTimer = setTimeout(onExpired, timeoutMs);
     },
     startSiteLoginTimer: (timeoutMs: number, onExpired: () => void): void => {
       clearSiteLoginTimer();

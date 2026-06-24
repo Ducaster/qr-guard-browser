@@ -1,8 +1,5 @@
 import { hashCode } from "./auth";
-import {
-  ADMIN_SITE_LOGIN_AUDIT_USER_ID,
-  LOGIN_MODE_AUDIT_USER_ID
-} from "./audit-log";
+import { ADMIN_SITE_LOGIN_AUDIT_USER_ID } from "./audit-log";
 import { createDefaultSettings, type Settings, type UserSettings } from "./settings-repo";
 import {
   readAdminCodeInput,
@@ -32,7 +29,6 @@ export const isFirstRunSettings = (settings: Settings): boolean =>
 
 export const toSettingsSafeView = (settings: Settings): SettingsSafeView => ({
   idleAutoLockSeconds: settings.idleAutoLockSeconds,
-  loginDetection: settings.loginDetection,
   qrTitlePattern: settings.qrTitlePattern,
   qrUrl: settings.qrUrl,
   unlockDurationSeconds: settings.unlockDurationSeconds,
@@ -61,7 +57,6 @@ export const createSettingsFromFirstRunSetup = (payload: unknown): ValidationRes
     ...createDefaultSettings(),
     admin: hashCode(input.adminCode),
     idleAutoLockSeconds: input.idleAutoLockSeconds,
-    loginDetection: input.loginDetection,
     qrUrl: input.qrUrl,
     unlockDurationSeconds: input.unlockDurationSeconds,
     users: input.users.map(toUserSettings)
@@ -81,7 +76,6 @@ export const applySettingsPatch = (
   return ok({
     ...settings,
     idleAutoLockSeconds: patchResult.value.idleAutoLockSeconds,
-    loginDetection: patchResult.value.loginDetection,
     qrTitlePattern: patchResult.value.qrTitlePattern,
     qrUrl: patchResult.value.qrUrl,
     unlockDurationSeconds: patchResult.value.unlockDurationSeconds
@@ -217,4 +211,4 @@ const reservedUserIdFailure = (userId: string): ValidationResult<never> =>
   fail([`${userId}는 예약된 값이라 지역으로 사용할 수 없습니다.`]);
 
 const isReservedUserId = (userId: string): boolean =>
-  userId === LOGIN_MODE_AUDIT_USER_ID || userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID;
+  userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID;

@@ -32,12 +32,6 @@ export const registerLockIpc = (getController: LockControllerProvider): void => 
     return { ok: true };
   });
 
-  ipcMain.handle(IPC_CHANNELS.manualLoginComplete, (): ActionResponse => {
-    getRequiredController(getController).manualLoginComplete();
-
-    return { ok: true };
-  });
-
   ipcMain.handle(IPC_CHANNELS.learnCurrentQrTitle, (): ActionResponse =>
     getRequiredController(getController).learnCurrentQrTitle()
   );

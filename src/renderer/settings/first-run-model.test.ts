@@ -5,10 +5,7 @@ import { validateSetupForm } from "./first-run-model";
 const validInput = {
   adminCode: "1234",
   idleAutoLockSeconds: "30",
-  loggedInUrlPattern: "",
-  loginUrlPattern: "/login",
   qrUrl: "https://qr.example.test/login",
-  titleContains: "",
   unlockDurationSeconds: "10",
   users: [{ code: "2468", rowId: "row-1", userId: "staff01" }]
 };

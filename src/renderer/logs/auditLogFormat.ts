@@ -1,12 +1,7 @@
-import {
-  ADMIN_SITE_LOGIN_AUDIT_USER_ID,
-  LOGIN_MODE_AUDIT_USER_ID,
-  type AuditEvent
-} from "../../core/audit-log";
+import { ADMIN_SITE_LOGIN_AUDIT_USER_ID, type AuditEvent } from "../../core/audit-log";
 
 const AUDIT_REASON_LABELS = {
   idle: "유휴 잠금",
-  "login-mode": "로그인 모드",
   manual: "수동 잠금",
   "qr-title": "QR 제목 감지",
   timer: "시간 만료"
@@ -45,9 +40,7 @@ export const getAuditUserIds = (
   }
 
   for (const event of events) {
-    if (event.userId !== LOGIN_MODE_AUDIT_USER_ID) {
-      ids.add(event.userId);
-    }
+    ids.add(event.userId);
   }
 
   return [...ids].sort((left, right) => left.localeCompare(right));
@@ -71,8 +64,6 @@ const formatAuditTime = (event: AuditEvent): string =>
   `잠금 해제: ${formatTimestamp(event.unlockedAt)} / 잠금: ${formatTimestamp(event.lockedAt)} / ${String(event.durationSeconds)}초`;
 
 const formatAuditUserId = (userId: string): string =>
-  userId === LOGIN_MODE_AUDIT_USER_ID
-    ? "로그인 모드"
-    : userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID
+  userId === ADMIN_SITE_LOGIN_AUDIT_USER_ID
       ? "관리자"
       : userId;

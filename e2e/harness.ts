@@ -1,4 +1,4 @@
-import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
+import { _electron as electron, expect, type ElectronApplication, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -22,7 +22,6 @@ export interface LaunchedApp {
 
 export interface LaunchOverrides {
   readonly idlePollMs?: string;
-  readonly loginModeTimeoutMs?: string;
   readonly siteLoginTimeoutMs?: string;
   readonly systemIdleSeconds?: string;
   readonly unlockDurationSeconds?: string;
@@ -30,9 +29,6 @@ export interface LaunchOverrides {
 
 export interface FirstRunSetupOptions {
   readonly idleAutoLockSeconds?: string;
-  readonly loggedInUrlPattern?: string;
-  readonly loginUrlPattern?: string;
-  readonly titleContains?: string;
   readonly unlockDurationSeconds?: string;
 }
 
@@ -100,10 +96,8 @@ export const completeFirstRunSetup = async (
   await page.getByTestId("setup-user-code").fill("2468");
   await page.getByTestId("setup-unlock-duration").fill(options.unlockDurationSeconds ?? "10");
   await page.getByTestId("setup-idle-timeout").fill(options.idleAutoLockSeconds ?? "30");
-  await page.getByTestId("setup-login-pattern").fill(options.loginUrlPattern ?? "");
-  await page.getByTestId("setup-logged-in-pattern").fill(options.loggedInUrlPattern ?? "");
-  await page.getByTestId("setup-title-contains").fill(options.titleContains ?? "");
   await page.getByTestId("setup-submit").click();
+  await expect(page.getByTestId("locked-screen")).toBeVisible();
 };
 
 const getLaunchEnv = (
@@ -125,7 +119,6 @@ const getLaunchEnv = (
   env["QR_GUARD_TEST_UNLOCK_DURATION_SECONDS"] = overrides.unlockDurationSeconds ?? "1";
   env["QR_GUARD_USER_DATA_DIR"] = userDataDir;
   setOptionalEnv(env, "QR_GUARD_TEST_IDLE_POLL_MS", overrides.idlePollMs);
-  setOptionalEnv(env, "QR_GUARD_TEST_LOGIN_MODE_TIMEOUT_MS", overrides.loginModeTimeoutMs);
   setOptionalEnv(env, "QR_GUARD_TEST_SITE_LOGIN_TIMEOUT_MS", overrides.siteLoginTimeoutMs);
   env["QR_GUARD_TEST_SYSTEM_IDLE_SECONDS"] = overrides.systemIdleSeconds ?? "1";
 

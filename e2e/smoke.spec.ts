@@ -197,53 +197,19 @@ test.describe("secure Electron shell", () => {
     }
   });
 
-  test("shows an expired login page without an app code and relocks on QR navigation", async () => {
+  test("keeps an expired login page hidden until an operator authenticates", async () => {
     // Given
     const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
     const electronApp = launchedApp.app;
 
     try {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
-      const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
-      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`, {
-        loggedInUrlPattern: "/qr",
-        loginUrlPattern: "/login"
-      });
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
 
-      // When
-      await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
-      await expect(controlPage.getByText("로그인 모드 (인증 없이 표시 중)")).toBeVisible();
-      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
-      await qrPage.goto(`${fixtureServer.baseUrl}/qr`);
-
-      // Then
+      // When / Then
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(false);
-      const auditLog = fs.readFileSync(getAuditLogPath(launchedApp.userDataDir), "utf8");
-      expect(auditLog).toContain('"reason":"login-mode"');
-    } finally {
-      await closeLaunchedApp(launchedApp);
-    }
-  });
-
-  test("manual login completion relocks when automatic completion detection is disabled", async () => {
-    // Given
-    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
-    const electronApp = launchedApp.app;
-
-    try {
-      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
-      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`, {
-        loginUrlPattern: "/login"
-      });
-      await expect(controlPage.getByTestId("manual-login-complete")).toBeVisible();
-
-      // When
-      await controlPage.getByTestId("manual-login-complete").click();
-
-      // Then
-      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
-      expect(await getQrVisible(controlPage)).toBe(false);
+      await expect(controlPage.getByTestId("unlock-toolbar")).toHaveCount(0);
     } finally {
       await closeLaunchedApp(launchedApp);
     }
