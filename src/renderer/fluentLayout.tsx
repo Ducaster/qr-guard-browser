@@ -18,7 +18,10 @@ const useLayoutStyles = makeStyles({
     gap: tokens.spacingHorizontalS
   },
   actionsEnd: {
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
+    "@media (max-width: 760px)": {
+      justifyContent: "stretch"
+    }
   },
   center: {
     alignItems: "center"
@@ -31,7 +34,10 @@ const useLayoutStyles = makeStyles({
     alignItems: "start",
     display: "flex",
     gap: tokens.spacingHorizontalL,
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    "@media (max-width: 760px)": {
+      display: "grid"
+    }
   },
   headerText: {
     display: "grid",
@@ -43,7 +49,10 @@ const useLayoutStyles = makeStyles({
     gap: tokens.spacingVerticalXL,
     maxWidth: "1120px",
     padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalXXL}`,
-    width: "min(100%, 1120px)"
+    width: "min(100%, 1120px)",
+    "@media (max-width: 760px)": {
+      padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`
+    }
   },
   narrow: {
     maxWidth: "440px"
@@ -63,7 +72,10 @@ const useLayoutStyles = makeStyles({
     minHeight: 0,
     overflowY: "auto",
     padding: tokens.spacingVerticalXXL,
-    width: "100vw"
+    width: "100vw",
+    "@media (max-width: 760px)": {
+      padding: tokens.spacingVerticalM
+    }
   },
   section: {
     display: "grid",
@@ -79,12 +91,18 @@ const useLayoutStyles = makeStyles({
   splitTwo: {
     display: "grid",
     gap: tokens.spacingHorizontalM,
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))"
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    "@media (max-width: 760px)": {
+      gridTemplateColumns: "1fr"
+    }
   },
   splitThree: {
     display: "grid",
     gap: tokens.spacingHorizontalM,
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    "@media (max-width: 760px)": {
+      gridTemplateColumns: "1fr"
+    }
   },
   stack: {
     display: "grid",
@@ -98,26 +116,6 @@ const useLayoutStyles = makeStyles({
     display: "grid",
     gap: tokens.spacingHorizontalM,
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))"
-  },
-  "@media (max-width: 760px)": {
-    actionsEnd: {
-      justifyContent: "stretch"
-    },
-    header: {
-      display: "grid"
-    },
-    panel: {
-      padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`
-    },
-    screen: {
-      padding: tokens.spacingVerticalM
-    },
-    splitThree: {
-      gridTemplateColumns: "1fr"
-    },
-    splitTwo: {
-      gridTemplateColumns: "1fr"
-    }
   }
 });
 
