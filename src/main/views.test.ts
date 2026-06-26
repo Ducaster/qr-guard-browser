@@ -212,6 +212,28 @@ describe("shell window loading", () => {
       url: "http://127.0.0.1:37655/login"
     });
   });
+
+  it("loads a blank QR page when the configured QR URL uses a disallowed scheme", async () => {
+    // Given
+    const { createShellWindow } = await import("./views");
+    const shellWindow = createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js",
+      qrUrl: "file:///etc/passwd"
+    });
+    const qrWebContents = getQrWebContents();
+
+    // When
+    await shellWindow.load();
+
+    // Then
+    expect(qrWebContents.loadUrlCalls).toEqual(["about:blank"]);
+    expect(loggerMock.warn).toHaveBeenCalledWith("Refusing to load disallowed QR URL.", {
+      url: "file:///etc/passwd"
+    });
+  });
 });
 
 const getQrWebContents = (): InstanceType<typeof electronMock.WebContentsView>["webContents"] => {

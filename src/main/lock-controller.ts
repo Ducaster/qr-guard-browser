@@ -67,7 +67,6 @@ export const createLockController = (options: LockControllerOptions): LockContro
   let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
   let unlockExpiresAtMs: number | null = null;
   const authenticator = createLockAuthenticator({
-    initialLockoutState: options.lockoutStateStore.load(),
     lockoutStateStore: options.lockoutStateStore,
     repository: options.repository
   });

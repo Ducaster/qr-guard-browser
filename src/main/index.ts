@@ -14,7 +14,8 @@ import {
   createElectronSafeStorageSealer,
   createElectronSettingsStore,
   createElectronSiteCredentialStore,
-  createInsecureTestSealer
+  createInsecureTestSealer,
+  type LockoutStateStore
 } from "./settings-adapters";
 import { registerSiteCredentialIpc } from "./site-credential-ipc";
 import {
@@ -23,6 +24,7 @@ import {
   type TestOverrideEnvironment
 } from "./test-env-overrides";
 import { createShellWindow, getRendererHtmlPath, type ShellWindow } from "./views";
+import { loadQrUrlOrBlank } from "./qr-url-loader";
 import { createQrWebContentsAdapter } from "./qr-navigation-watcher";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -32,6 +34,7 @@ let activeShellWindow: ShellWindow | undefined;
 let activeLockController: LockController | undefined;
 let settingsRepository: SettingsRepository | undefined;
 let siteCredentialRepository: SiteCredentialRepository | undefined;
+let lockoutStateStore: LockoutStateStore | undefined;
 
 const configuredUserDataPath = process.env["QR_GUARD_USER_DATA_DIR"];
 
@@ -78,6 +81,16 @@ const getSiteCredentialRepository = (): SiteCredentialRepository => {
   return siteCredentialRepository;
 };
 
+const getLockoutStateStore = (): LockoutStateStore => {
+  if (lockoutStateStore !== undefined) {
+    return lockoutStateStore;
+  }
+
+  lockoutStateStore = createElectronLockoutStateStore();
+
+  return lockoutStateStore;
+};
+
 const createStorageSealer = (): Sealer => {
   const allowInsecureTestStorage =
     hasEnabledTestFlag(getTestOverrideEnvironment(), "QR_GUARD_ALLOW_INSECURE_TEST_STORAGE");
@@ -102,7 +115,7 @@ const loadActiveQrUrl = async (url: string): Promise<void> => {
     return;
   }
 
-  await activeShellWindow.qrView.webContents.loadURL(url);
+  await loadQrUrlOrBlank(activeShellWindow.qrView.webContents, url);
 };
 
 const getUnlockDurationOverrideSeconds = (): number | undefined => {
@@ -149,7 +162,7 @@ const createAndLoadShellWindow = (): void => {
     appVersion: app.getVersion(),
     auditLogStore: createElectronAuditLogStore(),
     idleSource: getIdleSource(),
-    lockoutStateStore: createElectronLockoutStateStore(),
+    lockoutStateStore: getLockoutStateStore(),
     qrWebContents: createQrWebContentsAdapter(shellWindow.qrView.webContents),
     repository: getSettingsRepository(),
     shellWindow,
@@ -175,7 +188,10 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.setName(APP_NAME);
-  registerLockIpc(() => activeLockController);
+  registerLockIpc(
+    () => activeLockController,
+    () => activeShellWindow?.controlView.webContents
+  );
   registerShellIpc(() => ({
     qrVisible: activeShellWindow?.isQrVisible() ?? false
   }));
@@ -205,6 +221,7 @@ if (!gotSingleInstanceLock) {
       registerSettingsIpc({
         auditLogStore: createElectronAuditLogStore(),
         loadQrUrl: loadActiveQrUrl,
+        lockoutStateStore: getLockoutStateStore(),
         onSettingsClosed: () => {
           activeLockController?.closeSettings();
         },

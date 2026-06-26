@@ -1,6 +1,5 @@
 import { ipcMain, session, type IpcMainInvokeEvent } from "electron";
 
-import { verifyCode } from "../core/auth";
 import {
   IPC_CHANNELS,
   QR_SESSION_PARTITION,
@@ -23,13 +22,15 @@ import {
 import type { ValidationResult } from "../core/settings-validation-types";
 import { authorizeSender, isSenderAuthorized, revokeSender } from "./admin-session-gate";
 import { registerAuditLogIpc } from "./audit-log-ipc";
-import type { AuditLogStore } from "./settings-adapters";
+import { authenticateAdminCode, type AdminCodeAuthResult } from "./qr-access-auth";
+import type { AuditLogStore, LockoutStateStore } from "./settings-adapters";
 
 export type ShellInfoProvider = () => Pick<ShellInfo, "qrVisible">;
 
 export interface SettingsIpcOptions {
   readonly auditLogStore: AuditLogStore;
   readonly loadQrUrl: (url: string) => Promise<void>;
+  readonly lockoutStateStore: LockoutStateStore;
   readonly onSettingsClosed: () => void;
   readonly onSettingsOpened: () => void;
   readonly onSetupCompleted: () => void;
@@ -135,14 +136,10 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
   ipcMain.handle(
     IPC_CHANNELS.openSettings,
     (event: IpcMainInvokeEvent, adminCode: unknown): ActionResponse => {
-      const loadResult = loadSettingsForIpc(options.repository);
+      const authResult = authenticateSettingsAdmin(options, adminCode);
 
-      if (!loadResult.ok) {
-        return loadResult;
-      }
-
-      if (!verifyAdminCode(loadResult.settings.admin.salt, loadResult.settings.admin.hash, adminCode)) {
-        return errorResponse(["관리자 코드가 올바르지 않습니다."]);
+      if (authResult.kind === "failure") {
+        return errorResponse(authResult.response.errors);
       }
 
       authorizeSender(event);
@@ -218,22 +215,16 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
   ipcMain.handle(
     IPC_CHANNELS.clearQrSession,
     async (_event: IpcMainInvokeEvent, adminCode: unknown): Promise<ActionResponse> => {
-      const loadResult = loadSettingsForIpc(options.repository);
-
-      if (!loadResult.ok) {
-        return loadResult;
-      }
-
-      const settings = loadResult.settings;
+      const authResult = authenticateSettingsAdmin(options, adminCode);
 
       // This destructive action intentionally re-requires the admin code directly
       // instead of trusting an existing admin session.
-      if (!verifyAdminCode(settings.admin.salt, settings.admin.hash, adminCode)) {
-        return errorResponse(["관리자 코드가 올바르지 않습니다."]);
+      if (authResult.kind === "failure") {
+        return errorResponse(authResult.response.errors);
       }
 
       await session.fromPartition(QR_SESSION_PARTITION).clearStorageData();
-      await options.loadQrUrl(settings.qrUrl);
+      await options.loadQrUrl(authResult.settings.qrUrl);
 
       return okResponse();
     }
@@ -287,8 +278,16 @@ const loadSettingsForIpc = (repository: SettingsRepository): SettingsLoadRespons
   }
 };
 
-const verifyAdminCode = (salt: string, hash: string, code: unknown): boolean =>
-  typeof code === "string" && code.trim().length > 0 && verifyCode(code.trim(), salt, hash);
+const authenticateSettingsAdmin = (
+  options: SettingsIpcOptions,
+  adminCode: unknown
+): AdminCodeAuthResult =>
+  authenticateAdminCode({
+    lockoutStateStore: options.lockoutStateStore,
+    nowMs: Date.now(),
+    rawCode: adminCode,
+    repository: options.repository
+  });
 
 const okResponse = (): ActionOkResponse => ({ ok: true });
 

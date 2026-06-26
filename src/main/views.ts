@@ -1,5 +1,6 @@
 import { BaseWindow, nativeTheme, session, WebContentsView, type Rectangle } from "electron";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { APP_NAME } from "../core/sanity";
 import {
@@ -8,7 +9,12 @@ import {
   QR_VIEW_WEB_PREFERENCES
 } from "../core/shell-config";
 import { formatUnknownError, mainLogger } from "./logger";
-import { denyDisallowedQrNavigations, hardenWebContents } from "./windows-permissions";
+import { loadQrUrlOrBlank } from "./qr-url-loader";
+import {
+  denyDisallowedControlNavigations,
+  denyDisallowedQrNavigations,
+  hardenWebContents
+} from "./windows-permissions";
 
 export interface ShellWindow {
   readonly window: BaseWindow;
@@ -99,6 +105,10 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   hardenWebContents(qrView.webContents, qrSession, options.disableDevTools);
   denyDisallowedQrNavigations(qrView.webContents);
   hardenWebContents(controlView.webContents, controlView.webContents.session, options.disableDevTools);
+  denyDisallowedControlNavigations(controlView.webContents, {
+    controlHtmlUrl: pathToFileURL(options.controlHtmlPath).href,
+    ...(options.controlDevServerUrl === undefined ? {} : { controlDevServerUrl: options.controlDevServerUrl })
+  });
 
   const applyThemeBackground = (): void => {
     const backgroundColor = getSystemNeutralBackground();
@@ -123,7 +133,7 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
 
   const load = async (): Promise<void> => {
     if (options.qrUrl !== undefined) {
-      void qrView.webContents.loadURL(options.qrUrl).catch((error: unknown) => {
+      void loadQrUrlOrBlank(qrView.webContents, options.qrUrl).catch((error: unknown) => {
         mainLogger.warn("QR site failed to load.", {
           error: formatUnknownError(error),
           url: options.qrUrl

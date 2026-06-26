@@ -2,6 +2,11 @@ import type { Session, WebContents } from "electron";
 
 import { isAllowedQrNavigation } from "../core/qr-navigation";
 
+export interface ControlNavigationGuardOptions {
+  readonly controlDevServerUrl?: string;
+  readonly controlHtmlUrl: string;
+}
+
 export interface DevToolsShortcutInput {
   readonly alt?: boolean;
   readonly control?: boolean;
@@ -33,6 +38,32 @@ export const isDevToolsShortcut = (input: DevToolsShortcutInput): boolean => {
   const isInspectorKey = key === "i" || key === "j" || key === "c";
 
   return key === "f12" || (isInspectorKey && (hasControlShift || hasMacInspectorModifiers));
+};
+
+export const isAllowedControlNavigation = (
+  navigationUrl: string,
+  options: ControlNavigationGuardOptions
+): boolean => {
+  const parsedUrl = parseUrl(navigationUrl);
+
+  if (parsedUrl === null) {
+    return false;
+  }
+
+  if (options.controlDevServerUrl !== undefined) {
+    const devServerUrl = parseUrl(options.controlDevServerUrl);
+
+    return devServerUrl !== null && parsedUrl.origin === devServerUrl.origin;
+  }
+
+  const controlHtmlUrl = parseUrl(options.controlHtmlUrl);
+
+  return (
+    controlHtmlUrl !== null &&
+    parsedUrl.protocol === "file:" &&
+    parsedUrl.protocol === controlHtmlUrl.protocol &&
+    parsedUrl.pathname === controlHtmlUrl.pathname
+  );
 };
 
 export const disableDevToolsAccess = (webContents: WebContents): void => {
@@ -67,6 +98,26 @@ export const denyDisallowedQrNavigations = (webContents: WebContents): void => {
   });
 };
 
+export const denyDisallowedControlNavigations = (
+  webContents: WebContents,
+  options: ControlNavigationGuardOptions
+): void => {
+  const preventIfDisallowed = (event: Electron.Event, navigationUrl: string): void => {
+    if (!isAllowedControlNavigation(navigationUrl, options)) {
+      event.preventDefault();
+    }
+  };
+
+  webContents.on("will-navigate", (event) => {
+    preventIfDisallowed(event, event.url);
+  });
+  webContents.on("will-redirect", (event) => {
+    if (event.isMainFrame) {
+      preventIfDisallowed(event, event.url);
+    }
+  });
+};
+
 export const hardenWebContents = (
   webContents: WebContents,
   permissionSession: Session = webContents.session,
@@ -78,5 +129,17 @@ export const hardenWebContents = (
 
   if (disableDevTools) {
     disableDevToolsAccess(webContents);
+  }
+};
+
+const parseUrl = (url: string): URL | null => {
+  try {
+    return new URL(url);
+  } catch (error: unknown) {
+    if (error instanceof TypeError) {
+      return null;
+    }
+
+    throw error;
   }
 };

@@ -1,0 +1,245 @@
+
+=== harden1 evidence 2026-06-26T07:25:10Z ===
+=== npm run typecheck ===
+
+> qr-guard-browser@0.1.0 typecheck
+> tsc --noEmit
+
+EXIT_CODE: 0
+=== npm run lint ===
+
+> qr-guard-browser@0.1.0 lint
+> eslint . --max-warnings=0
+
+EXIT_CODE: 0
+=== npm run test ===
+
+> qr-guard-browser@0.1.0 test
+> vitest run
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v3.2.6 /Users/inthek/Documents/tele_proj/qr-guard-browser
+
+ ✓ src/core/audit-log.test.ts (12 tests) 5ms
+ ✓ src/core/shell-config.test.ts (4 tests) 21ms
+ ✓ src/main/lock-ipc.test.ts (2 tests) 28ms
+ ✓ src/main/views.test.ts (3 tests) 117ms
+ ✓ src/main/site-credential-ipc.test.ts (2 tests) 120ms
+ ✓ src/core/state-machine.test.ts (17 tests) 5ms
+ ✓ src/core/site-credentials.test.ts (4 tests) 3ms
+ ✓ src/core/auth.test.ts (5 tests) 355ms
+   ✓ auth code hashing > verifies the correct code and rejects the wrong code  351ms
+ ✓ src/renderer/settings/first-run-model.test.ts (2 tests) 4ms
+ ✓ src/core/login-form-detection.test.ts (4 tests) 4ms
+ ✓ src/main/test-env-overrides.test.ts (3 tests) 3ms
+ ✓ src/main/qr-url-loader.test.ts (1 test) 2ms
+ ✓ src/core/qr-title-detector.test.ts (3 tests) 4ms
+ ✓ src/main/qr-access-auth.test.ts (1 test) 574ms
+   ✓ admin code lockout > shares one persistent admin lockout key across settings and site-login checks  572ms
+ ✓ src/core/qr-navigation.test.ts (2 tests) 2ms
+ ✓ src/main/windows-permissions.test.ts (4 tests) 3ms
+ ✓ src/core/admin-session.test.ts (2 tests) 4ms
+ ✓ src/core/idle-lock.test.ts (1 test) 1ms
+ ✓ src/core/sanity.test.ts (1 test) 1ms
+ ✓ src/core/settings-repo.test.ts (8 tests) 1138ms
+ ✓ src/core/settings-validation.test.ts (13 tests) 1185ms
+   ✓ settings validation > updates a user code by replacing the stored hash  493ms
+ ✓ src/main/lock-controller.test.ts (6 tests) 1210ms
+   ✓ lock controller unlock submission > does not record auth failure when unlock is submitted outside locked state  366ms
+ ✓ src/main/lock-controller-site-login.test.ts (10 tests) 2379ms
+   ✓ lock controller siteLogin mode > enters siteLogin only after a valid admin code  358ms
+   ✓ lock controller siteLogin mode > manual lock, idle timeout, and safety cap all exit siteLogin through the gate  478ms
+
+ Test Files  23 passed (23)
+      Tests  110 passed (110)
+   Start at  16:26:17
+   Duration  3.01s (transform 774ms, setup 0ms, collect 1.71s, tests 7.17s, environment 4ms, prepare 2.13s)
+
+EXIT_CODE: 0
+=== npm run test:e2e #1 ===
+
+> qr-guard-browser@0.1.0 test:e2e
+> npm run build:e2e && playwright test
+
+
+> qr-guard-browser@0.1.0 build:e2e
+> vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.qr-preload.config.ts && vite build --config vite.renderer.config.ts
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 40 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/main.js  38.19 kB │ gzip: 12.22 kB │ map: 185.99 kB
+✓ built in 180ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 2 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/preload.js  2.88 kB │ gzip: 0.80 kB │ map: 10.85 kB
+✓ built in 39ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 5 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/qr-site-preload.js  4.43 kB │ gzip: 1.78 kB │ map: 17.08 kB
+✓ built in 49ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 2163 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/renderer/main_window/index.html                  0.33 kB │ gzip:   0.24 kB
+.vite/renderer/main_window/assets/index-BXWOgImX.js  675.75 kB │ gzip: 193.58 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.43s
+
+Running 16 tests using 1 worker
+
+  ✓   1 e2e/admin-settings.spec.ts:25:7 › admin settings controls › keeps every settings section reachable in a small window (1.9s)
+  ✓   2 e2e/admin-settings.spec.ts:51:7 › admin settings controls › changes the admin code for settings entry and site login (2.0s)
+  ✓   3 e2e/admin-settings.spec.ts:81:7 › admin settings controls › locks out settings entry after repeated wrong admin codes (1.4s)
+  ✓   4 e2e/audit-log.spec.ts:23:7 › audit log settings view › shows two users' successful unlock history and excludes failed auth (8.5s)
+  ✓   5 e2e/password-autofill.spec.ts:23:7 › QR site password autosave and autofill › saves, autofills, and deletes only the QR site's login password (3.1s)
+  ✓   6 e2e/site-login.spec.ts:23:7 › site login mode › auto-locks by stable QR title after multi-step login on a changing QR URL (1.6s)
+  ✓   7 e2e/site-login.spec.ts:49:7 › site login mode › learns the current QR title from the siteLogin toolbar (1.5s)
+  ✓   8 e2e/site-login.spec.ts:76:7 › site login mode › does not enter siteLogin when the admin code is wrong (1.2s)
+  ✓   9 e2e/smoke.spec.ts:27:7 › secure Electron shell › starts with a hardened control renderer and loads the fixture QR site (444ms)
+  ✓  10 e2e/smoke.spec.ts:58:7 › secure Electron shell › blocks fixture window.open calls from creating a new Electron window (1.4s)
+  ✓  11 e2e/smoke.spec.ts:90:7 › secure Electron shell › completes first-run setup and lands on the locked screen (774ms)
+  ✓  12 e2e/smoke.spec.ts:110:7 › secure Electron shell › unlocks with the correct code, counts down, and relocks without reloading QR contents (4.9s)
+  ✓  13 e2e/smoke.spec.ts:152:7 › secure Electron shell › keeps QR locked and writes no success audit event when the code is wrong (996ms)
+  ✓  14 e2e/smoke.spec.ts:178:7 › secure Electron shell › keeps settings closed when the admin code is wrong (948ms)
+  ✓  15 e2e/smoke.spec.ts:200:7 › secure Electron shell › keeps an expired login page hidden until an operator authenticates (774ms)
+  ✓  16 e2e/smoke.spec.ts:218:7 › secure Electron shell › idle auto-lock relocks an unlocked QR page before the unlock timer (1.0s)
+
+  16 passed (32.9s)
+EXIT_CODE: 0
+=== npm run test:e2e #2 ===
+
+> qr-guard-browser@0.1.0 test:e2e
+> npm run build:e2e && playwright test
+
+
+> qr-guard-browser@0.1.0 build:e2e
+> vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.qr-preload.config.ts && vite build --config vite.renderer.config.ts
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 40 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/main.js  38.19 kB │ gzip: 12.22 kB │ map: 185.99 kB
+✓ built in 161ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 2 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/preload.js  2.88 kB │ gzip: 0.80 kB │ map: 10.85 kB
+✓ built in 41ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 5 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/qr-site-preload.js  4.43 kB │ gzip: 1.78 kB │ map: 17.08 kB
+✓ built in 49ms
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.4.3 building for production...
+transforming...
+✓ 2163 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/renderer/main_window/index.html                  0.33 kB │ gzip:   0.24 kB
+.vite/renderer/main_window/assets/index-BXWOgImX.js  675.75 kB │ gzip: 193.58 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.46s
+
+Running 16 tests using 1 worker
+
+  ✓   1 e2e/admin-settings.spec.ts:25:7 › admin settings controls › keeps every settings section reachable in a small window (1.7s)
+  ✓   2 e2e/admin-settings.spec.ts:51:7 › admin settings controls › changes the admin code for settings entry and site login (2.1s)
+  ✓   3 e2e/admin-settings.spec.ts:81:7 › admin settings controls › locks out settings entry after repeated wrong admin codes (1.4s)
+  ✓   4 e2e/audit-log.spec.ts:23:7 › audit log settings view › shows two users' successful unlock history and excludes failed auth (8.5s)
+  ✓   5 e2e/password-autofill.spec.ts:23:7 › QR site password autosave and autofill › saves, autofills, and deletes only the QR site's login password (3.1s)
+  ✓   6 e2e/site-login.spec.ts:23:7 › site login mode › auto-locks by stable QR title after multi-step login on a changing QR URL (1.6s)
+  ✓   7 e2e/site-login.spec.ts:49:7 › site login mode › learns the current QR title from the siteLogin toolbar (1.6s)
+  ✓   8 e2e/site-login.spec.ts:76:7 › site login mode › does not enter siteLogin when the admin code is wrong (1.3s)
+  ✓   9 e2e/smoke.spec.ts:27:7 › secure Electron shell › starts with a hardened control renderer and loads the fixture QR site (445ms)
+  ✓  10 e2e/smoke.spec.ts:58:7 › secure Electron shell › blocks fixture window.open calls from creating a new Electron window (1.4s)
+  ✓  11 e2e/smoke.spec.ts:90:7 › secure Electron shell › completes first-run setup and lands on the locked screen (803ms)
+  ✓  12 e2e/smoke.spec.ts:110:7 › secure Electron shell › unlocks with the correct code, counts down, and relocks without reloading QR contents (4.9s)
+  ✓  13 e2e/smoke.spec.ts:152:7 › secure Electron shell › keeps QR locked and writes no success audit event when the code is wrong (989ms)
+  ✓  14 e2e/smoke.spec.ts:178:7 › secure Electron shell › keeps settings closed when the admin code is wrong (950ms)
+  ✓  15 e2e/smoke.spec.ts:200:7 › secure Electron shell › keeps an expired login page hidden until an operator authenticates (792ms)
+  ✓  16 e2e/smoke.spec.ts:218:7 › secure Electron shell › idle auto-lock relocks an unlocked QR page before the unlock timer (1.0s)
+
+  16 passed (32.9s)
+EXIT_CODE: 0
+=== npm run package ===
+
+> qr-guard-browser@0.1.0 package
+> electron-forge package
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found npm@10.9.2
+✔ Checking your system
+[?25h❯ Preparing to package application
+✔ Preparing to package application
+❯ Running packaging hooks
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running prePackage hook
+❯ [plugin-vite] Building production Vite bundles
+❯ Building main and preload targets...
+❯ Building renderer targets...
+❯ Building src/main/index.ts target
+❯ Building preload target
+❯ Building qr-site-preload target
+✔ Building preload target
+✔ Building qr-site-preload target
+✔ Building src/main/index.ts target
+✔ Building main and preload targets...
+✔ Built target main_window
+✔ Building renderer targets...
+✔ [plugin-vite] Building production Vite bundles
+✔ Running prePackage hook
+✔ Running packaging hooks
+❯ Packaging application
+› Determining targets...
+❯ Packaging for arm64 on darwin
+❯ Copying files
+❯ Preparing native dependencies
+❯ Finalizing package
+✔ Copying files
+✔ Preparing native dependencies
+✔ Finalizing package
+✔ Packaging for arm64 on darwin
+✔ Packaging application
+❯ Running postPackage hook
+✔ Running postPackage hook
+[?25hEXIT_CODE: 0
+=== packaged launch CLEAN check ===
+APP=out/QR Guard Browser-darwin-arm64/QR Guard Browser.app/Contents/MacOS/qr-guard-browser
+CLEAN
+EXIT_CODE: 0

@@ -1,4 +1,6 @@
 import { expect, test, type ElectronApplication, type Page } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 
 import { startFixtureQrSiteServer, type FixtureQrSiteServer } from "../fixtures/qr-site-server";
 import {
@@ -75,6 +77,37 @@ test.describe("admin settings controls", () => {
       await closeLaunchedApp(launchedApp);
     }
   });
+
+  test("locks out settings entry after repeated wrong admin codes", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
+      await controlPage.getByTestId("settings-open").click();
+
+      // When
+      await submitSettingsAdminCode(controlPage, "0000");
+      await submitSettingsAdminCode(controlPage, "0001");
+      await submitSettingsAdminCode(controlPage, "0002");
+      await submitSettingsAdminCode(controlPage, "1234");
+
+      // Then
+      await expect(controlPage.getByTestId("admin-errors")).toContainText("실패 횟수가 너무 많습니다.");
+      await expect(controlPage.getByTestId("settings-qr-url")).toHaveCount(0);
+
+      // When
+      resetLockoutState(launchedApp.userDataDir);
+      await submitSettingsAdminCode(controlPage, "1234");
+
+      // Then
+      await expect(controlPage.getByTestId("settings-qr-url")).toBeVisible();
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
 });
 
 const resizeMainWindow = async (
@@ -98,9 +131,13 @@ const resizeMainWindow = async (
 
 const openSettingsWithCode = async (page: Page, adminCode: string): Promise<void> => {
   await page.getByTestId("settings-open").click();
+  await submitSettingsAdminCode(page, adminCode);
+  await expect(page.getByTestId("settings-qr-url")).toBeVisible();
+};
+
+const submitSettingsAdminCode = async (page: Page, adminCode: string): Promise<void> => {
   await page.getByTestId("admin-code-input").fill(adminCode);
   await page.getByRole("button", { name: "설정 열기" }).click();
-  await expect(page.getByTestId("settings-qr-url")).toBeVisible();
 };
 
 const expectSettingsEntryToFail = async (page: Page, adminCode: string): Promise<void> => {
@@ -115,4 +152,8 @@ const enterSiteLogin = async (page: Page, adminCode: string): Promise<void> => {
   await page.getByTestId("site-login-submit").click();
   await page.getByTestId("site-login-admin-code-input").fill(adminCode);
   await page.getByTestId("site-login-admin-code-submit").click();
+};
+
+const resetLockoutState = (userDataDir: string): void => {
+  fs.writeFileSync(path.join(userDataDir, "lockout-state.json"), JSON.stringify({ entries: {} }));
 };

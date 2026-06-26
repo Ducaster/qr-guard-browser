@@ -11,6 +11,8 @@ import type { UnlockResponse } from "../core/state-machine";
 import { updateLastAuthenticatedAt } from "../core/user-settings";
 import type { LockoutStateStore } from "./settings-adapters";
 
+type UnlockFailureResponse = Extract<UnlockResponse, { readonly ok: false }>;
+
 export type QrAccessAuthResult =
   | {
       readonly kind: "success";
@@ -18,11 +20,21 @@ export type QrAccessAuthResult =
       readonly settings: Settings;
       readonly userId: string;
     }
+  | AuthFailureResult;
+
+export type AdminCodeAuthResult =
   | {
-      readonly kind: "failure";
+      readonly kind: "success";
       readonly lockoutState: LockoutState;
-      readonly response: UnlockResponse;
-    };
+      readonly settings: Settings;
+    }
+  | AuthFailureResult;
+
+interface AuthFailureResult {
+  readonly kind: "failure";
+  readonly lockoutState: LockoutState;
+  readonly response: UnlockFailureResponse;
+}
 
 export interface QrAccessAuthInput {
   readonly lockoutState: LockoutState;
@@ -33,13 +45,16 @@ export interface QrAccessAuthInput {
   readonly repository: SettingsRepository;
 }
 
-export interface AdminSiteLoginAuthInput {
-  readonly lockoutState: LockoutState;
+export interface AdminCodeAuthInput {
   readonly lockoutStateStore: LockoutStateStore;
   readonly nowMs: number;
   readonly rawCode: unknown;
   readonly repository: SettingsRepository;
 }
+
+export type AdminSiteLoginAuthInput = AdminCodeAuthInput;
+
+export const ADMIN_LOCKOUT_KEY = "__qr_guard_admin__";
 
 export const notLockedResponse = (): UnlockResponse => ({
   errors: ["현재 잠긴 상태가 아닙니다."],
@@ -98,23 +113,22 @@ export const authenticateQrAccess = (input: QrAccessAuthInput): QrAccessAuthResu
   };
 };
 
-export const authenticateAdminSiteLogin = (
-  input: AdminSiteLoginAuthInput
-): QrAccessAuthResult => {
+export const authenticateAdminCode = (input: AdminCodeAuthInput): AdminCodeAuthResult => {
   const code = typeof input.rawCode === "string" ? input.rawCode.trim() : "";
+  const lockoutState = input.lockoutStateStore.load();
 
   if (code.length === 0) {
-    return failure(input.lockoutState, {
+    return failure(lockoutState, {
       errors: ["관리자 코드를 입력하세요."],
       ok: false,
       retryAfterMs: null
     });
   }
 
-  const decision = checkLockout(input.lockoutState, ADMIN_SITE_LOGIN_AUDIT_USER_ID, input.nowMs);
+  const decision = checkLockout(lockoutState, ADMIN_LOCKOUT_KEY, input.nowMs);
 
   if (!decision.allowed) {
-    return failure(input.lockoutState, {
+    return failure(lockoutState, {
       errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
       ok: false,
       retryAfterMs: decision.retryAfterMs ?? null
@@ -124,11 +138,7 @@ export const authenticateAdminSiteLogin = (
   const settings = input.repository.load();
 
   if (!verifyCode(code, settings.admin.salt, settings.admin.hash)) {
-    const result = recordAuthFailure(
-      input.lockoutState,
-      ADMIN_SITE_LOGIN_AUDIT_USER_ID,
-      input.nowMs
-    );
+    const result = recordAuthFailure(lockoutState, ADMIN_LOCKOUT_KEY, input.nowMs);
 
     input.lockoutStateStore.save(result.state);
 
@@ -139,22 +149,38 @@ export const authenticateAdminSiteLogin = (
     });
   }
 
-  const nextLockoutState = recordAuthSuccess(
-    input.lockoutState,
-    ADMIN_SITE_LOGIN_AUDIT_USER_ID
-  );
+  const nextLockoutState = recordAuthSuccess(lockoutState, ADMIN_LOCKOUT_KEY);
 
   input.lockoutStateStore.save(nextLockoutState);
 
   return {
     kind: "success",
     lockoutState: nextLockoutState,
-    settings,
+    settings
+  };
+};
+
+export const authenticateAdminSiteLogin = (
+  input: AdminSiteLoginAuthInput
+): QrAccessAuthResult => {
+  const result = authenticateAdminCode(input);
+
+  if (result.kind === "failure") {
+    return result;
+  }
+
+  return {
+    kind: "success",
+    lockoutState: result.lockoutState,
+    settings: result.settings,
     userId: ADMIN_SITE_LOGIN_AUDIT_USER_ID
   };
 };
 
-const failure = (lockoutState: LockoutState, response: UnlockResponse): QrAccessAuthResult => ({
+const failure = (
+  lockoutState: LockoutState,
+  response: UnlockFailureResponse
+): AuthFailureResult => ({
   kind: "failure",
   lockoutState,
   response
