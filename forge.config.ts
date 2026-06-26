@@ -15,7 +15,9 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel(
       {
+        authors: "Ducaster",
         name: "qr_guard_browser",
+        owners: "Ducaster",
         setupExe: "QRGuardBrowserSetup.exe"
       },
       ["win32"]

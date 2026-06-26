@@ -4,7 +4,7 @@
   "description": "QR Guard Browser desktop app shell.",
   "productName": "QR Guard Browser",
   "main": ".vite/build/main.js",
-  "author": "",
+  "author": "Ducaster",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
