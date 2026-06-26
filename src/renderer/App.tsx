@@ -103,6 +103,8 @@ export const App = (): JSX.Element => {
             onOpenSettings={() => {
               setLocalMode("adminGate");
             }}
+            onRetryQrLoad={() => window.qrGuard.retryQrLoad()}
+            qrLoadFailure={state.qrLoadFailure}
           />
           {error.length > 0 ? (
             <MessageBar className={styles.floatingMessage} intent="error">
@@ -138,6 +140,7 @@ export const App = (): JSX.Element => {
 const createLockedFallbackState = (): StateSnapshot => ({
   activeUserId: null,
   now: new Date().toISOString(),
+  qrLoadFailure: null,
   qrVisible: false,
   remainingMs: null,
   state: "locked",

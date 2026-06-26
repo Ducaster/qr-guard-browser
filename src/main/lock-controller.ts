@@ -9,6 +9,7 @@ import {
   shouldShowQrView,
   unlockSucceeded,
   type GuardState,
+  type QrLoadFailure,
   type StateSnapshot,
   type UnlockResponse
 } from "../core/state-machine";
@@ -40,12 +41,14 @@ interface LockControllerShellWindow {
 }
 
 export interface LockController {
+  readonly clearQrLoadFailure: () => void;
   readonly closeSettings: () => void;
   readonly completeSetup: () => void;
   readonly getState: () => StateSnapshot;
   readonly learnCurrentQrTitle: () => ActionResponse;
   readonly manualLock: () => void;
   readonly openSettings: () => void;
+  readonly setQrLoadFailure: (failure: QrLoadFailure) => void;
   readonly submitSiteLogin: (code: unknown) => UnlockResponse;
   readonly submitUnlock: (userId: unknown, code: unknown) => UnlockResponse;
 }
@@ -66,6 +69,7 @@ export interface LockControllerOptions {
 export const createLockController = (options: LockControllerOptions): LockController => {
   let state: GuardState = isFirstRunSettings(options.repository.load()) ? "needsSetup" : "locked";
   let unlockExpiresAtMs: number | null = null;
+  let qrLoadFailure: QrLoadFailure | null = null;
   const authenticator = createLockAuthenticator({
     lockoutStateStore: options.lockoutStateStore,
     repository: options.repository
@@ -93,6 +97,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     return {
       activeUserId: auditSessions.getActiveUserId(),
       now: new Date(nowMs).toISOString(),
+      qrLoadFailure,
       qrVisible: shouldShowQrView(state),
       remainingMs,
       state,
@@ -227,6 +232,14 @@ export const createLockController = (options: LockControllerOptions): LockContro
   applyVisibility();
 
   return {
+    clearQrLoadFailure: () => {
+      if (qrLoadFailure === null) {
+        return;
+      }
+
+      qrLoadFailure = null;
+      emitState();
+    },
     closeSettings: () => {
       timers.clearUnlockTimer();
       setState(closeSettings(state));
@@ -250,6 +263,10 @@ export const createLockController = (options: LockControllerOptions): LockContro
       }
 
       setState(nextState);
+    },
+    setQrLoadFailure: (failure: QrLoadFailure) => {
+      qrLoadFailure = failure;
+      emitState();
     },
     submitSiteLogin,
     submitUnlock

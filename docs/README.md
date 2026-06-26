@@ -2,7 +2,7 @@
 
 QR Guard Browser is an Electron desktop app for keeping a logged-in QR web page available while hiding the live QR code behind a local lock screen. The QR site runs as a real Chromium page in a persistent `persist:qr-site` session; the lock, settings, countdown, and audit log run in a separate control layer.
 
-The app is an operational deterrent for shared terminals. It does not store QR-site usernames or passwords and does not automate QR-site login.
+The app is an operational deterrent for shared terminals. It never stores or autofills regional unlock codes. QR-site usernames and passwords can be saved only when the operator chooses to save them, and saved QR-site passwords are autofilled without auto-submit.
 
 ## Install
 
@@ -27,20 +27,22 @@ On first launch, enter:
 - At least one user: user ID plus local unlock code.
 - Unlock seconds: how long QR stays visible after successful user unlock. Default is 10 seconds.
 - Idle seconds: how long system inactivity may continue before an unlocked QR view relocks. Default is 30 seconds.
-- Login detection: optional login URL pattern, logged-in URL pattern, and title text hint.
+- QR screen title: optional title text used to relock admin-authenticated site login when the QR page is reached.
 
 Admin and user codes are stored as salted `scrypt` hashes. The settings file is sealed with Electron `safeStorage` when available.
 
-## QR URL And Login Detection
+## QR URL And Site Login
 
 The QR URL is loaded in the dedicated QR Chromium view. The view uses a persistent session, so QR-site cookies survive app restarts until the QR session is cleared.
 
-Login detection is fail-safe:
+There is no automatic URL/title login-screen detection that exposes pages without authentication.
 
-- A page is shown without a local unlock only when it clearly matches the configured login URL pattern or title hint.
-- If the app cannot classify the QR page, it stays locked.
-- When login mode is active and navigation leaves the login URL pattern, the app relocks immediately.
-- If automatic detection is not enough for the site, use the toolbar's "login complete" lock action after finishing QR-site login.
+QR exposure is limited to:
+
+- Regional unlock with a configured user code.
+- Admin-authenticated `siteLogin`, used when an operator needs to log in to the QR site.
+
+During `siteLogin`, multi-step navigation is allowed. When the current page title matches the configured QR screen title, the app immediately relocks and hides the QR view. The toolbar can also learn the current page title as the QR screen title.
 
 ## User And Code Management
 
@@ -48,9 +50,10 @@ Open Settings with the admin code. From Settings you can:
 
 - Change the QR URL.
 - Change unlock and idle-lock durations.
-- Change login detection patterns.
+- Change the QR screen title pattern.
 - Add, rename, or delete users.
 - Reset a user's unlock code.
+- Manage saved QR-site logins.
 - Clear the QR-site session after re-entering the admin code.
 
 The renderer never receives raw hashes, salts, or internal storage paths.
@@ -64,7 +67,7 @@ User unlock flow:
 1. Enter user ID and code.
 2. On success, the QR view appears for the configured unlock duration.
 3. The countdown toolbar remains visible.
-4. Timer expiry, manual lock, idle timeout, or login-mode transition hides the QR view without reloading it.
+4. Timer expiry, manual lock, idle timeout, or QR-title detection during `siteLogin` hides the QR view without reloading it.
 
 Repeated failed unlocks trigger an increasing lockout delay.
 

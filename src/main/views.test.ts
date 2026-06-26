@@ -22,6 +22,8 @@ const electronMock = vi.hoisted(() => {
     readonly loadUrlCalls: string[] = [];
     readonly session = new FakeSession();
 
+    private readonly listeners = new Map<string, ((...args: readonly unknown[]) => void)[]>();
+    private currentUrl = "";
     private loadFileError: Error | undefined;
     private loadUrlError: Error | undefined;
 
@@ -57,6 +59,7 @@ const electronMock = vi.hoisted(() => {
 
     loadURL(url: string): Promise<void> {
       this.loadUrlCalls.push(url);
+      this.currentUrl = url;
 
       if (this.loadUrlError !== undefined) {
         return Promise.reject(this.loadUrlError);
@@ -65,8 +68,18 @@ const electronMock = vi.hoisted(() => {
       return Promise.resolve();
     }
 
-    on(_eventName: string, _listener: (...args: readonly unknown[]) => void): void {
-      return;
+    getURL(): string {
+      return this.currentUrl;
+    }
+
+    emit(eventName: string, ...args: readonly unknown[]): void {
+      for (const listener of this.listeners.get(eventName) ?? []) {
+        listener(...args);
+      }
+    }
+
+    on(eventName: string, listener: (...args: readonly unknown[]) => void): void {
+      this.listeners.set(eventName, [...(this.listeners.get(eventName) ?? []), listener]);
     }
 
     setWindowOpenHandler(_handler: () => Readonly<{ action: "deny" }>): void {
@@ -192,12 +205,17 @@ describe("shell window loading", () => {
   it("loads the control view when the configured QR site is unreachable", async () => {
     // Given
     const { createShellWindow } = await import("./views");
+    const qrLoadStatuses: unknown[] = [];
+    const qrUrl = "http://127.0.0.1:37655/login";
     const shellWindow = createShellWindow({
       controlHtmlPath: "/control/index.html",
       disableDevTools: true,
+      onQrLoadStatusChanged: (status) => {
+        qrLoadStatuses.push(status);
+      },
       preloadPath: "/preload.js",
       qrPreloadPath: "/qr-site-preload.js",
-      qrUrl: "http://127.0.0.1:37655/login"
+      qrUrl
     });
     const qrWebContents = getQrWebContents();
     const controlWebContents = getControlWebContents();
@@ -209,7 +227,12 @@ describe("shell window loading", () => {
     expect(controlWebContents.loadFileCalls).toEqual(["/control/index.html"]);
     expect(loggerMock.warn).toHaveBeenCalledWith("QR site failed to load.", {
       error: "ERR_CONNECTION_REFUSED",
-      url: "http://127.0.0.1:37655/login"
+      url: qrUrl
+    });
+    expect(qrLoadStatuses.at(-1)).toEqual({
+      errorCode: null,
+      errorDescription: "ERR_CONNECTION_REFUSED",
+      url: qrUrl
     });
   });
 
@@ -233,6 +256,36 @@ describe("shell window loading", () => {
     expect(loggerMock.warn).toHaveBeenCalledWith("Refusing to load disallowed QR URL.", {
       url: "file:///etc/passwd"
     });
+  });
+
+  it("reports only main-frame QR load failures and ignores intentional blank loads", async () => {
+    // Given
+    const { createShellWindow } = await import("./views");
+    const qrLoadStatuses: unknown[] = [];
+    createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      onQrLoadStatusChanged: (status) => {
+        qrLoadStatuses.push(status);
+      },
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+    const qrWebContents = getQrWebContents();
+
+    // When
+    qrWebContents.emit("did-fail-load", {}, -3, "ERR_ABORTED", "about:blank", true);
+    qrWebContents.emit("did-fail-load", {}, -105, "ERR_NAME_NOT_RESOLVED", "https://bad.example/frame", false);
+    qrWebContents.emit("did-fail-load", {}, -105, "ERR_NAME_NOT_RESOLVED", "https://bad.example/login", true);
+
+    // Then
+    expect(qrLoadStatuses).toEqual([
+      {
+        errorCode: -105,
+        errorDescription: "ERR_NAME_NOT_RESOLVED",
+        url: "https://bad.example/login"
+      }
+    ]);
   });
 });
 

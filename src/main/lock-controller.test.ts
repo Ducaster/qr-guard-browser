@@ -130,6 +130,29 @@ describe("lock controller unlock submission", () => {
 });
 
 describe("lock controller QR navigation and idle safety", () => {
+  it("keeps QR load failures informational without changing the lock gate", () => {
+    // Given
+    const harness = createHarness();
+    const failure = {
+      errorCode: -105,
+      errorDescription: "ERR_NAME_NOT_RESOLVED",
+      url: "https://bad.example/login"
+    };
+
+    // When
+    harness.controller.setQrLoadFailure(failure);
+    const failedState = harness.controller.getState();
+    harness.controller.clearQrLoadFailure();
+    const clearedState = harness.controller.getState();
+
+    // Then
+    expect(failedState.state).toBe("locked");
+    expect(failedState.qrVisible).toBe(false);
+    expect(failedState.qrLoadFailure).toEqual(failure);
+    expect(clearedState.qrLoadFailure).toBeNull();
+    expect(harness.visibilityChanges.at(-1)).toBe(false);
+  });
+
   it("keeps QR locked when the hidden QR page navigates to a login URL", () => {
     // Given
     const harness = createHarness({

@@ -15,8 +15,10 @@ import {
   type AuditLogFilter,
   type AuditLogReadResult
 } from "../core/audit-log";
-import type { Sealer, SettingsStore } from "../core/settings-repo";
+import type { Sealer, SettingsRepository, SettingsStore } from "../core/settings-repo";
+import { createRecoverableFileSettingsRepository } from "./settings-file-recovery";
 import { mainLogger } from "./logger";
+import { hasErrorCode, readOptionalTextFile, writeAtomicTextFile } from "./text-file-io";
 
 const SETTINGS_FILE_NAME = "settings.json";
 const SITE_CREDENTIALS_FILE_NAME = "site-credentials.json";
@@ -32,6 +34,12 @@ export interface AuditLogStore {
   readonly append: (event: AuditEvent) => void;
   readonly read: (filter?: AuditLogFilter) => AuditLogReadResult;
 }
+
+export const createElectronSettingsRepository = (sealer: Sealer): SettingsRepository =>
+  createRecoverableFileSettingsRepository(
+    path.join(app.getPath("userData"), SETTINGS_FILE_NAME),
+    sealer
+  );
 
 export const createElectronSettingsStore = (): SettingsStore =>
   createFileSettingsStore(path.join(app.getPath("userData"), SETTINGS_FILE_NAME));
@@ -117,26 +125,6 @@ export class SafeStorageUnavailableError extends Error {
   }
 }
 
-const hasErrorCode = (error: unknown, expectedCode: string): boolean => {
-  if (!(error instanceof Error) || !("code" in error)) {
-    return false;
-  }
-
-  return error.code === expectedCode;
-};
-
-const readOptionalTextFile = (filePath: string): string | null => {
-  try {
-    return fs.readFileSync(filePath, "utf8");
-  } catch (error: unknown) {
-    if (hasErrorCode(error, "ENOENT")) {
-      return null;
-    }
-
-    throw error;
-  }
-};
-
 const parseLockoutStateFile = (data: string, filePath: string): LockoutState => {
   try {
     JSON.parse(data);
@@ -154,16 +142,4 @@ const parseLockoutStateFile = (data: string, filePath: string): LockoutState => 
   }
 
   return parseLockoutStateJson(data);
-};
-
-const writeAtomicTextFile = (filePath: string, data: string): void => {
-  const dirPath = path.dirname(filePath);
-  const tempPath = path.join(
-    dirPath,
-    `.${path.basename(filePath)}.${String(process.pid)}.${String(Date.now())}.tmp`
-  );
-
-  fs.mkdirSync(dirPath, { mode: 0o700, recursive: true });
-  fs.writeFileSync(tempPath, data, { encoding: "utf8", mode: 0o600 });
-  fs.renameSync(tempPath, filePath);
 };

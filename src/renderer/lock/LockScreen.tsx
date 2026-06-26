@@ -16,15 +16,23 @@ import {
 import { Globe24Regular, Key24Regular, Settings24Regular } from "@fluentui/react-icons";
 import { useState, type JSX, type SyntheticEvent } from "react";
 
+import type { QrLoadFailure } from "../../core/state-machine";
 import { ActionsRow, FormGrid, HeaderBlock, PanelCard, Screen } from "../fluentLayout";
 import { inputSlot } from "../fluentSlots";
 import { ErrorList } from "../settings/Feedback";
+import { QrLoadFailureNotice } from "./QrLoadFailureNotice";
 
 interface LockScreenProps {
+  readonly qrLoadFailure: QrLoadFailure | null;
   readonly onOpenSettings: () => void;
+  readonly onRetryQrLoad: () => ReturnType<typeof window.qrGuard.retryQrLoad>;
 }
 
-export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => {
+export const LockScreen = ({
+  onOpenSettings,
+  onRetryQrLoad,
+  qrLoadFailure
+}: LockScreenProps): JSX.Element => {
   const styles = useLockScreenStyles();
   const [userId, setUserId] = useState("");
   const [code, setCode] = useState("");
@@ -96,6 +104,7 @@ export const LockScreen = ({ onOpenSettings }: LockScreenProps): JSX.Element => 
           </Badge>
           <Text size={200}>지역 인증 후 QR 화면을 표시합니다.</Text>
         </div>
+        <QrLoadFailureNotice failure={qrLoadFailure} onRetry={onRetryQrLoad} />
         <form onSubmit={submit}>
           <FormGrid>
             <Field label="지역">

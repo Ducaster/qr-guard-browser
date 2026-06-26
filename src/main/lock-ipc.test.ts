@@ -88,6 +88,10 @@ class RecordingLockController implements LockController {
   learnCurrentQrTitleCalls = 0;
   manualLockCalls = 0;
 
+  clearQrLoadFailure(): void {
+    return;
+  }
+
   closeSettings(): void {
     return;
   }
@@ -100,6 +104,7 @@ class RecordingLockController implements LockController {
     return {
       activeUserId: null,
       now: "2026-06-26T00:00:00.000Z",
+      qrLoadFailure: null,
       qrVisible: false,
       remainingMs: null,
       state: "locked",
@@ -118,6 +123,10 @@ class RecordingLockController implements LockController {
   }
 
   openSettings(): void {
+    return;
+  }
+
+  setQrLoadFailure(): void {
     return;
   }
 

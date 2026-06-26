@@ -107,6 +107,35 @@ test.describe("secure Electron shell", () => {
     }
   });
 
+  test("shows a retry affordance when the configured QR site fails to load", async () => {
+    // Given
+    const unreachableQrUrl = "http://127.0.0.1:1/login";
+    const launchedApp = await launchApp(unreachableQrUrl);
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+
+      // When
+      await completeFirstRunSetup(controlPage, unreachableQrUrl);
+
+      // Then
+      await expect(controlPage.getByTestId("qr-load-failure-message")).toContainText(
+        "QR 사이트를 불러오지 못했습니다."
+      );
+      await expect(controlPage.getByTestId("qr-load-retry")).toBeVisible();
+      expect(await getQrVisible(controlPage)).toBe(false);
+
+      await controlPage.getByTestId("qr-load-retry").click();
+      await expect(controlPage.getByTestId("qr-load-failure-message")).toContainText(
+        "QR 사이트를 불러오지 못했습니다."
+      );
+      expect(await getQrVisible(controlPage)).toBe(false);
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
   test("unlocks with the correct code, counts down, and relocks without reloading QR contents", async () => {
     // Given
     const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`, {

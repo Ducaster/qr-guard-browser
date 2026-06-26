@@ -229,6 +229,22 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       return okResponse();
     }
   );
+
+  ipcMain.handle(IPC_CHANNELS.retryQrLoad, async (): Promise<ActionResponse> => {
+    const loadResult = loadSettingsForIpc(options.repository);
+
+    if (!loadResult.ok) {
+      return loadResult;
+    }
+
+    if (loadResult.settings.qrUrl.length === 0) {
+      return errorResponse(["QR URL이 설정되어 있지 않습니다."]);
+    }
+
+    await options.loadQrUrl(loadResult.settings.qrUrl);
+
+    return okResponse();
+  });
 };
 
 const saveSettingsMutation = async (

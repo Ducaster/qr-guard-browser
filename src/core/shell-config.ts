@@ -19,6 +19,7 @@ export const IPC_CHANNELS = {
   openSettings: "qr-guard:open-settings",
   queryAuditLog: "qr-guard:query-audit-log",
   resetUserCode: "qr-guard:reset-user-code",
+  retryQrLoad: "qr-guard:retry-qr-load",
   saveSettings: "qr-guard:save-settings",
   siteCredentialAutofillRequest: "qr-guard:site-credential-autofill-request",
   siteCredentialCaptured: "qr-guard:site-credential-captured",

@@ -2,7 +2,8 @@ import { app, BaseWindow, Menu, nativeTheme, powerMonitor } from "electron";
 import path from "node:path";
 
 import { APP_NAME } from "../core/sanity";
-import { createSettingsRepository, type Sealer, type SettingsRepository } from "../core/settings-repo";
+import type { Sealer, SettingsRepository } from "../core/settings-repo";
+import type { QrLoadFailure } from "../core/state-machine";
 import { createSiteCredentialRepository, type SiteCredentialRepository } from "../core/site-credentials";
 import { registerLockIpc } from "./lock-ipc";
 import { createLockController, type LockController } from "./lock-controller";
@@ -11,8 +12,8 @@ import { registerSettingsIpc, registerShellIpc } from "./ipc";
 import {
   createElectronAuditLogStore,
   createElectronLockoutStateStore,
+  createElectronSettingsRepository,
   createElectronSafeStorageSealer,
-  createElectronSettingsStore,
   createElectronSiteCredentialStore,
   createInsecureTestSealer,
   type LockoutStateStore
@@ -63,7 +64,7 @@ const getSettingsRepository = (): SettingsRepository => {
     return settingsRepository;
   }
 
-  settingsRepository = createSettingsRepository(createElectronSettingsStore(), createStorageSealer());
+  settingsRepository = createElectronSettingsRepository(createStorageSealer());
 
   return settingsRepository;
 };
@@ -115,8 +116,34 @@ const loadActiveQrUrl = async (url: string): Promise<void> => {
     return;
   }
 
-  await loadQrUrlOrBlank(activeShellWindow.qrView.webContents, url);
+  activeLockController?.clearQrLoadFailure();
+
+  try {
+    await loadQrUrlOrBlank(activeShellWindow.qrView.webContents, url);
+    activeLockController?.clearQrLoadFailure();
+  } catch (error: unknown) {
+    mainLogger.warn("QR site failed to load.", {
+      error: formatUnknownError(error),
+      url
+    });
+    activeLockController?.setQrLoadFailure(createQrLoadFailure(url, error));
+  }
 };
+
+const updateQrLoadStatus = (failure: QrLoadFailure | null): void => {
+  if (failure === null) {
+    activeLockController?.clearQrLoadFailure();
+    return;
+  }
+
+  activeLockController?.setQrLoadFailure(failure);
+};
+
+const createQrLoadFailure = (url: string, error: unknown): QrLoadFailure => ({
+  errorCode: null,
+  errorDescription: error instanceof Error ? error.message : formatUnknownError(error),
+  url
+});
 
 const getUnlockDurationOverrideSeconds = (): number | undefined => {
   return readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_UNLOCK_DURATION_SECONDS");
@@ -148,6 +175,7 @@ const createAndLoadShellWindow = (): void => {
   const shellWindow = createShellWindow({
     controlHtmlPath: getRendererHtmlPath(getRendererName()),
     disableDevTools: app.isPackaged,
+    onQrLoadStatusChanged: updateQrLoadStatus,
     preloadPath: path.join(__dirname, "preload.js"),
     qrPreloadPath: path.join(__dirname, "qr-site-preload.js"),
     ...(controlDevServerUrl === undefined ? {} : { controlDevServerUrl }),

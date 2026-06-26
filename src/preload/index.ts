@@ -130,6 +130,7 @@ const qrGuardApi = {
   ): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.siteCredentialSaveDecision, payload),
   resetUserCode: (payload: SetupUserPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.resetUserCode, payload),
+  retryQrLoad: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.retryQrLoad),
   saveSettings: (payload: SettingsPatchPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.saveSettings, payload),
   submitSiteLogin: (code: string): Promise<UnlockResponse> =>

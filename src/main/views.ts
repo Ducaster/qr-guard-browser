@@ -3,13 +3,14 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { APP_NAME } from "../core/sanity";
+import type { QrLoadFailure } from "../core/state-machine";
 import {
   CONTROL_VIEW_WEB_PREFERENCES,
   QR_SESSION_PARTITION,
   QR_VIEW_WEB_PREFERENCES
 } from "../core/shell-config";
 import { formatUnknownError, mainLogger } from "./logger";
-import { loadQrUrlOrBlank } from "./qr-url-loader";
+import { isQrBlankFallbackUrl, loadQrUrlOrBlank } from "./qr-url-loader";
 import {
   denyDisallowedControlNavigations,
   denyDisallowedQrNavigations,
@@ -29,6 +30,7 @@ export interface ShellWindowOptions {
   readonly controlDevServerUrl?: string;
   readonly controlHtmlPath: string;
   readonly disableDevTools: boolean;
+  readonly onQrLoadStatusChanged?: (failure: QrLoadFailure | null) => void;
   readonly preloadPath: string;
   readonly qrPreloadPath: string;
   readonly qrUrl?: string;
@@ -110,6 +112,26 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     ...(options.controlDevServerUrl === undefined ? {} : { controlDevServerUrl: options.controlDevServerUrl })
   });
 
+  qrView.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+      if (!isMainFrame || isQrBlankFallbackUrl(validatedUrl)) {
+        return;
+      }
+
+      options.onQrLoadStatusChanged?.({
+        errorCode,
+        errorDescription,
+        url: validatedUrl
+      });
+    }
+  );
+  qrView.webContents.on("did-finish-load", () => {
+    if (!isQrBlankFallbackUrl(qrView.webContents.getURL())) {
+      options.onQrLoadStatusChanged?.(null);
+    }
+  });
+
   const applyThemeBackground = (): void => {
     const backgroundColor = getSystemNeutralBackground();
 
@@ -133,12 +155,23 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
 
   const load = async (): Promise<void> => {
     if (options.qrUrl !== undefined) {
-      void loadQrUrlOrBlank(qrView.webContents, options.qrUrl).catch((error: unknown) => {
-        mainLogger.warn("QR site failed to load.", {
-          error: formatUnknownError(error),
-          url: options.qrUrl
+      const qrUrl = options.qrUrl;
+
+      void loadQrUrlOrBlank(qrView.webContents, qrUrl)
+        .then(() => {
+          options.onQrLoadStatusChanged?.(null);
+        })
+        .catch((error: unknown) => {
+          mainLogger.warn("QR site failed to load.", {
+            error: formatUnknownError(error),
+            url: qrUrl
+          });
+          options.onQrLoadStatusChanged?.({
+            errorCode: null,
+            errorDescription: formatQrLoadErrorDescription(error),
+            url: qrUrl
+          });
         });
-      });
     }
 
     await (options.controlDevServerUrl === undefined
@@ -169,3 +202,6 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
 
 export const getRendererHtmlPath = (rendererName: string): string =>
   path.join(__dirname, `../renderer/${rendererName}/index.html`);
+
+const formatQrLoadErrorDescription = (error: unknown): string =>
+  error instanceof Error ? error.message : formatUnknownError(error);

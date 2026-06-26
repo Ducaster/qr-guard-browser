@@ -11,8 +11,10 @@ The app protects that asset by:
 - Hosting the QR site in a real Chromium `WebContentsView`.
 - Keeping QR-site cookies in the persistent `persist:qr-site` session.
 - Hiding the QR view with `setVisible(false)` while locked.
-- Allowing QR exposure only during user unlock or verified login-mode display.
-- Relocking immediately when login-mode navigation leaves the configured login URL pattern.
+- Allowing QR exposure only after a regional user unlock or an admin-authenticated
+  `siteLogin` session.
+- Relocking `siteLogin` immediately when the configured QR-title pattern matches
+  the current QR page title.
 
 ## Out Of Scope
 
@@ -31,6 +33,13 @@ QR-site passwords are autofilled into the site's login form without auto-submit.
 ## Local Storage Limits
 
 Settings are stored in Electron `userData` and sealed with Electron `safeStorage` when available. Admin and user codes are salted `scrypt` hashes, not plaintext codes.
+
+The main `settings.json` file is written atomically and mirrored to
+`settings.json.bak` after successful saves. On startup, if the primary settings
+file cannot be read, parsed, or unsealed, the app tries to restore from the
+backup. A corrupted primary is moved aside as `settings.json.corrupt` before a
+backup restore or later overwrite. If both files fail, the app falls back to
+first-run defaults and stays locked/needs-setup instead of crashing.
 
 Saved QR-site passwords are stored in a separate `site-credentials.json` file under
 Electron `userData`. The file is sealed with Electron `safeStorage`, which uses the
@@ -61,7 +70,7 @@ DOM input value that the site needs in order for the operator to log in.
 
 ## Audit Log Integrity
 
-The audit log is an append-style local JSONL file. It records successful unlock and login-mode sessions for operational review.
+The audit log is an append-style local JSONL file. It records successful regional unlock and admin-authenticated `siteLogin` sessions for operational review.
 
 It is not tamper-evident:
 

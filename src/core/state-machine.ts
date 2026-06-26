@@ -7,9 +7,16 @@ export type GuardState =
 
 export type VisibilityState = GuardState | "unknown";
 
+export interface QrLoadFailure {
+  readonly errorCode: number | null;
+  readonly errorDescription: string;
+  readonly url: string;
+}
+
 export interface StateSnapshot {
   readonly activeUserId: string | null;
   readonly now: string;
+  readonly qrLoadFailure: QrLoadFailure | null;
   readonly qrVisible: boolean;
   readonly remainingMs: number | null;
   readonly state: GuardState;

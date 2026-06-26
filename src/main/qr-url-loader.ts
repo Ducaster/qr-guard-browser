@@ -5,6 +5,9 @@ import { mainLogger } from "./logger";
 
 export const QR_BLANK_FALLBACK_URL = "about:blank";
 
+export const isQrBlankFallbackUrl = (url: string): boolean =>
+  url === QR_BLANK_FALLBACK_URL || url.length === 0;
+
 export const loadQrUrlOrBlank = async (
   webContents: Pick<WebContents, "loadURL">,
   url: string
