@@ -21,6 +21,12 @@ const electronMock = vi.hoisted(() => {
     ): void {
       return;
     }
+
+    setPermissionCheckHandler(
+      _handler: (webContents: FakeWebContents | null, permission: string, requestingOrigin: string) => boolean
+    ): void {
+      return;
+    }
   }
 
   class FakeWebContents {

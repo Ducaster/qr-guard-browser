@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { isAllowedControlNavigation, isDevToolsShortcut } from "./windows-permissions";
+import {
+  hardenControlWebContents,
+  hardenQrWebContents,
+  isAllowedControlNavigation,
+  isDevToolsShortcut
+} from "./windows-permissions";
+import type { DevToolsShortcutInput } from "./windows-permissions";
 
 describe("isDevToolsShortcut", () => {
   it("detects production DevTools accelerators", () => {
@@ -61,3 +67,155 @@ describe("control navigation guard", () => {
     expect(isAllowedControlNavigation("javascript:alert(1)", options)).toBe(false);
   });
 });
+
+describe("QR browser hardening", () => {
+  it("navigates allowed popup URLs in the same QR view while denying a new window", () => {
+    // Given
+    const webContents = new TestWebContents();
+    hardenQrWebContents(webContents, webContents.session, { disableDevTools: false });
+
+    // When
+    const result = webContents.openWindow("https://login.example.test/oauth?state=abc");
+
+    // Then
+    expect(result).toEqual({ action: "deny" });
+    expect(webContents.loadUrlCalls).toEqual(["https://login.example.test/oauth?state=abc"]);
+  });
+
+  it.each([
+    { label: "empty URL", url: "" },
+    { label: "about blank", url: "about:blank" },
+    { label: "file URL", url: "file:///tmp/qr.png" },
+    { label: "custom scheme", url: "myapp://callback" }
+  ] as const)("denies $label popup URLs without navigating", ({ url }) => {
+    // Given
+    const webContents = new TestWebContents();
+    hardenQrWebContents(webContents, webContents.session, { disableDevTools: false });
+
+    // When
+    const result = webContents.openWindow(url);
+
+    // Then
+    expect(result).toEqual({ action: "deny" });
+    expect(webContents.loadUrlCalls).toEqual([]);
+  });
+
+  it("allows QR permission requests and checks", () => {
+    // Given
+    const webContents = new TestWebContents();
+    hardenQrWebContents(webContents, webContents.session, { disableDevTools: false });
+
+    // When / Then
+    expect(webContents.session.requestPermission("media")).toBe(true);
+    expect(webContents.session.checkPermission("clipboard-read")).toBe(true);
+  });
+});
+
+describe("control browser hardening", () => {
+  it("keeps control popups and permissions denied", () => {
+    // Given
+    const webContents = new TestWebContents();
+    hardenControlWebContents(webContents, { disableDevTools: false });
+
+    // When
+    const result = webContents.openWindow("https://login.example.test/oauth");
+
+    // Then
+    expect(result).toEqual({ action: "deny" });
+    expect(webContents.loadUrlCalls).toEqual([]);
+    expect(webContents.session.requestPermission("media")).toBe(false);
+    expect(webContents.session.checkPermission("clipboard-read")).toBe(false);
+  });
+});
+
+interface TestWindowOpenDetails {
+  readonly url: string;
+}
+
+interface TestPreventableEvent {
+  readonly preventDefault: () => void;
+}
+
+type TestWindowOpenResult = Readonly<{ readonly action: "deny" }>;
+type TestWindowOpenHandler = (details: TestWindowOpenDetails) => TestWindowOpenResult;
+type TestPermissionRequestHandler = (
+  webContents: unknown,
+  permission: string,
+  callback: (permissionGranted: boolean) => void
+) => void;
+type TestPermissionCheckHandler = (
+  webContents: unknown,
+  permission: string,
+  requestingOrigin: string,
+  details: unknown
+) => boolean;
+
+class TestSession {
+  private permissionCheckHandler: TestPermissionCheckHandler | null = null;
+  private permissionRequestHandler: TestPermissionRequestHandler | null = null;
+
+  checkPermission(permission: string): boolean {
+    return this.permissionCheckHandler?.({}, permission, "https://login.example.test", {}) ?? false;
+  }
+
+  requestPermission(permission: string): boolean {
+    let permissionGranted = false;
+
+    this.permissionRequestHandler?.({}, permission, (granted) => {
+      permissionGranted = granted;
+    });
+
+    return permissionGranted;
+  }
+
+  setPermissionCheckHandler(handler: TestPermissionCheckHandler | null): void {
+    this.permissionCheckHandler = handler;
+  }
+
+  setPermissionRequestHandler(handler: TestPermissionRequestHandler | null): void {
+    this.permissionRequestHandler = handler;
+  }
+}
+
+class TestWebContents {
+  readonly loadUrlCalls: string[] = [];
+  readonly session = new TestSession();
+
+  private windowOpenHandler: TestWindowOpenHandler | null = null;
+
+  closeDevTools(): void {
+    return;
+  }
+
+  isDevToolsOpened(): boolean {
+    return false;
+  }
+
+  loadURL(url: string): Promise<void> {
+    this.loadUrlCalls.push(url);
+
+    return Promise.resolve();
+  }
+
+  on(eventName: "will-attach-webview", listener: (event: TestPreventableEvent) => void): void;
+  on(
+    eventName: "before-input-event",
+    listener: (event: TestPreventableEvent, input: DevToolsShortcutInput) => void
+  ): void;
+  on(eventName: "devtools-opened", listener: () => void): void;
+  on(_eventName: string, _listener: unknown): void {
+    return;
+  }
+
+  openWindow(url: string): TestWindowOpenResult {
+    if (this.windowOpenHandler === null) {
+      throw new Error("Window open handler was not configured.");
+    }
+
+    return this.windowOpenHandler({ url });
+  }
+
+  setWindowOpenHandler(handler: TestWindowOpenHandler): void {
+    this.windowOpenHandler = handler;
+  }
+}

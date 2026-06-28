@@ -56,7 +56,7 @@ test.describe("secure Electron shell", () => {
     }
   });
 
-  test("blocks fixture window.open calls from creating a new Electron window", async () => {
+  test("routes fixture window.open calls into the existing QR view", async () => {
     // Given
     const launchedApp = await launchApp(`${fixtureServer.baseUrl}/login`);
     const electronApp = launchedApp.app;
@@ -79,10 +79,13 @@ test.describe("secure Electron shell", () => {
       await expect.poll(() => getShellCounts(electronApp), {
         timeout: 1_000
       }).toEqual(beforeOpenCounts);
+      await expect(qrPage).toHaveURL(`${fixtureServer.baseUrl}/dashboard`);
       const webContentsUrls = await electronApp.evaluate(({ webContents }) =>
         webContents.getAllWebContents().map((item) => item.getURL())
       );
-      expect(webContentsUrls.filter((url) => url === `${fixtureServer.baseUrl}/dashboard`)).toEqual([]);
+      expect(webContentsUrls.filter((url) => url === `${fixtureServer.baseUrl}/dashboard`)).toEqual([
+        `${fixtureServer.baseUrl}/dashboard`
+      ]);
     } finally {
       await closeLaunchedApp(launchedApp);
     }

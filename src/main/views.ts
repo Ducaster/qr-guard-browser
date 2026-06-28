@@ -16,7 +16,8 @@ import { isQrBlankFallbackUrl, loadQrUrlOrBlank } from "./qr-url-loader";
 import {
   denyDisallowedControlNavigations,
   denyDisallowedQrNavigations,
-  hardenWebContents
+  hardenControlWebContents,
+  hardenQrWebContents
 } from "./windows-permissions";
 
 export interface ShellWindow {
@@ -110,9 +111,35 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     }
   });
 
-  hardenWebContents(qrView.webContents, qrSession, options.disableDevTools);
+  const reportQrLoadFailure = (message: string, qrUrl: string, error: unknown): void => {
+    mainLogger.warn(message, {
+      error: formatUnknownError(error),
+      url: qrUrl
+    });
+    options.onQrLoadStatusChanged?.({
+      errorCode: null,
+      errorDescription: formatQrLoadErrorDescription(error),
+      url: qrUrl
+    });
+  };
+  const loadAllowedQrPopupUrl = (popupUrl: string): void => {
+    void loadQrUrlOrBlank(qrView.webContents, popupUrl)
+      .then(() => {
+        options.onQrLoadStatusChanged?.(null);
+      })
+      .catch((error: unknown) => {
+        reportQrLoadFailure("QR popup URL failed to load.", popupUrl, error);
+      });
+  };
+
+  hardenQrWebContents(qrView.webContents, qrSession, {
+    disableDevTools: options.disableDevTools,
+    openAllowedPopupUrl: loadAllowedQrPopupUrl
+  });
   denyDisallowedQrNavigations(qrView.webContents);
-  hardenWebContents(controlView.webContents, controlView.webContents.session, options.disableDevTools);
+  hardenControlWebContents(controlView.webContents, {
+    disableDevTools: options.disableDevTools
+  });
   denyDisallowedControlNavigations(controlView.webContents, {
     controlHtmlUrl: pathToFileURL(options.controlHtmlPath).href,
     ...(options.controlDevServerUrl === undefined ? {} : { controlDevServerUrl: options.controlDevServerUrl })
@@ -168,15 +195,7 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
           options.onQrLoadStatusChanged?.(null);
         })
         .catch((error: unknown) => {
-          mainLogger.warn("QR site failed to load.", {
-            error: formatUnknownError(error),
-            url: qrUrl
-          });
-          options.onQrLoadStatusChanged?.({
-            errorCode: null,
-            errorDescription: formatQrLoadErrorDescription(error),
-            url: qrUrl
-          });
+          reportQrLoadFailure("QR site failed to load.", qrUrl, error);
         });
     }
 
