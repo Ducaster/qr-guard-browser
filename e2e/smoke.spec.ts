@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
+import path from "node:path";
 
 import { startFixtureQrSiteServer, type FixtureQrSiteServer } from "../fixtures/qr-site-server";
 import {
@@ -162,6 +163,9 @@ test.describe("secure Electron shell", () => {
       // Then
       await expect(controlPage.getByTestId("unlock-toolbar")).toBeVisible();
       await expect(controlPage.getByTestId("unlock-countdown")).toContainText("초");
+      await expect(controlPage.getByTestId("qr-go-back")).toBeDisabled();
+      await expect(controlPage.getByTestId("qr-go-forward")).toBeDisabled();
+      await expect(controlPage.getByTestId("qr-reload")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
       await expect.poll(() => getQrVisible(controlPage), { timeout: 8_000 }).toBe(false);
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
@@ -173,6 +177,44 @@ test.describe("secure Electron shell", () => {
       const auditLog = fs.readFileSync(getAuditLogPath(launchedApp.userDataDir), "utf8");
       expect(auditLog).toContain('"userId":"staff01"');
       expect(auditLog).toContain('"reason":"timer"');
+    } finally {
+      await closeLaunchedApp(launchedApp);
+    }
+  });
+
+  test("navigates the QR view from the toolbar address bar and writes safe diagnostics", async () => {
+    // Given
+    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`, {
+      unlockDurationSeconds: "10"
+    });
+    const electronApp = launchedApp.app;
+
+    try {
+      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
+      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/qr`, {
+        unlockDurationSeconds: "10"
+      });
+      await selectUnlockRegion(controlPage, "staff01");
+      await controlPage.getByTestId("unlock-code").fill("2468");
+      await controlPage.getByTestId("unlock-submit").click();
+      const addressInput = controlPage.getByTestId("qr-address-input");
+      const diagnosticsLogPath = path.join(launchedApp.userDataDir, "qr-net-diagnostics.log");
+
+      // When
+      await expect(addressInput).toHaveValue(`${fixtureServer.baseUrl}/qr`);
+      await addressInput.fill(`${fixtureServer.baseUrl}/dashboard`);
+      await addressInput.press("Enter");
+
+      // Then
+      await expect(qrPage.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+      await expect(addressInput).toHaveValue(`${fixtureServer.baseUrl}/dashboard`);
+      await expect.poll(() => readTextIfExists(diagnosticsLogPath), { timeout: 5_000 }).toContain(
+        `"url":"${fixtureServer.baseUrl}/dashboard"`
+      );
+      const diagnosticsLog = readTextIfExists(diagnosticsLogPath);
+      expect(diagnosticsLog).toContain('"statusCode":200');
+      expect(diagnosticsLog).not.toContain("fixtureSession=1");
     } finally {
       await closeLaunchedApp(launchedApp);
     }
@@ -282,3 +324,6 @@ const selectUnlockRegion = async (page: Page, regionName: string): Promise<void>
   await page.getByTestId("unlock-user-id").click();
   await page.getByRole("option", { name: regionName }).click();
 };
+
+const readTextIfExists = (filePath: string): string =>
+  fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";

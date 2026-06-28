@@ -105,6 +105,11 @@ const qrGuardApi = {
   listUnlockRegions: (): Promise<ListUnlockRegionsResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.listUnlockRegions),
   manualLock: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.manualLock),
+  qrGoBack: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.qrGoBack),
+  qrGoForward: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.qrGoForward),
+  qrNavigateToUrl: (url: string): Promise<ActionResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.qrNavigateToUrl, url),
+  qrReload: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.qrReload),
   onStateChange: (callback: StateChangeCallback): (() => void) => {
     const listener = (_event: IpcRendererEvent, state: StateSnapshot): void => {
       callback(state);

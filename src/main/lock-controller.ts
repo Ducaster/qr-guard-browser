@@ -21,6 +21,7 @@ import { createLockAuthenticator } from "./lock-authenticator";
 import { createLockModeLifecycle } from "./lock-mode-lifecycle";
 import { createLockTimers } from "./lock-timers";
 import { notLockedResponse } from "./qr-access-auth";
+import { loadQrUrlOrBlank } from "./qr-url-loader";
 import { learnQrTitleFromCurrentPage, type ActionResponse } from "./qr-title-learning";
 import {
   readQrNavigationSnapshot,
@@ -49,6 +50,10 @@ export interface LockController {
   readonly listUnlockRegions: () => readonly string[];
   readonly manualLock: () => void;
   readonly openSettings: () => void;
+  readonly qrGoBack: () => void;
+  readonly qrGoForward: () => void;
+  readonly qrNavigateToUrl: (url: string) => Promise<ActionResponse>;
+  readonly qrReload: () => void;
   readonly setQrLoadFailure: (failure: QrLoadFailure) => void;
   readonly submitSiteLogin: (code: unknown) => UnlockResponse;
   readonly submitUnlock: (userId: unknown, code: unknown) => UnlockResponse;
@@ -97,6 +102,9 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
     return {
       activeUserId: auditSessions.getActiveUserId(),
+      canGoBack: options.qrWebContents.navigationHistory.canGoBack(),
+      canGoForward: options.qrWebContents.navigationHistory.canGoForward(),
+      currentUrl: options.qrWebContents.getURL(),
       now: new Date(nowMs).toISOString(),
       qrLoadFailure,
       qrVisible: shouldShowQrView(state),
@@ -156,7 +164,12 @@ export const createLockController = (options: LockControllerOptions): LockContro
     }
   };
 
-  watchQrNavigation(options.qrWebContents, evaluateQrNavigation);
+  const handleQrNavigation = (target?: QrNavigationTarget): void => {
+    emitState();
+    evaluateQrNavigation(target);
+  };
+
+  watchQrNavigation(options.qrWebContents, handleQrNavigation);
 
   const submitUnlock = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
     const nowMs = Date.now();
@@ -280,6 +293,24 @@ export const createLockController = (options: LockControllerOptions): LockContro
       }
 
       setState(nextState);
+    },
+    qrGoBack: () => {
+      if (options.qrWebContents.navigationHistory.canGoBack()) {
+        options.qrWebContents.navigationHistory.goBack();
+      }
+    },
+    qrGoForward: () => {
+      if (options.qrWebContents.navigationHistory.canGoForward()) {
+        options.qrWebContents.navigationHistory.goForward();
+      }
+    },
+    qrNavigateToUrl: async (url: string): Promise<ActionResponse> => {
+      await loadQrUrlOrBlank(options.qrWebContents, url);
+
+      return { ok: true };
+    },
+    qrReload: () => {
+      options.qrWebContents.reload();
     },
     setQrLoadFailure: (failure: QrLoadFailure) => {
       qrLoadFailure = failure;

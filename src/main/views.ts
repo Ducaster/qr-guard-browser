@@ -1,7 +1,8 @@
-import { BaseWindow, nativeTheme, session, WebContentsView, type Rectangle } from "electron";
+import { app, BaseWindow, nativeTheme, session, WebContentsView, type Rectangle } from "electron";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { cleanQrUserAgent } from "../core/qr-user-agent";
 import { APP_NAME } from "../core/sanity";
 import type { QrLoadFailure } from "../core/state-machine";
 import {
@@ -10,6 +11,7 @@ import {
   QR_VIEW_WEB_PREFERENCES
 } from "../core/shell-config";
 import { formatUnknownError, mainLogger } from "./logger";
+import { attachQrNetDiagnostics, getQrNetDiagnosticsLogPath } from "./qr-net-diagnostics";
 import { isQrBlankFallbackUrl, loadQrUrlOrBlank } from "./qr-url-loader";
 import {
   denyDisallowedControlNavigations,
@@ -90,6 +92,9 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   });
 
   const qrSession = session.fromPartition(QR_SESSION_PARTITION);
+  attachQrNetDiagnostics(qrSession, {
+    logFilePath: getQrNetDiagnosticsLogPath(app.getPath("userData"))
+  });
   const qrView = new WebContentsView({
     webPreferences: {
       ...QR_VIEW_WEB_PREFERENCES,
@@ -97,6 +102,7 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
       session: qrSession
     }
   });
+  qrView.webContents.setUserAgent(cleanQrUserAgent(qrView.webContents.getUserAgent()));
   const controlView = new WebContentsView({
     webPreferences: {
       ...CONTROL_VIEW_WEB_PREFERENCES,

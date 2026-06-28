@@ -115,6 +115,24 @@ describe("lock controller unlock submission", () => {
     expect(regions).not.toContain(staff02.salt);
   });
 
+  it("includes QR navigation availability in state snapshots", () => {
+    // Given
+    const harness = createHarness();
+
+    // When
+    harness.qrWebContents.setLocation("https://example.test/dashboard", "Fixture Dashboard");
+    harness.qrWebContents.setNavigationAvailability({ canGoBack: true, canGoForward: false });
+    harness.qrWebContents.trigger("did-frame-finish-load");
+    const state = harness.controller.getState();
+
+    // Then
+    expect(state.canGoBack).toBe(true);
+    expect(state.canGoForward).toBe(false);
+    expect(state.currentUrl).toBe("https://example.test/dashboard");
+    expect(harness.sentStates.at(-1)?.canGoBack).toBe(true);
+    expect(harness.sentStates.at(-1)?.currentUrl).toBe("https://example.test/dashboard");
+  });
+
   it("returns no unlock regions when settings cannot load", () => {
     // Given
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -308,6 +326,7 @@ type QrNavigationEvent =
   | "did-navigate"
   | "did-navigate-in-page"
   | "did-redirect-navigation"
+  | "did-frame-finish-load"
   | "did-start-navigation"
   | "page-title-updated";
 
@@ -316,7 +335,24 @@ interface FakeQrNavigationTarget {
 }
 
 class FakeQrWebContents {
+  readonly navigationHistory = {
+    canGoBack: (): boolean => this.canGoBack,
+    canGoForward: (): boolean => this.canGoForward,
+    goBack: (): void => {
+      this.goBackCalls += 1;
+    },
+    goForward: (): void => {
+      this.goForwardCalls += 1;
+    }
+  };
+
+  goBackCalls = 0;
+  goForwardCalls = 0;
+  reloadCalls = 0;
+
   private readonly listeners = new Map<QrNavigationEvent, ((details?: FakeQrNavigationTarget) => void)[]>();
+  private canGoBack = false;
+  private canGoForward = false;
 
   constructor(
     private url: string,
@@ -331,10 +367,28 @@ class FakeQrWebContents {
     return this.url;
   }
 
+  loadURL(url: string): Promise<void> {
+    this.url = url;
+
+    return Promise.resolve();
+  }
+
   on(event: QrNavigationEvent, listener: (details?: FakeQrNavigationTarget) => void): void {
     const listeners = this.listeners.get(event) ?? [];
 
     this.listeners.set(event, [...listeners, listener]);
+  }
+
+  reload(): void {
+    this.reloadCalls += 1;
+  }
+
+  setNavigationAvailability(availability: {
+    readonly canGoBack: boolean;
+    readonly canGoForward: boolean;
+  }): void {
+    this.canGoBack = availability.canGoBack;
+    this.canGoForward = availability.canGoForward;
   }
 
   setLocation(url: string, title: string): void {

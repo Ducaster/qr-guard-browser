@@ -1,5 +1,6 @@
 import {
   Badge,
+  Input,
   MessageBar,
   MessageBarBody,
   Text,
@@ -8,7 +9,13 @@ import {
   makeStyles,
   tokens
 } from "@fluentui/react-components";
-import { LockClosed24Regular, QrCode24Regular } from "@fluentui/react-icons";
+import {
+  ArrowClockwise24Regular,
+  ArrowLeft24Regular,
+  ArrowRight24Regular,
+  LockClosed24Regular,
+  QrCode24Regular
+} from "@fluentui/react-icons";
 import { useEffect, useState, type JSX } from "react";
 
 import type { StateSnapshot } from "../../core/state-machine";
@@ -25,8 +32,11 @@ interface ToolbarActionResponse {
 export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   const styles = useToolbarStyles();
   const [actionError, setActionError] = useState("");
+  const [addressValue, setAddressValue] = useState(formatAddressUrl(state.currentUrl));
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [remainingMs, setRemainingMs] = useState(state.remainingMs);
   const isSiteLogin = state.state === "siteLogin";
+  const currentAddressUrl = formatAddressUrl(state.currentUrl);
 
   const runToolbarAction = (action: () => Promise<ToolbarActionResponse>): void => {
     setActionError("");
@@ -59,6 +69,19 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
     };
   }, [state.unlockExpiresAt]);
 
+  useEffect(() => {
+    if (!isEditingAddress) {
+      setAddressValue(currentAddressUrl);
+    }
+  }, [currentAddressUrl, isEditingAddress]);
+
+  const submitAddressNavigation = (): void => {
+    const url = addressValue.trim();
+
+    setIsEditingAddress(false);
+    runToolbarAction(() => window.qrGuard.qrNavigateToUrl(url));
+  };
+
   return (
     <main className={styles.shell} data-testid="unlock-toolbar">
       <div className={styles.status}>
@@ -78,7 +101,66 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           </Badge>
         )}
       </div>
-      <FluentToolbar aria-label="잠금 도구" className={styles.actions} size="small">
+      <div className={styles.navigation}>
+        <FluentToolbar aria-label="잠금 도구" className={styles.actions} size="small">
+          <ToolbarButton
+            appearance="subtle"
+            data-testid="qr-go-back"
+            disabled={!state.canGoBack}
+            icon={<ArrowLeft24Regular />}
+            onClick={() => {
+              runToolbarAction(() => window.qrGuard.qrGoBack());
+            }}
+            type="button"
+          >
+            뒤로
+          </ToolbarButton>
+          <ToolbarButton
+            appearance="subtle"
+            data-testid="qr-go-forward"
+            disabled={!state.canGoForward}
+            icon={<ArrowRight24Regular />}
+            onClick={() => {
+              runToolbarAction(() => window.qrGuard.qrGoForward());
+            }}
+            type="button"
+          >
+            앞으로
+          </ToolbarButton>
+          <ToolbarButton
+            appearance="subtle"
+            data-testid="qr-reload"
+            icon={<ArrowClockwise24Regular />}
+            onClick={() => {
+              runToolbarAction(() => window.qrGuard.qrReload());
+            }}
+            type="button"
+          >
+            새로고침
+          </ToolbarButton>
+        </FluentToolbar>
+        <Input
+          aria-label="QR 주소"
+          className={styles.addressInput}
+          data-testid="qr-address-input"
+          onBlur={() => {
+            setIsEditingAddress(false);
+          }}
+          onChange={(_event, data) => {
+            setAddressValue(data.value);
+          }}
+          onFocus={() => {
+            setIsEditingAddress(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submitAddressNavigation();
+            }
+          }}
+          size="small"
+          value={addressValue}
+        />
         {isSiteLogin ? (
           <ToolbarButton
             appearance="subtle"
@@ -103,7 +185,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
         >
           지금 잠그기
         </ToolbarButton>
-      </FluentToolbar>
+      </div>
       {actionError.length > 0 ? (
         <MessageBar className={styles.error} data-testid="toolbar-action-error" intent="error" role="alert">
           <MessageBarBody>{actionError}</MessageBarBody>
@@ -114,6 +196,11 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
 };
 
 const useToolbarStyles = makeStyles({
+  addressInput: {
+    flex: "1 1 320px",
+    maxWidth: "560px",
+    minWidth: "140px"
+  },
   actions: {
     flexShrink: 0
   },
@@ -134,6 +221,14 @@ const useToolbarStyles = makeStyles({
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalL}`,
     width: "100vw"
   },
+  navigation: {
+    alignItems: "center",
+    display: "flex",
+    flex: "1 1 auto",
+    gap: tokens.spacingHorizontalS,
+    justifyContent: "flex-end",
+    minWidth: 0
+  },
   status: {
     alignItems: "center",
     display: "flex",
@@ -142,6 +237,8 @@ const useToolbarStyles = makeStyles({
     minWidth: 0
   }
 });
+
+const formatAddressUrl = (url: string): string => (url === "about:blank" ? "" : url);
 
 const formatRemaining = (remainingMs: number | null): string => {
   if (remainingMs === null) {

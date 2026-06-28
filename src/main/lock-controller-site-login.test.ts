@@ -65,6 +65,7 @@ type QrNavigationEvent =
   | "did-navigate"
   | "did-navigate-in-page"
   | "did-redirect-navigation"
+  | "did-frame-finish-load"
   | "did-start-navigation"
   | "page-title-updated";
 
@@ -73,6 +74,13 @@ interface FakeQrNavigationTarget {
 }
 
 class FakeQrWebContents {
+  readonly navigationHistory = {
+    canGoBack: (): boolean => false,
+    canGoForward: (): boolean => false,
+    goBack: (): void => undefined,
+    goForward: (): void => undefined
+  };
+
   private readonly listeners = new Map<QrNavigationEvent, ((details?: FakeQrNavigationTarget) => void)[]>();
   private queuedTitles: string[] = [];
 
@@ -95,10 +103,20 @@ class FakeQrWebContents {
     return this.url;
   }
 
+  loadURL(url: string): Promise<void> {
+    this.url = url;
+
+    return Promise.resolve();
+  }
+
   on(event: QrNavigationEvent, listener: (details?: FakeQrNavigationTarget) => void): void {
     const listeners = this.listeners.get(event) ?? [];
 
     this.listeners.set(event, [...listeners, listener]);
+  }
+
+  reload(): void {
+    return;
   }
 
   setLocation(url: string, title: string): void {

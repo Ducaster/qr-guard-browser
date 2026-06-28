@@ -1,5 +1,6 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
 
+import { isAllowedQrNavigation } from "../core/qr-navigation";
 import { IPC_CHANNELS } from "../core/shell-config";
 import type {
   ListUnlockRegionsResponse,
@@ -58,6 +59,51 @@ export const registerLockIpc = (
     return { ok: true };
   });
 
+  ipcMain.handle(IPC_CHANNELS.qrGoBack, (event: IpcMainInvokeEvent): ActionResponse => {
+    if (!isControlSender(event, getControlWebContents)) {
+      return unauthorizedActionResponse();
+    }
+
+    getRequiredController(getController).qrGoBack();
+
+    return { ok: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.qrGoForward, (event: IpcMainInvokeEvent): ActionResponse => {
+    if (!isControlSender(event, getControlWebContents)) {
+      return unauthorizedActionResponse();
+    }
+
+    getRequiredController(getController).qrGoForward();
+
+    return { ok: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.qrReload, (event: IpcMainInvokeEvent): ActionResponse => {
+    if (!isControlSender(event, getControlWebContents)) {
+      return unauthorizedActionResponse();
+    }
+
+    getRequiredController(getController).qrReload();
+
+    return { ok: true };
+  });
+
+  ipcMain.handle(
+    IPC_CHANNELS.qrNavigateToUrl,
+    (event: IpcMainInvokeEvent, url: unknown): Promise<ActionResponse> | ActionResponse => {
+      if (!isControlSender(event, getControlWebContents)) {
+        return unauthorizedActionResponse();
+      }
+
+      if (typeof url !== "string" || !isAllowedQrNavigation(url)) {
+        return disallowedQrNavigationResponse();
+      }
+
+      return getRequiredController(getController).qrNavigateToUrl(url);
+    }
+  );
+
   ipcMain.handle(IPC_CHANNELS.learnCurrentQrTitle, (event: IpcMainInvokeEvent): ActionResponse => {
     if (!isControlSender(event, getControlWebContents)) {
       return unauthorizedActionResponse();
@@ -107,6 +153,11 @@ const isControlSender = (
 
 const unauthorizedActionResponse = (): ActionResponse => ({
   errors: ["허용되지 않은 요청입니다."],
+  ok: false
+});
+
+const disallowedQrNavigationResponse = (): ActionResponse => ({
+  errors: ["허용되지 않은 QR 주소입니다."],
   ok: false
 });
 

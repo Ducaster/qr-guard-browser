@@ -6,6 +6,12 @@ const loggerMock = vi.hoisted(() => ({
 
 const electronMock = vi.hoisted(() => {
   class FakeSession {
+    readonly webRequest = {
+      onBeforeSendHeaders: vi.fn(),
+      onCompleted: vi.fn(),
+      onErrorOccurred: vi.fn()
+    };
+
     setPermissionRequestHandler(
       _handler: (
         webContents: FakeWebContents,
@@ -26,6 +32,8 @@ const electronMock = vi.hoisted(() => {
     private currentUrl = "";
     private loadFileError: Error | undefined;
     private loadUrlError: Error | undefined;
+    private userAgent =
+      "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) QR Guard Browser/0.1.1 Chrome/142.0.7444.234 Electron/42.4.1 Safari/537.36";
 
     closeDevTools(): void {
       return;
@@ -72,6 +80,10 @@ const electronMock = vi.hoisted(() => {
       return this.currentUrl;
     }
 
+    getUserAgent(): string {
+      return this.userAgent;
+    }
+
     emit(eventName: string, ...args: readonly unknown[]): void {
       for (const listener of this.listeners.get(eventName) ?? []) {
         listener(...args);
@@ -80,6 +92,10 @@ const electronMock = vi.hoisted(() => {
 
     on(eventName: string, listener: (...args: readonly unknown[]) => void): void {
       this.listeners.set(eventName, [...(this.listeners.get(eventName) ?? []), listener]);
+    }
+
+    setUserAgent(userAgent: string): void {
+      this.userAgent = userAgent;
     }
 
     setWindowOpenHandler(_handler: () => Readonly<{ action: "deny" }>): void {
@@ -148,6 +164,9 @@ const electronMock = vi.hoisted(() => {
   return {
     BaseWindow: FakeBaseWindow,
     WebContentsView: FakeWebContentsView,
+    app: {
+      getPath: vi.fn(() => "/tmp/qr-guard-test-user-data")
+    },
     nativeTheme: {
       off: vi.fn(),
       on: vi.fn(),
@@ -163,6 +182,7 @@ const electronMock = vi.hoisted(() => {
 vi.mock("electron", () => ({
   BaseWindow: electronMock.BaseWindow,
   WebContentsView: electronMock.WebContentsView,
+  app: electronMock.app,
   nativeTheme: electronMock.nativeTheme,
   session: electronMock.session
 }));
@@ -200,6 +220,9 @@ describe("shell window loading", () => {
 
     // Then
     expect(qrWebContents.loadUrlCalls).toEqual([]);
+    expect(qrWebContents.getUserAgent()).toBe(
+      "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.234 Safari/537.36"
+    );
   });
 
   it("loads the control view when the configured QR site is unreachable", async () => {

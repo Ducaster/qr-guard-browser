@@ -4,6 +4,7 @@ export type QrNavigationEvent =
   | "did-navigate"
   | "did-navigate-in-page"
   | "did-redirect-navigation"
+  | "did-frame-finish-load"
   | "did-start-navigation"
   | "page-title-updated";
 
@@ -13,10 +14,20 @@ export interface QrNavigationTarget {
 
 export type QrNavigationListener = (target?: QrNavigationTarget) => void;
 
+export interface QrNavigationHistoryLike {
+  readonly canGoBack: () => boolean;
+  readonly canGoForward: () => boolean;
+  readonly goBack: () => void;
+  readonly goForward: () => void;
+}
+
 export interface QrWebContentsLike {
   readonly getTitle: () => string;
   readonly getURL: () => string;
+  readonly loadURL: (url: string) => Promise<void>;
+  readonly navigationHistory: QrNavigationHistoryLike;
   readonly on: (event: QrNavigationEvent, listener: QrNavigationListener) => void;
+  readonly reload: () => void;
 }
 
 export interface QrNavigationSnapshot {
@@ -28,6 +39,7 @@ const QR_NAVIGATION_EVENTS = [
   "did-navigate",
   "did-navigate-in-page",
   "did-redirect-navigation",
+  "did-frame-finish-load",
   "did-start-navigation",
   "page-title-updated"
 ] as const satisfies readonly QrNavigationEvent[];
@@ -52,6 +64,17 @@ export const watchQrNavigation = (
 export const createQrWebContentsAdapter = (webContents: WebContents): QrWebContentsLike => ({
   getTitle: () => webContents.getTitle(),
   getURL: () => webContents.getURL(),
+  loadURL: (url: string) => webContents.loadURL(url),
+  navigationHistory: {
+    canGoBack: () => webContents.navigationHistory.canGoBack(),
+    canGoForward: () => webContents.navigationHistory.canGoForward(),
+    goBack: () => {
+      webContents.navigationHistory.goBack();
+    },
+    goForward: () => {
+      webContents.navigationHistory.goForward();
+    }
+  },
   on: (event: QrNavigationEvent, listener: QrNavigationListener): void => {
     switch (event) {
       case "did-navigate":
@@ -69,6 +92,13 @@ export const createQrWebContentsAdapter = (webContents: WebContents): QrWebConte
           listener();
         });
         return;
+      case "did-frame-finish-load":
+        webContents.on("did-frame-finish-load", (_event, isMainFrame) => {
+          if (isMainFrame) {
+            listener();
+          }
+        });
+        return;
       case "did-start-navigation":
         webContents.on("did-start-navigation", (details) => {
           if (details.isMainFrame) {
@@ -82,5 +112,8 @@ export const createQrWebContentsAdapter = (webContents: WebContents): QrWebConte
         });
         return;
     }
+  },
+  reload: () => {
+    webContents.reload();
   }
 });

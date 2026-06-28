@@ -15,6 +15,9 @@ export interface QrLoadFailure {
 
 export interface StateSnapshot {
   readonly activeUserId: string | null;
+  readonly canGoBack: boolean;
+  readonly canGoForward: boolean;
+  readonly currentUrl: string;
   readonly now: string;
   readonly qrLoadFailure: QrLoadFailure | null;
   readonly qrVisible: boolean;

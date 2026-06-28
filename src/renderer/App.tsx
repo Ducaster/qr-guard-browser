@@ -139,6 +139,9 @@ export const App = (): JSX.Element => {
 
 const createLockedFallbackState = (): StateSnapshot => ({
   activeUserId: null,
+  canGoBack: false,
+  canGoForward: false,
+  currentUrl: "",
   now: new Date().toISOString(),
   qrLoadFailure: null,
   qrVisible: false,
