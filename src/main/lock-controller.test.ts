@@ -8,17 +8,26 @@ import {
   type AuditLogFilter,
   type AuditLogReadResult
 } from "../core/audit-log";
-import { createDefaultSettings, type Settings, type SettingsRepository } from "../core/settings-repo";
+import {
+  createDefaultSettings,
+  type Settings,
+  type SettingsRepository
+} from "../core/settings-repo";
 import type { StateSnapshot } from "../core/state-machine";
 import { createLockController, type LockControllerOptions } from "./lock-controller";
 import type { AuditLogStore, LockoutStateStore } from "./settings-adapters";
 
 class MemorySettingsRepository implements SettingsRepository {
+  loadError: Error | null = null;
   readonly savedSettings: Settings[] = [];
 
   constructor(private settings: Settings) {}
 
   load(): Settings {
+    if (this.loadError !== null) {
+      throw this.loadError;
+    }
+
     return this.settings;
   }
 
@@ -60,15 +69,96 @@ interface ControllerHarness {
   readonly controller: ReturnType<typeof createLockController>;
   readonly lockoutStateStore: MemoryLockoutStateStore;
   readonly qrWebContents: FakeQrWebContents;
+  readonly repository: MemorySettingsRepository;
   readonly sentStates: readonly StateSnapshot[];
   readonly visibilityChanges: readonly boolean[];
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
 describe("lock controller unlock submission", () => {
+  it("lists only unlock region names without credential secrets", () => {
+    // Given
+    const staff01 = hashCode("2468");
+    const staff02 = hashCode("1357");
+    const defaults = createDefaultSettings();
+    const harness = createHarness({
+      settings: {
+        ...defaults,
+        admin: hashCode("admin-code"),
+        users: [
+          {
+            ...staff01,
+            lastAuthenticatedAt: "2026-06-22T00:00:00.000Z",
+            userId: "staff01"
+          },
+          {
+            ...staff02,
+            lastAuthenticatedAt: null,
+            userId: "staff02"
+          }
+        ]
+      }
+    });
+
+    // When
+    const regions = harness.controller.listUnlockRegions();
+
+    // Then
+    expect(regions).toEqual(["staff01", "staff02"]);
+    expect(regions).not.toContain(staff01.hash);
+    expect(regions).not.toContain(staff01.salt);
+    expect(regions).not.toContain(staff02.hash);
+    expect(regions).not.toContain(staff02.salt);
+  });
+
+  it("returns no unlock regions when settings cannot load", () => {
+    // Given
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const harness = createHarness();
+    harness.repository.loadError = new Error("corrupted settings");
+
+    // When
+    const regions = harness.controller.listUnlockRegions();
+
+    // Then
+    expect(regions).toEqual([]);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to load settings during unlock region list")
+    );
+  });
+
+  it("lists unlock regions only while locked", () => {
+    // Given
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
+    const harness = createHarness({
+      unlockDurationOverrideSeconds: 60
+    });
+    const firstRunSettings = {
+      ...createSettingsWithUser(),
+      admin: createDefaultSettings().admin
+    };
+    const setupHarness = createHarness({ settings: firstRunSettings });
+
+    // When
+    const lockedRegions = harness.controller.listUnlockRegions();
+    const unlock = harness.controller.submitUnlock("staff01", "2468");
+    const unlockedRegions = harness.controller.listUnlockRegions();
+    const needsSetupRegions = setupHarness.controller.listUnlockRegions();
+
+    // Then
+    expect(lockedRegions).toEqual(["staff01"]);
+    expect(unlock.ok).toBe(true);
+    expect(harness.controller.getState().state).toBe("unlocked");
+    expect(unlockedRegions).toEqual([]);
+    expect(setupHarness.controller.getState().state).toBe("needsSetup");
+    expect(needsSetupRegions).toEqual([]);
+  });
+
   it("does not record auth failure when unlock is submitted outside locked state", () => {
     // Given
     vi.useFakeTimers();
@@ -265,6 +355,7 @@ const createHarness = (options: {
   readonly idleSource?: () => number;
   readonly qrTitle?: string;
   readonly qrUrl?: string;
+  readonly settings?: Settings;
   readonly unlockDurationOverrideSeconds?: number | (() => number);
 } = {}): ControllerHarness => {
   const settingsOverrides = {
@@ -272,7 +363,7 @@ const createHarness = (options: {
       ? {}
       : { idleAutoLockSeconds: options.idleAutoLockSeconds })
   };
-  const repository = new MemorySettingsRepository(createSettingsWithUser(settingsOverrides));
+  const repository = new MemorySettingsRepository(options.settings ?? createSettingsWithUser(settingsOverrides));
   const lockoutStateStore = new MemoryLockoutStateStore();
   const auditLogStore = new MemoryAuditLogStore();
   const sentStates: StateSnapshot[] = [];
@@ -326,6 +417,7 @@ const createHarness = (options: {
     controller: createLockController(controllerOptions),
     lockoutStateStore,
     qrWebContents,
+    repository,
     sentStates,
     visibilityChanges
   };

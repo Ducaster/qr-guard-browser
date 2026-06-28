@@ -46,6 +46,7 @@ export interface LockController {
   readonly completeSetup: () => void;
   readonly getState: () => StateSnapshot;
   readonly learnCurrentQrTitle: () => ActionResponse;
+  readonly listUnlockRegions: () => readonly string[];
   readonly manualLock: () => void;
   readonly openSettings: () => void;
   readonly setQrLoadFailure: (failure: QrLoadFailure) => void;
@@ -226,6 +227,21 @@ export const createLockController = (options: LockControllerOptions): LockContro
       state
     });
 
+  const listUnlockRegions = (): readonly string[] => {
+    if (state !== "locked") {
+      // Unlock regions are only meaningful while rendering the lock screen.
+      return [];
+    }
+
+    const settings = loadSettingsForMainEvent(options.repository, "unlock region list");
+
+    if (settings === null) {
+      return [];
+    }
+
+    return settings.users.map((user) => user.userId);
+  };
+
   const getUnlockDurationSeconds = (settings: Settings): number =>
     options.unlockDurationOverrideSeconds ?? settings.unlockDurationSeconds;
 
@@ -250,6 +266,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     },
     getState,
     learnCurrentQrTitle,
+    listUnlockRegions,
     manualLock: () => {
       relock("manual");
     },

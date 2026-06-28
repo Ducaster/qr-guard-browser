@@ -1,7 +1,11 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
 
 import { IPC_CHANNELS } from "../core/shell-config";
-import type { StateSnapshot, UnlockResponse } from "../core/state-machine";
+import type {
+  ListUnlockRegionsResponse,
+  StateSnapshot,
+  UnlockResponse
+} from "../core/state-machine";
 import type { LockController } from "./lock-controller";
 
 interface ActionResponse {
@@ -61,6 +65,20 @@ export const registerLockIpc = (
 
     return getRequiredController(getController).learnCurrentQrTitle();
   });
+
+  ipcMain.handle(
+    IPC_CHANNELS.listUnlockRegions,
+    (event: IpcMainInvokeEvent): ListUnlockRegionsResponse => {
+      if (!isControlSender(event, getControlWebContents)) {
+        return unauthorizedListUnlockRegionsResponse();
+      }
+
+      return {
+        ok: true,
+        regions: getRequiredController(getController).listUnlockRegions()
+      };
+    }
+  );
 };
 
 const getRequiredController = (getController: LockControllerProvider): LockController => {
@@ -96,4 +114,9 @@ const unauthorizedUnlockResponse = (): UnlockResponse => ({
   errors: ["허용되지 않은 요청입니다."],
   ok: false,
   retryAfterMs: null
+});
+
+const unauthorizedListUnlockRegionsResponse = (): ListUnlockRegionsResponse => ({
+  errors: ["허용되지 않은 요청입니다."],
+  ok: false
 });

@@ -31,6 +31,10 @@ export type UnlockResponse =
       readonly retryAfterMs: number | null;
     };
 
+export type ListUnlockRegionsResponse =
+  | { readonly ok: true; readonly regions: readonly string[] }
+  | { readonly errors: readonly string[]; readonly ok: false };
+
 export const shouldShowQrView = (state: VisibilityState): boolean => {
   switch (state) {
     case "unlocked":

@@ -11,8 +11,14 @@ import type {
   SiteCredentialSaveOffer
 } from "../core/site-credential-messages";
 import { IPC_CHANNELS, type ShellInfo } from "../core/shell-config";
-import type { StateSnapshot, UnlockResponse } from "../core/state-machine";
+import type {
+  ListUnlockRegionsResponse,
+  StateSnapshot,
+  UnlockResponse
+} from "../core/state-machine";
 import type { SettingsSafeView } from "../core/settings-validation";
+
+export type { ListUnlockRegionsResponse };
 
 export interface SetupUserPayload {
   readonly code: string;
@@ -96,6 +102,8 @@ const qrGuardApi = {
     ipcRenderer.invoke(IPC_CHANNELS.learnCurrentQrTitle),
   listSiteCredentials: (): Promise<ListSiteCredentialsResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.siteCredentialList),
+  listUnlockRegions: (): Promise<ListUnlockRegionsResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.listUnlockRegions),
   manualLock: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.manualLock),
   onStateChange: (callback: StateChangeCallback): (() => void) => {
     const listener = (_event: IpcRendererEvent, state: StateSnapshot): void => {

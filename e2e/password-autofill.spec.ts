@@ -53,7 +53,8 @@ test.describe("QR site password autosave and autofill", () => {
 
       await controlPage.getByTestId("manual-lock").click();
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
-      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      // 지역이 staff01 하나뿐이라 잠금 화면 드롭다운에서 자동 선택된다.
+      await expect(controlPage.getByTestId("unlock-user-id")).toContainText("staff01");
       await controlPage.getByTestId("unlock-submit").click();
       await expect(controlPage.getByTestId("unlock-errors")).toContainText("인증 코드");
       await expect(controlPage.getByTestId("unlock-code")).toHaveValue("");

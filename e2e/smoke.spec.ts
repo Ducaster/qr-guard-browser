@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
 
 import { startFixtureQrSiteServer, type FixtureQrSiteServer } from "../fixtures/qr-site-server";
@@ -155,7 +155,7 @@ test.describe("secure Electron shell", () => {
       });
 
       // When
-      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      await selectUnlockRegion(controlPage, "staff01");
       await controlPage.getByTestId("unlock-code").fill("2468");
       await controlPage.getByTestId("unlock-submit").click();
 
@@ -188,7 +188,7 @@ test.describe("secure Electron shell", () => {
       await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
 
       // When
-      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      await selectUnlockRegion(controlPage, "staff01");
       await controlPage.getByTestId("unlock-code").fill("9999");
       await controlPage.getByTestId("unlock-submit").click();
 
@@ -262,7 +262,7 @@ test.describe("secure Electron shell", () => {
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
 
       // When
-      await controlPage.getByTestId("unlock-user-id").fill("staff01");
+      await selectUnlockRegion(controlPage, "staff01");
       await controlPage.getByTestId("unlock-code").fill("2468");
       await controlPage.getByTestId("unlock-submit").click();
 
@@ -277,3 +277,8 @@ test.describe("secure Electron shell", () => {
     }
   });
 });
+
+const selectUnlockRegion = async (page: Page, regionName: string): Promise<void> => {
+  await page.getByTestId("unlock-user-id").click();
+  await page.getByRole("option", { name: regionName }).click();
+};

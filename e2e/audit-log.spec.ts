@@ -75,7 +75,7 @@ const lockSettings = async (page: Page): Promise<void> => {
 };
 
 const submitFailedUnlock = async (page: Page, userId: string, code: string): Promise<void> => {
-  await page.getByTestId("unlock-user-id").fill(userId);
+  await selectUnlockRegion(page, userId);
   await page.getByTestId("unlock-code").fill(code);
   await page.getByTestId("unlock-submit").click();
   await expect(page.getByTestId("unlock-errors")).toContainText("올바르지 않습니다");
@@ -83,11 +83,16 @@ const submitFailedUnlock = async (page: Page, userId: string, code: string): Pro
 };
 
 const unlockAndWaitForRelock = async (page: Page, userId: string, code: string): Promise<void> => {
-  await page.getByTestId("unlock-user-id").fill(userId);
+  await selectUnlockRegion(page, userId);
   await page.getByTestId("unlock-code").fill(code);
   await page.getByTestId("unlock-submit").click();
   await expect(page.getByTestId("unlock-toolbar")).toBeVisible();
   await expect.poll(() => getQrVisible(page), { timeout: 2_000 }).toBe(true);
   await expect(page.getByTestId("locked-screen")).toBeVisible({ timeout: 8_000 });
   await expect.poll(() => getQrVisible(page), { timeout: 8_000 }).toBe(false);
+};
+
+const selectUnlockRegion = async (page: Page, regionName: string): Promise<void> => {
+  await page.getByTestId("unlock-user-id").click();
+  await page.getByRole("option", { name: regionName }).click();
 };

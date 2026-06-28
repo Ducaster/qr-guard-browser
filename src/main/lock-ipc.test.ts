@@ -46,6 +46,9 @@ describe("lock IPC sender gate", () => {
     const learnResponse = getInvokeHandler(IPC_CHANNELS.learnCurrentQrTitle)({
       sender: qrWebContents
     });
+    const listRegionsResponse = getInvokeHandler(IPC_CHANNELS.listUnlockRegions)({
+      sender: qrWebContents
+    });
 
     // Then
     expect(manualLockResponse).toEqual({
@@ -56,8 +59,13 @@ describe("lock IPC sender gate", () => {
       errors: ["허용되지 않은 요청입니다."],
       ok: false
     });
+    expect(listRegionsResponse).toEqual({
+      errors: ["허용되지 않은 요청입니다."],
+      ok: false
+    });
     expect(controller.manualLockCalls).toBe(0);
     expect(controller.learnCurrentQrTitleCalls).toBe(0);
+    expect(controller.listUnlockRegionsCalls).toBe(0);
   });
 
   it("allows lock actions from the control webContents", async () => {
@@ -75,17 +83,23 @@ describe("lock IPC sender gate", () => {
     const learnResponse = getInvokeHandler(IPC_CHANNELS.learnCurrentQrTitle)({
       sender: controlWebContents
     });
+    const listRegionsResponse = getInvokeHandler(IPC_CHANNELS.listUnlockRegions)({
+      sender: controlWebContents
+    });
 
     // Then
     expect(manualLockResponse).toEqual({ ok: true });
     expect(learnResponse).toEqual({ ok: true });
+    expect(listRegionsResponse).toEqual({ ok: true, regions: ["staff01"] });
     expect(controller.manualLockCalls).toBe(1);
     expect(controller.learnCurrentQrTitleCalls).toBe(1);
+    expect(controller.listUnlockRegionsCalls).toBe(1);
   });
 });
 
 class RecordingLockController implements LockController {
   learnCurrentQrTitleCalls = 0;
+  listUnlockRegionsCalls = 0;
   manualLockCalls = 0;
 
   clearQrLoadFailure(): void {
@@ -116,6 +130,12 @@ class RecordingLockController implements LockController {
     this.learnCurrentQrTitleCalls += 1;
 
     return { ok: true };
+  }
+
+  listUnlockRegions(): readonly string[] {
+    this.listUnlockRegionsCalls += 1;
+
+    return ["staff01"];
   }
 
   manualLock(): void {

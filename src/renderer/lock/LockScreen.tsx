@@ -7,18 +7,20 @@ import {
   DialogContent,
   DialogSurface,
   DialogTitle,
+  Dropdown,
   Field,
   Input,
+  Option,
   Text,
   makeStyles,
   tokens
 } from "@fluentui/react-components";
 import { Globe24Regular, Key24Regular, Settings24Regular } from "@fluentui/react-icons";
-import { useState, type JSX, type SyntheticEvent } from "react";
+import { useEffect, useState, type JSX, type SyntheticEvent } from "react";
 
 import type { QrLoadFailure } from "../../core/state-machine";
 import { ActionsRow, FormGrid, HeaderBlock, PanelCard, Screen } from "../fluentLayout";
-import { inputSlot } from "../fluentSlots";
+import { buttonSlot, inputSlot } from "../fluentSlots";
 import { ErrorList } from "../settings/Feedback";
 import { QrLoadFailureNotice } from "./QrLoadFailureNotice";
 
@@ -40,7 +42,52 @@ export const LockScreen = ({
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [siteLoginErrors, setSiteLoginErrors] = useState<readonly string[]>([]);
   const [isSiteLoginOpen, setIsSiteLoginOpen] = useState(false);
+  const [isLoadingRegions, setIsLoadingRegions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [regions, setRegions] = useState<readonly string[]>([]);
+  const emptyRegionsHint =
+    !isLoadingRegions && regions.length === 0
+      ? "설정된 지역이 없습니다. 설정에서 지역을 추가하세요."
+      : undefined;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void window.qrGuard.listUnlockRegions()
+      .then((response) => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (!response.ok) {
+          setRegions([]);
+          setUserId("");
+          setErrors(response.errors);
+          return;
+        }
+
+        setRegions(response.regions);
+        setUserId(response.regions.length === 1 ? response.regions[0] ?? "" : "");
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setRegions([]);
+        setUserId("");
+        setErrors(["지역 목록을 불러올 수 없습니다."]);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingRegions(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const submitCredentials = (
     action: () => ReturnType<typeof window.qrGuard.submitUnlock>,
@@ -68,6 +115,11 @@ export const LockScreen = ({
 
   const submit = (event: SyntheticEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    if (userId.length === 0) {
+      setErrors(["지역을 선택하세요."]);
+      return;
+    }
+
     submitCredentials(() => window.qrGuard.submitUnlock(userId, code), "잠금 해제에 실패했습니다.");
   };
 
@@ -107,15 +159,29 @@ export const LockScreen = ({
         <QrLoadFailureNotice failure={qrLoadFailure} onRetry={onRetryQrLoad} />
         <form onSubmit={submit}>
           <FormGrid>
-            <Field label="지역">
-              <Input
-                disabled={isSubmitting}
-                input={inputSlot({ "data-testid": "unlock-user-id", autoFocus: true })}
-                onChange={(_event, data) => {
-                  setUserId(data.value);
+            <Field
+              {...(emptyRegionsHint === undefined ? {} : { hint: emptyRegionsHint })}
+              label="지역"
+            >
+              <Dropdown
+                button={buttonSlot({ "data-testid": "unlock-user-id", autoFocus: true })}
+                disabled={isSubmitting || isLoadingRegions || regions.length === 0}
+                inlinePopup
+                onOptionSelect={(_event, data) => {
+                  const selectedUserId = data.optionValue ?? "";
+                  setUserId(selectedUserId);
+                  setErrors([]);
                 }}
+                placeholder="지역 선택"
+                selectedOptions={userId.length === 0 ? [] : [userId]}
                 value={userId}
-              />
+              >
+                {regions.map((region) => (
+                  <Option key={region} text={region} value={region}>
+                    {region}
+                  </Option>
+                ))}
+              </Dropdown>
             </Field>
             <Field label="인증 코드">
               <Input
