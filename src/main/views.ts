@@ -48,6 +48,8 @@ const CONTROL_TOOLBAR_HEIGHT = 64;
 const DARK_NEUTRAL_BACKGROUND = "#1f1f1f" as const;
 const LIGHT_NEUTRAL_BACKGROUND = "#f3f2f1" as const;
 
+const isQrNetDiagnosticsEnabled = (): boolean => process.env["QR_GUARD_NET_DIAGNOSTICS"] === "1";
+
 const getContentBounds = (window: BaseWindow): Rectangle => {
   const [width, height] = window.getContentSize();
 
@@ -93,9 +95,11 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   });
 
   const qrSession = session.fromPartition(QR_SESSION_PARTITION);
-  attachQrNetDiagnostics(qrSession, {
-    logFilePath: getQrNetDiagnosticsLogPath(app.getPath("userData"))
-  });
+  if (isQrNetDiagnosticsEnabled()) {
+    attachQrNetDiagnostics(qrSession, {
+      logFilePath: getQrNetDiagnosticsLogPath(app.getPath("userData"))
+    });
+  }
   const qrView = new WebContentsView({
     webPreferences: {
       ...QR_VIEW_WEB_PREFERENCES,
@@ -206,6 +210,8 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
 
   const setQrVisible = (visible: boolean): void => {
     qrView.setVisible(visible);
+    qrView.webContents.setBackgroundThrottling(!visible);
+    qrView.webContents.setAudioMuted(!visible);
     applyFullWindowLayout(window, qrView, controlView, visible);
 
     if (!visible) {

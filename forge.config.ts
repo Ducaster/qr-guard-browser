@@ -4,13 +4,20 @@ import { MakerZIP } from "@electron-forge/maker-zip";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 
+type PackagerConfigWithElectronLanguages = NonNullable<ForgeConfig["packagerConfig"]> & {
+  readonly electronLanguages: readonly string[];
+};
+
+const packagerConfig = {
+  appBundleId: "com.qrguard.browser",
+  asar: true,
+  electronLanguages: ["ko", "en-US"],
+  executableName: "qr-guard-browser",
+  name: "QR Guard Browser"
+} satisfies PackagerConfigWithElectronLanguages;
+
 const config: ForgeConfig = {
-  packagerConfig: {
-    appBundleId: "com.qrguard.browser",
-    asar: true,
-    executableName: "qr-guard-browser",
-    name: "QR Guard Browser"
-  },
+  packagerConfig,
   rebuildConfig: {},
   makers: [
     new MakerSquirrel(

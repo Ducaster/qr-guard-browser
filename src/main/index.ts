@@ -37,7 +37,10 @@ let settingsRepository: SettingsRepository | undefined;
 let siteCredentialRepository: SiteCredentialRepository | undefined;
 let lockoutStateStore: LockoutStateStore | undefined;
 
+const QR_SESSION_DISK_CACHE_BYTES = 128 * 1024 * 1024;
 const configuredUserDataPath = process.env["QR_GUARD_USER_DATA_DIR"];
+
+app.commandLine.appendSwitch("disk-cache-size", String(QR_SESSION_DISK_CACHE_BYTES));
 
 if (configuredUserDataPath !== undefined) {
   app.setPath("userData", configuredUserDataPath);

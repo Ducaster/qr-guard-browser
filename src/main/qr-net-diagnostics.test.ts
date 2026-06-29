@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -6,6 +9,7 @@ import {
   measureQrRequestHeaders,
   shouldCaptureQrDiagnosticsRequest
 } from "./qr-net-diagnostics";
+import { rotateQrDiagnosticsLogIfNeeded } from "./qr-net-diagnostics-log";
 
 describe("QR network diagnostics helpers", () => {
   it("measures request header and cookie sizes without returning secret values", () => {
@@ -64,5 +68,26 @@ describe("QR network diagnostics helpers", () => {
 
     // Then
     expect(diagnosticUrl).toBe("https://example.test/login/random-id");
+  });
+
+  it("rotates the diagnostics log when it reaches the configured cap", async () => {
+    // Given
+    const directory = await mkdtemp(path.join(os.tmpdir(), "qr-net-diagnostics-"));
+    const logFilePath = path.join(directory, "qr-net-diagnostics.log");
+    const rotatedLogFilePath = `${logFilePath}.1`;
+
+    try {
+      await writeFile(logFilePath, "old diagnostics\n", "utf8");
+      await writeFile(rotatedLogFilePath, "stale diagnostics\n", "utf8");
+
+      // When
+      await rotateQrDiagnosticsLogIfNeeded(logFilePath, 4);
+
+      // Then
+      await expect(readFile(logFilePath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(readFile(rotatedLogFilePath, "utf8")).resolves.toBe("old diagnostics\n");
+    } finally {
+      await rm(directory, { force: true, recursive: true });
+    }
   });
 });

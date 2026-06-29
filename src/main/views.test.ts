@@ -29,10 +29,18 @@ const electronMock = vi.hoisted(() => {
     }
   }
 
+  interface FakeWebContentsViewOptions {
+    readonly webPreferences?: {
+      readonly session?: FakeSession;
+    };
+  }
+
   class FakeWebContents {
     readonly loadFileCalls: string[] = [];
     readonly loadUrlCalls: string[] = [];
-    readonly session = new FakeSession();
+    readonly setAudioMutedCalls: boolean[] = [];
+    readonly setBackgroundThrottlingCalls: boolean[] = [];
+    readonly session: FakeSession;
 
     private readonly listeners = new Map<string, ((...args: readonly unknown[]) => void)[]>();
     private currentUrl = "";
@@ -40,6 +48,10 @@ const electronMock = vi.hoisted(() => {
     private loadUrlError: Error | undefined;
     private userAgent =
       "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) QR Guard Browser/0.1.1 Chrome/142.0.7444.234 Electron/42.4.1 Safari/537.36";
+
+    constructor(targetSession?: FakeSession) {
+      this.session = targetSession ?? new FakeSession();
+    }
 
     closeDevTools(): void {
       return;
@@ -104,17 +116,26 @@ const electronMock = vi.hoisted(() => {
       this.userAgent = userAgent;
     }
 
+    setAudioMuted(muted: boolean): void {
+      this.setAudioMutedCalls.push(muted);
+    }
+
+    setBackgroundThrottling(allowed: boolean): void {
+      this.setBackgroundThrottlingCalls.push(allowed);
+    }
+
     setWindowOpenHandler(_handler: () => Readonly<{ action: "deny" }>): void {
       return;
     }
   }
 
   class FakeWebContentsView {
-    readonly webContents = new FakeWebContents();
+    readonly webContents: FakeWebContents;
 
     private visible = true;
 
-    constructor(_options: Readonly<Record<string, unknown>>) {
+    constructor(options: FakeWebContentsViewOptions) {
+      this.webContents = new FakeWebContents(options.webPreferences?.session);
       state.views.push(this);
     }
 
@@ -208,6 +229,66 @@ describe("shell window loading", () => {
   beforeEach(() => {
     electronMock.state.views.length = 0;
     loggerMock.warn.mockClear();
+    delete process.env["QR_GUARD_NET_DIAGNOSTICS"];
+  });
+
+  it("keeps QR network diagnostics detached by default", async () => {
+    // Given
+    const { createShellWindow } = await import("./views");
+
+    // When
+    createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+
+    // Then
+    const qrWebContents = getQrWebContents();
+    expect(qrWebContents.session.webRequest.onBeforeSendHeaders).not.toHaveBeenCalled();
+    expect(qrWebContents.session.webRequest.onCompleted).not.toHaveBeenCalled();
+    expect(qrWebContents.session.webRequest.onErrorOccurred).not.toHaveBeenCalled();
+  });
+
+  it("attaches QR network diagnostics only when explicitly enabled", async () => {
+    // Given
+    process.env["QR_GUARD_NET_DIAGNOSTICS"] = "1";
+    const { createShellWindow } = await import("./views");
+
+    // When
+    createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+
+    // Then
+    const qrWebContents = getQrWebContents();
+    expect(qrWebContents.session.webRequest.onBeforeSendHeaders).toHaveBeenCalledOnce();
+    expect(qrWebContents.session.webRequest.onCompleted).toHaveBeenCalledOnce();
+    expect(qrWebContents.session.webRequest.onErrorOccurred).toHaveBeenCalledOnce();
+  });
+
+  it("throttles and mutes QR contents while hidden, then restores them when shown", async () => {
+    // Given
+    const { createShellWindow } = await import("./views");
+    const shellWindow = createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+    const qrWebContents = getQrWebContents();
+
+    // When
+    shellWindow.setQrVisible(false);
+    shellWindow.setQrVisible(true);
+
+    // Then
+    expect(qrWebContents.setBackgroundThrottlingCalls).toEqual([true, false]);
+    expect(qrWebContents.setAudioMutedCalls).toEqual([true, false]);
   });
 
   it("leaves the QR view empty when no QR URL is configured", async () => {

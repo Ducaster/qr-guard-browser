@@ -1,17 +1,22 @@
 import { MessageBar, MessageBarBody, Spinner, makeStyles, tokens } from "@fluentui/react-components";
-import { useEffect, useState, type JSX } from "react";
+import { Suspense, lazy, useEffect, useState, type JSX } from "react";
 
 import type { StateSnapshot } from "../core/state-machine";
 import type { SiteCredentialSaveOffer } from "../core/site-credential-messages";
 import { HeaderBlock, PanelCard, Screen } from "./fluentLayout";
 import { LockScreen } from "./lock/LockScreen";
 import { AdminGate } from "./settings/AdminGate";
-import { FirstRunSetup } from "./settings/FirstRunSetup";
-import { SettingsView } from "./settings/SettingsView";
 import { SiteCredentialSavePrompt } from "./site-credentials/SiteCredentialSavePrompt";
 import { Toolbar } from "./toolbar/Toolbar";
 
 type LocalMode = "adminGate" | null;
+
+const FirstRunSetup = lazy(() =>
+  import("./settings/FirstRunSetup").then(({ FirstRunSetup }) => ({ default: FirstRunSetup }))
+);
+const SettingsView = lazy(() =>
+  import("./settings/SettingsView").then(({ SettingsView }) => ({ default: SettingsView }))
+);
 
 export const App = (): JSX.Element => {
   const styles = useAppStyles();
@@ -90,11 +95,13 @@ export const App = (): JSX.Element => {
   switch (state.state) {
     case "needsSetup":
       return (
-        <FirstRunSetup
-          onComplete={() => {
-            void window.qrGuard.getState().then(setState, () => undefined);
-          }}
-        />
+        <Suspense fallback={<DeferredViewFallback />}>
+          <FirstRunSetup
+            onComplete={() => {
+              void window.qrGuard.getState().then(setState, () => undefined);
+            }}
+          />
+        </Suspense>
       );
     case "locked":
       return (
@@ -117,12 +124,14 @@ export const App = (): JSX.Element => {
     case "settings":
       return (
         <>
-          <SettingsView
-            onClose={() => {
-              setLocalMode(null);
-              void window.qrGuard.getState().then(setState, () => undefined);
-            }}
-          />
+          <Suspense fallback={<DeferredViewFallback />}>
+            <SettingsView
+              onClose={() => {
+                setLocalMode(null);
+                void window.qrGuard.getState().then(setState, () => undefined);
+              }}
+            />
+          </Suspense>
           {credentialPrompt}
         </>
       );
@@ -156,6 +165,12 @@ const LoadingView = (): JSX.Element => (
       <HeaderBlock title="불러오는 중" />
       <Spinner label="설정 불러오는 중" />
     </PanelCard>
+  </Screen>
+);
+
+const DeferredViewFallback = (): JSX.Element => (
+  <Screen center>
+    <Spinner label="화면 불러오는 중" size="small" />
   </Screen>
 );
 

@@ -188,6 +188,7 @@ test.describe("secure Electron shell", () => {
   test("navigates the QR view from the toolbar address bar and writes safe diagnostics", async () => {
     // Given
     const launchedApp = await launchApp(`${fixtureServer.baseUrl}/qr`, {
+      qrNetDiagnosticsEnabled: true,
       unlockDurationSeconds: "10"
     });
     const electronApp = launchedApp.app;

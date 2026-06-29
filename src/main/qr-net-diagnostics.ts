@@ -9,6 +9,7 @@ import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { formatUnknownError, mainLogger, type MainLogger } from "./logger";
+import { rotateQrDiagnosticsLogIfNeeded } from "./qr-net-diagnostics-log";
 
 export const QR_NET_DIAGNOSTICS_LOG_FILE = "qr-net-diagnostics.log" as const;
 
@@ -227,6 +228,7 @@ const appendDiagnosticsRecord = async (
 ): Promise<void> => {
   try {
     await mkdir(path.dirname(logFilePath), { recursive: true });
+    await rotateQrDiagnosticsLogIfNeeded(logFilePath);
     await appendFile(logFilePath, `${JSON.stringify(record)}\n`, "utf8");
   } catch (error: unknown) {
     if (!(error instanceof Error)) {

@@ -1,11 +1,10 @@
 import { Button, Field, Input, Spinner } from "@fluentui/react-components";
 import { LockClosed24Regular, Save24Regular } from "@fluentui/react-icons";
-import { useCallback, useEffect, useState, type JSX, type SyntheticEvent } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState, type JSX, type SyntheticEvent } from "react";
 
 import type { SettingsSafeView } from "../../core/settings-validation";
 import { HeaderBlock, PageStack, Screen, SectionCard, SplitTwo, Stack } from "../fluentLayout";
 import { inputSlot } from "../fluentSlots";
-import { AuditLogView } from "../logs/AuditLogView";
 import { AdminCodeChange } from "./AdminCodeChange";
 import { ErrorList, Message } from "./Feedback";
 import { QrSessionTools } from "./QrSessionTools";
@@ -16,6 +15,10 @@ import { isValidHttpUrl, parseSeconds } from "./validation";
 interface SettingsViewProps {
   readonly onClose: () => void;
 }
+
+const AuditLogView = lazy(() =>
+  import("../logs/AuditLogView").then(({ AuditLogView }) => ({ default: AuditLogView }))
+);
 
 export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
   const [settings, setSettings] = useState<SettingsSafeView | null>(null);
@@ -176,7 +179,9 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
         {settings === null ? null : <UserManagement onChanged={loadSettings} users={settings.users} />}
         {settings === null ? null : <AdminCodeChange />}
         {settings === null ? null : <SavedLoginsSection />}
-        <AuditLogView />
+        <Suspense fallback={<Spinner label="감사 로그 불러오는 중" size="small" />}>
+          <AuditLogView />
+        </Suspense>
         <QrSessionTools
           isBusy={isBusy}
           onSetBusy={setIsBusy}
