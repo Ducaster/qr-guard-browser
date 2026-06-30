@@ -162,9 +162,10 @@ const electronMock = vi.hoisted(() => {
         return;
       }
     };
+    readonly setMinimumSizeCalls: [number, number][] = [];
 
     constructor(_options: Readonly<Record<string, unknown>>) {
-      return;
+      state.windows.push(this);
     }
 
     getContentSize(): readonly [number, number] {
@@ -182,9 +183,14 @@ const electronMock = vi.hoisted(() => {
     setBackgroundColor(_backgroundColor: string): void {
       return;
     }
+
+    setMinimumSize(width: number, height: number): void {
+      this.setMinimumSizeCalls.push([width, height]);
+    }
   }
 
-  const state: { readonly views: FakeWebContentsView[] } = {
+  const state: { readonly views: FakeWebContentsView[]; readonly windows: FakeBaseWindow[] } = {
+    windows: [],
     views: []
   };
 
@@ -228,8 +234,26 @@ vi.mock("./logger", () => ({
 describe("shell window loading", () => {
   beforeEach(() => {
     electronMock.state.views.length = 0;
+    electronMock.state.windows.length = 0;
     loggerMock.warn.mockClear();
     delete process.env["QR_GUARD_NET_DIAGNOSTICS"];
+  });
+
+  it("sets the shell minimum window size", async () => {
+    // Given
+    const { createShellWindow } = await import("./views");
+
+    // When
+    createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+
+    // Then
+    const [createdWindow] = electronMock.state.windows;
+    expect(createdWindow?.setMinimumSizeCalls).toEqual([[720, 540]]);
   });
 
   it("keeps QR network diagnostics detached by default", async () => {

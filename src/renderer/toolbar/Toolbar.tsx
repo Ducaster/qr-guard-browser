@@ -3,7 +3,6 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
-  Text,
   Toolbar as FluentToolbar,
   ToolbarButton,
   makeStyles,
@@ -85,26 +84,26 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   return (
     <main className={styles.shell} data-testid="unlock-toolbar">
       <div className={styles.status}>
-        <Badge appearance="tint" color={isSiteLogin ? "warning" : "danger"} shape="rounded">
-          {isSiteLogin ? "사이트 로그인 중" : "잠금 해제됨"}
-        </Badge>
-        <Text weight="semibold">
-          {isSiteLogin ? "사이트 로그인 중" : "잠금 해제됨"}
-        </Text>
         {isSiteLogin ? (
-          <Badge appearance="outline" color="warning" data-testid="site-login-indicator" shape="rounded">
+          <Badge appearance="tint" color="warning" data-testid="site-login-indicator" shape="rounded">
             사이트 로그인 중
           </Badge>
         ) : (
-          <Badge appearance="outline" color="danger" data-testid="unlock-countdown" shape="rounded">
-            {formatRemaining(remainingMs)}
-          </Badge>
+          <>
+            <Badge appearance="tint" color="danger" shape="rounded">
+              잠금 해제됨
+            </Badge>
+            <Badge appearance="outline" color="danger" data-testid="unlock-countdown" shape="rounded">
+              {formatRemaining(remainingMs)}
+            </Badge>
+          </>
         )}
       </div>
       <div className={styles.navigation}>
         <FluentToolbar aria-label="잠금 도구" className={styles.actions} size="small">
           <ToolbarButton
             appearance="subtle"
+            aria-label="뒤로"
             data-testid="qr-go-back"
             disabled={!state.canGoBack}
             icon={<ArrowLeft24Regular />}
@@ -113,10 +112,11 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             }}
             type="button"
           >
-            뒤로
+            <span className={styles.buttonLabel}>뒤로</span>
           </ToolbarButton>
           <ToolbarButton
             appearance="subtle"
+            aria-label="앞으로"
             data-testid="qr-go-forward"
             disabled={!state.canGoForward}
             icon={<ArrowRight24Regular />}
@@ -125,10 +125,11 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             }}
             type="button"
           >
-            앞으로
+            <span className={styles.buttonLabel}>앞으로</span>
           </ToolbarButton>
           <ToolbarButton
             appearance="subtle"
+            aria-label="새로고침"
             data-testid="qr-reload"
             icon={<ArrowClockwise24Regular />}
             onClick={() => {
@@ -136,7 +137,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             }}
             type="button"
           >
-            새로고침
+            <span className={styles.buttonLabel}>새로고침</span>
           </ToolbarButton>
         </FluentToolbar>
         <Input
@@ -164,6 +165,8 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
         {isSiteLogin ? (
           <ToolbarButton
             appearance="subtle"
+            aria-label="이 화면이 QR입니다"
+            className={styles.actionButton}
             data-testid="learn-qr-title"
             icon={<QrCode24Regular />}
             onClick={() => {
@@ -171,11 +174,13 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             }}
             type="button"
           >
-            이 화면이 QR입니다
+            <span className={styles.actionLabel}>이 화면이 QR입니다</span>
           </ToolbarButton>
         ) : null}
         <ToolbarButton
           appearance="primary"
+          aria-label="지금 잠그기"
+          className={styles.actionButton}
           data-testid="manual-lock"
           icon={<LockClosed24Regular />}
           onClick={() => {
@@ -183,7 +188,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           }}
           type="button"
         >
-          지금 잠그기
+          <span className={styles.manualLockLabel}>지금 잠그기</span>
         </ToolbarButton>
       </div>
       {actionError.length > 0 ? (
@@ -196,16 +201,30 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
 };
 
 const useToolbarStyles = makeStyles({
+  actionButton: { flexShrink: 0, whiteSpace: "nowrap" },
+  actionLabel: { whiteSpace: "nowrap" },
   addressInput: {
-    flex: "1 1 320px",
+    flex: "1 1 88px",
     maxWidth: "560px",
-    minWidth: "140px"
+    minWidth: "88px",
+    "@media (max-width: 820px)": {
+      flexBasis: "88px",
+      minWidth: "80px"
+    }
   },
-  actions: {
-    flexShrink: 0
+  actions: { flexShrink: 0, whiteSpace: "nowrap" },
+  buttonLabel: {
+    whiteSpace: "nowrap",
+    "@media (max-width: 820px)": {
+      display: "none"
+    }
   },
-  error: {
-    maxWidth: "320px"
+  error: { maxWidth: "320px" },
+  manualLockLabel: {
+    whiteSpace: "nowrap",
+    "@media (max-width: 820px)": {
+      display: "none"
+    }
   },
   shell: {
     alignItems: "center",
@@ -213,28 +232,35 @@ const useToolbarStyles = makeStyles({
     borderBottomColor: tokens.colorNeutralStroke2,
     borderBottomStyle: "solid",
     borderBottomWidth: tokens.strokeWidthThin,
+    boxSizing: "border-box",
     color: tokens.colorNeutralForeground1,
     display: "flex",
     gap: tokens.spacingHorizontalM,
-    height: "64px",
+    flexWrap: "nowrap",
     justifyContent: "space-between",
+    minHeight: "56px",
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalL}`,
+    rowGap: tokens.spacingVerticalXS,
     width: "100vw"
   },
   navigation: {
     alignItems: "center",
     display: "flex",
     flex: "1 1 auto",
+    flexWrap: "nowrap",
     gap: tokens.spacingHorizontalS,
     justifyContent: "flex-end",
-    minWidth: 0
+    minWidth: 0,
+    rowGap: tokens.spacingVerticalXS
   },
   status: {
     alignItems: "center",
     display: "flex",
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
+    flexShrink: 0,
     gap: tokens.spacingHorizontalS,
-    minWidth: 0
+    minWidth: 0,
+    whiteSpace: "nowrap"
   }
 });
 

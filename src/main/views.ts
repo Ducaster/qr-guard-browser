@@ -93,6 +93,7 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     title: APP_NAME,
     width: INITIAL_BOUNDS.width
   });
+  window.setMinimumSize(720, 540);
 
   const qrSession = session.fromPartition(QR_SESSION_PARTITION);
   if (isQrNetDiagnosticsEnabled()) {
