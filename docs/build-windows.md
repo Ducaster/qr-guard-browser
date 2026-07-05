@@ -33,7 +33,10 @@ Expected artifacts include:
 out/make/squirrel.windows/<arch>/QRGuardBrowserSetup.exe
 out/make/squirrel.windows/<arch>/RELEASES
 out/make/squirrel.windows/<arch>/*.nupkg
+out/make/zip/win32/<arch>/QR Guard Browser-win32-<arch>-<version>.zip
 ```
+
+The zip artifact is the fallback distribution for machines where Squirrel shows `Installation has failed`. It does not install shortcuts or an uninstaller; unzip it and run `QR Guard Browser.exe` directly.
 
 ## CI Build
 

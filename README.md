@@ -12,6 +12,7 @@ QR 화면을 그냥 띄워 두면 지나가는 누구나 찍어 갈 수 있습�
 
 - **항상 최신본**: <https://github.com/Ducaster/qr-guard-browser/releases/latest>
 - **Windows**: [`QRGuardBrowserSetup.exe`](https://github.com/Ducaster/qr-guard-browser/releases/latest/download/QRGuardBrowserSetup.exe)
+- **Windows 설치 실패 시**: 릴리스의 `QR Guard Browser-win32-*.zip`을 받아 압축을 풀고 `QR Guard Browser.exe`를 실행합니다.
 - **macOS**: [`QR Guard Browser.dmg`](https://github.com/Ducaster/qr-guard-browser/releases/latest/download/QR.Guard.Browser.dmg)
 
 ---
@@ -24,6 +25,8 @@ QR 화면을 그냥 띄워 두면 지나가는 누구나 찍어 갈 수 있습�
 1. `QRGuardBrowserSetup.exe`를 받아 **더블클릭**합니다.
 2. **"Windows의 PC를 보호했습니다"** 파란 창이 뜨면 → **`추가 정보`** 클릭 → **`실행`** 클릭.
 3. 별도의 설치 마법사 없이 **자동으로 설치된 뒤 바로 앱이 열립니다** (Slack·Discord·VS Code와 같은 방식). 시작 메뉴에 바로가기가 생기고, 제거는 *제어판 → 프로그램 추가/제거*에서 할 수 있습니다.
+
+설치 중 `Installation has failed`가 뜨면 릴리스의 Windows zip 파일을 사용하세요. zip은 설치 과정 없이 압축을 푼 폴더 안의 `QR Guard Browser.exe`를 바로 실행하는 방식이라 Squirrel 설치 실패를 우회할 수 있습니다.
 
 ### macOS
 1. `QR Guard Browser.dmg`를 받아 더블클릭으로 열고, **앱 아이콘을 `Applications` 폴더로 드래그**합니다.
@@ -115,7 +118,7 @@ npm ci
 npm run dev        # 개발 실행
 npm test           # 단위 테스트
 npm run test:e2e   # E2E (Playwright)
-npm run make       # 설치본(.dmg/.exe) 빌드
+npm run make       # 설치본(.dmg/.exe/.zip) 빌드
 ```
 
 릴리스(`main` 푸시)는 GitHub Actions가 macOS·Windows 양쪽 설치본을 자동 빌드합니다.
