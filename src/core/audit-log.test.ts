@@ -135,6 +135,25 @@ describe("audit log JSONL", () => {
     });
   });
 
+  it("limits displayed events while deriving last unlocks from the full log", () => {
+    // Given
+    const events = [
+      eventAt("staff01", 1_000),
+      eventAt("staff02", 2_000),
+      eventAt("staff01", 3_000)
+    ];
+
+    // When
+    const result = parseAuditLog(toJsonl(events), { limit: 2 });
+
+    // Then
+    expect(result.events).toEqual(events.slice(-2));
+    expect(result.lastSuccessfulUnlockByUserId).toEqual({
+      staff01: "1970-01-01T00:00:03.000Z",
+      staff02: "1970-01-01T00:00:02.000Z"
+    });
+  });
+
   it("skips malformed and wrong-shape lines while reporting the skipped count", () => {
     // Given
     const firstEvent = buildAuditEvent({
@@ -252,3 +271,12 @@ const eventWithUserId = (userId: string): AuditEvent => ({
   unlockedAt: "1970-01-01T00:00:01.000Z",
   userId
 });
+
+const eventAt = (userId: string, unlockedAtMs: number): AuditEvent =>
+  buildAuditEvent({
+    appVersion: "0.1.6",
+    lockedAtMs: unlockedAtMs + 1_000,
+    reason: "timer",
+    unlockedAtMs,
+    userId
+  });
