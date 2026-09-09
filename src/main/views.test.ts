@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const loggerMock = vi.hoisted(() => ({
   warn: vi.fn()
@@ -248,6 +248,10 @@ describe("shell window loading", () => {
     delete process.env["QR_GUARD_NET_DIAGNOSTICS"];
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("sets the shell minimum window size", async () => {
     // Given
     const { createShellWindow } = await import("./views");
@@ -460,6 +464,35 @@ describe("shell window loading", () => {
       reason: "oom",
       url: ""
     });
+  });
+
+  it("reloads a renderer only when it remains unresponsive for 15 seconds", async () => {
+    // Given
+    vi.useFakeTimers();
+    const { createShellWindow } = await import("./views");
+    createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+    const qrWebContents = getQrWebContents();
+
+    // When
+    qrWebContents.emit("unresponsive");
+    vi.advanceTimersByTime(14_999);
+
+    // Then
+    expect(qrWebContents.reloadCalls).toBe(0);
+
+    // When
+    qrWebContents.emit("responsive");
+    vi.advanceTimersByTime(1);
+    qrWebContents.emit("unresponsive");
+    vi.advanceTimersByTime(15_000);
+
+    // Then
+    expect(qrWebContents.reloadCalls).toBe(1);
   });
 });
 
