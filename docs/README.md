@@ -81,6 +81,8 @@ Successful unlock sessions are appended to a local JSONL audit log with user ID,
 
 Failed unlock attempts are not written as successful audit events.
 
+To keep long-running low-spec PCs responsive, the settings view renders the latest 1,000 matching events. The local log rotates at 5 MB and retains one previous 5 MB file. Export includes every event still present in both retained files.
+
 ## Known Security Limits
 
 QR Guard Browser is an operational control, not a tamper-proof security boundary.

@@ -2,9 +2,8 @@ import { defineConfig } from "vite";
 import { builtinModules } from "node:module";
 
 const external = ["electron", ...builtinModules, ...builtinModules.map((name) => `node:${name}`)];
-const shouldEmitSourceMaps = process.env["NODE_ENV"] === "production" ? false : true;
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   build: {
     emptyOutDir: false,
     lib: {
@@ -16,7 +15,7 @@ export default defineConfig({
     rollupOptions: {
       external
     },
-    sourcemap: shouldEmitSourceMaps
+    sourcemap: mode !== "production"
   },
   clearScreen: false
-});
+}));
