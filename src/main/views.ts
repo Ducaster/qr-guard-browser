@@ -45,6 +45,7 @@ const INITIAL_BOUNDS = {
 } as const;
 
 const CONTROL_TOOLBAR_HEIGHT = 64;
+const RENDERER_HANG_RECOVERY_MS = 15_000;
 const DARK_NEUTRAL_BACKGROUND = "#1f1f1f" as const;
 const LIGHT_NEUTRAL_BACKGROUND = "#f3f2f1" as const;
 
@@ -171,7 +172,17 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   });
 
   const recoverRenderer = (label: "Control" | "QR", target: Electron.WebContents): void => {
+    let hangRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearHangRecovery = (): void => {
+      if (hangRecoveryTimer !== null) {
+        clearTimeout(hangRecoveryTimer);
+        hangRecoveryTimer = null;
+      }
+    };
+
     target.on("render-process-gone", (_event, details) => {
+      clearHangRecovery();
+
       if (details.reason === "clean-exit" || target.isDestroyed()) {
         return;
       }
@@ -185,7 +196,26 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     });
     target.on("unresponsive", () => {
       mainLogger.warn(`${label} renderer is unresponsive.`, { url: target.getURL() });
+
+      if (hangRecoveryTimer !== null) {
+        return;
+      }
+
+      hangRecoveryTimer = setTimeout(() => {
+        hangRecoveryTimer = null;
+
+        if (target.isDestroyed()) {
+          return;
+        }
+
+        mainLogger.warn(`${label} renderer remained unresponsive; reloading.`, {
+          url: target.getURL()
+        });
+        target.reload();
+      }, RENDERER_HANG_RECOVERY_MS);
     });
+    target.on("responsive", clearHangRecovery);
+    target.on("destroyed", clearHangRecovery);
   };
 
   recoverRenderer("QR", qrView.webContents);
