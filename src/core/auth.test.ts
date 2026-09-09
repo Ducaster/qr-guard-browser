@@ -13,19 +13,31 @@ import {
 } from "./auth";
 
 describe("auth code hashing", () => {
-  it("verifies the correct code and rejects the wrong code", () => {
+  it("verifies the correct code and rejects the wrong code without blocking the event loop", async () => {
     // Given
     const authCode = "correct-auth-code";
     const wrongCode = "wrong-auth-code";
     const record = hashCode(authCode);
+    const order: string[] = [];
+    const timer = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        order.push("timer");
+        resolve();
+      }, 0);
+    });
 
     // When
-    const correctResult = verifyCode(authCode, record.salt, record.hash);
-    const wrongResult = verifyCode(wrongCode, record.salt, record.hash);
+    const correctVerification = verifyCode(authCode, record.salt, record.hash);
+    expect(correctVerification).toBeInstanceOf(Promise);
+    const correctResult = await correctVerification;
+    order.push("verification");
+    const wrongResult = await verifyCode(wrongCode, record.salt, record.hash);
+    await timer;
 
     // Then
     expect(correctResult).toBe(true);
     expect(wrongResult).toBe(false);
+    expect(order).toEqual(["timer", "verification"]);
   });
 });
 

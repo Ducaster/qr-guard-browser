@@ -41,6 +41,7 @@ const electronMock = vi.hoisted(() => {
     readonly setAudioMutedCalls: boolean[] = [];
     readonly setBackgroundThrottlingCalls: boolean[] = [];
     readonly session: FakeSession;
+    reloadCalls = 0;
 
     private readonly listeners = new Map<string, ((...args: readonly unknown[]) => void)[]>();
     private currentUrl = "";
@@ -110,6 +111,10 @@ const electronMock = vi.hoisted(() => {
 
     on(eventName: string, listener: (...args: readonly unknown[]) => void): void {
       this.listeners.set(eventName, [...(this.listeners.get(eventName) ?? []), listener]);
+    }
+
+    reload(): void {
+      this.reloadCalls += 1;
     }
 
     setUserAgent(userAgent: string): void {
@@ -420,6 +425,37 @@ describe("shell window loading", () => {
         url: "https://bad.example/login"
       }
     ]);
+  });
+
+  it("reloads crashed QR and control renderers while preserving their webContents sessions", async () => {
+    // Given
+    const { createShellWindow } = await import("./views");
+    createShellWindow({
+      controlHtmlPath: "/control/index.html",
+      disableDevTools: true,
+      preloadPath: "/preload.js",
+      qrPreloadPath: "/qr-site-preload.js"
+    });
+    const qrWebContents = getQrWebContents();
+    const controlWebContents = getControlWebContents();
+
+    // When
+    qrWebContents.emit("render-process-gone", {}, { exitCode: 1, reason: "crashed" });
+    controlWebContents.emit("render-process-gone", {}, { exitCode: 1, reason: "oom" });
+
+    // Then
+    expect(qrWebContents.reloadCalls).toBe(1);
+    expect(controlWebContents.reloadCalls).toBe(1);
+    expect(loggerMock.warn).toHaveBeenCalledWith("QR renderer process exited; reloading.", {
+      exitCode: 1,
+      reason: "crashed",
+      url: ""
+    });
+    expect(loggerMock.warn).toHaveBeenCalledWith("Control renderer process exited; reloading.", {
+      exitCode: 1,
+      reason: "oom",
+      url: ""
+    });
   });
 });
 
