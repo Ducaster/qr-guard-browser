@@ -32,8 +32,10 @@ export interface LockoutStateStore {
 
 export interface AuditLogStore {
   readonly append: (event: AuditEvent) => void;
-  readonly read: (filter?: AuditLogFilter) => AuditLogReadResult;
+  readonly read: (filter?: AuditLogFilter) => Promise<AuditLogReadResult>;
 }
+
+export const AUDIT_LOG_MAX_BYTES = 5 * 1024 * 1024;
 
 export const createElectronSettingsRepository = (sealer: Sealer): SettingsRepository =>
   createRecoverableFileSettingsRepository(
@@ -81,17 +83,53 @@ export const createFileLockoutStateStore = (filePath: string): LockoutStateStore
 export const createElectronAuditLogStore = (): AuditLogStore =>
   createFileAuditLogStore(path.join(app.getPath("userData"), AUDIT_LOG_FILE_NAME));
 
-export const createFileAuditLogStore = (filePath: string): AuditLogStore => ({
+export const createFileAuditLogStore = (
+  filePath: string,
+  maxBytes = AUDIT_LOG_MAX_BYTES
+): AuditLogStore => ({
   append: (event: AuditEvent) => {
     fs.mkdirSync(path.dirname(filePath), { mode: 0o700, recursive: true });
+    rotateAuditLogIfNeeded(filePath, maxBytes);
     fs.appendFileSync(filePath, serializeAuditEvent(event), { encoding: "utf8", mode: 0o600 });
   },
-  read: (filter?: AuditLogFilter) => {
-    const data = readOptionalTextFile(filePath);
+  read: async (filter?: AuditLogFilter) => {
+    const [archivedData, currentData] = await Promise.all([
+      readOptionalTextFileAsync(`${filePath}.1`),
+      readOptionalTextFileAsync(filePath)
+    ]);
 
-    return parseAuditLog(data ?? "", filter);
+    return parseAuditLog(`${archivedData ?? ""}${currentData ?? ""}`, filter);
   }
 });
+
+const rotateAuditLogIfNeeded = (filePath: string, maxBytes: number): void => {
+  try {
+    if (fs.statSync(filePath).size < maxBytes) {
+      return;
+    }
+  } catch (error: unknown) {
+    if (hasErrorCode(error, "ENOENT")) {
+      return;
+    }
+
+    throw error;
+  }
+
+  fs.rmSync(`${filePath}.1`, { force: true });
+  fs.renameSync(filePath, `${filePath}.1`);
+};
+
+const readOptionalTextFileAsync = async (filePath: string): Promise<string | null> => {
+  try {
+    return await fs.promises.readFile(filePath, "utf8");
+  } catch (error: unknown) {
+    if (hasErrorCode(error, "ENOENT")) {
+      return null;
+    }
+
+    throw error;
+  }
+};
 
 export const createElectronSafeStorageSealer = (): Sealer => {
   if (!safeStorage.isEncryptionAvailable()) {

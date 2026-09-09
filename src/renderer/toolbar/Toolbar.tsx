@@ -61,7 +61,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
     };
 
     updateRemainingMs();
-    const intervalId = window.setInterval(updateRemainingMs, 250);
+    const intervalId = window.setInterval(updateRemainingMs, 1_000);
 
     return () => {
       window.clearInterval(intervalId);

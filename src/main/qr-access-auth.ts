@@ -62,7 +62,7 @@ export const notLockedResponse = (): UnlockResponse => ({
   retryAfterMs: null
 });
 
-export const authenticateQrAccess = (input: QrAccessAuthInput): QrAccessAuthResult => {
+export const authenticateQrAccess = async (input: QrAccessAuthInput): Promise<QrAccessAuthResult> => {
   const userId = typeof input.rawUserId === "string" ? input.rawUserId.trim() : "";
   const code = typeof input.rawCode === "string" ? input.rawCode.trim() : "";
 
@@ -87,8 +87,20 @@ export const authenticateQrAccess = (input: QrAccessAuthInput): QrAccessAuthResu
   const settings = input.repository.load();
   const user = settings.users.find((candidate) => candidate.userId === userId);
 
-  if (user === undefined || !verifyCode(code, user.salt, user.hash)) {
-    const result = recordAuthFailure(input.lockoutState, userId, input.nowMs);
+  const verified = user !== undefined && await verifyCode(code, user.salt, user.hash);
+  const currentLockoutState = input.lockoutStateStore.load();
+  const currentDecision = checkLockout(currentLockoutState, userId, input.nowMs);
+
+  if (!currentDecision.allowed) {
+    return failure(currentLockoutState, {
+      errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
+      ok: false,
+      retryAfterMs: currentDecision.retryAfterMs ?? null
+    });
+  }
+
+  if (!verified) {
+    const result = recordAuthFailure(currentLockoutState, userId, input.nowMs);
 
     input.lockoutStateStore.save(result.state);
 
@@ -99,7 +111,7 @@ export const authenticateQrAccess = (input: QrAccessAuthInput): QrAccessAuthResu
     });
   }
 
-  const nextLockoutState = recordAuthSuccess(input.lockoutState, userId);
+  const nextLockoutState = recordAuthSuccess(currentLockoutState, userId);
 
   input.lockoutStateStore.save(nextLockoutState);
   const updatedSettings = updateLastAuthenticatedAt(settings, userId, input.nowMs);
@@ -113,7 +125,7 @@ export const authenticateQrAccess = (input: QrAccessAuthInput): QrAccessAuthResu
   };
 };
 
-export const authenticateAdminCode = (input: AdminCodeAuthInput): AdminCodeAuthResult => {
+export const authenticateAdminCode = async (input: AdminCodeAuthInput): Promise<AdminCodeAuthResult> => {
   const code = typeof input.rawCode === "string" ? input.rawCode.trim() : "";
   const lockoutState = input.lockoutStateStore.load();
 
@@ -137,8 +149,20 @@ export const authenticateAdminCode = (input: AdminCodeAuthInput): AdminCodeAuthR
 
   const settings = input.repository.load();
 
-  if (!verifyCode(code, settings.admin.salt, settings.admin.hash)) {
-    const result = recordAuthFailure(lockoutState, ADMIN_LOCKOUT_KEY, input.nowMs);
+  const verified = await verifyCode(code, settings.admin.salt, settings.admin.hash);
+  const currentLockoutState = input.lockoutStateStore.load();
+  const currentDecision = checkLockout(currentLockoutState, ADMIN_LOCKOUT_KEY, input.nowMs);
+
+  if (!currentDecision.allowed) {
+    return failure(currentLockoutState, {
+      errors: ["실패 횟수가 너무 많습니다. 잠시 후 다시 시도하세요."],
+      ok: false,
+      retryAfterMs: currentDecision.retryAfterMs ?? null
+    });
+  }
+
+  if (!verified) {
+    const result = recordAuthFailure(currentLockoutState, ADMIN_LOCKOUT_KEY, input.nowMs);
 
     input.lockoutStateStore.save(result.state);
 
@@ -149,7 +173,7 @@ export const authenticateAdminCode = (input: AdminCodeAuthInput): AdminCodeAuthR
     });
   }
 
-  const nextLockoutState = recordAuthSuccess(lockoutState, ADMIN_LOCKOUT_KEY);
+  const nextLockoutState = recordAuthSuccess(currentLockoutState, ADMIN_LOCKOUT_KEY);
 
   input.lockoutStateStore.save(nextLockoutState);
 
@@ -162,8 +186,7 @@ export const authenticateAdminCode = (input: AdminCodeAuthInput): AdminCodeAuthR
 
 export const authenticateAdminSiteLogin = (
   input: AdminSiteLoginAuthInput
-): QrAccessAuthResult => {
-  const result = authenticateAdminCode(input);
+): Promise<QrAccessAuthResult> => authenticateAdminCode(input).then((result) => {
 
   if (result.kind === "failure") {
     return result;
@@ -175,7 +198,7 @@ export const authenticateAdminSiteLogin = (
     settings: result.settings,
     userId: ADMIN_SITE_LOGIN_AUDIT_USER_ID
   };
-};
+});
 
 const failure = (
   lockoutState: LockoutState,

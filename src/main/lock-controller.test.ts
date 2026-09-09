@@ -59,8 +59,8 @@ class MemoryAuditLogStore implements AuditLogStore {
     this.events.push(event);
   }
 
-  read(filter?: AuditLogFilter): AuditLogReadResult {
-    return parseAuditLog(toJsonl(this.events), filter);
+  read(filter?: AuditLogFilter): Promise<AuditLogReadResult> {
+    return Promise.resolve(parseAuditLog(toJsonl(this.events), filter));
   }
 }
 
@@ -149,7 +149,7 @@ describe("lock controller unlock submission", () => {
     );
   });
 
-  it("lists unlock regions only while locked", () => {
+  it("lists unlock regions only while locked", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
@@ -164,7 +164,7 @@ describe("lock controller unlock submission", () => {
 
     // When
     const lockedRegions = harness.controller.listUnlockRegions();
-    const unlock = harness.controller.submitUnlock("staff01", "2468");
+    const unlock = await harness.controller.submitUnlock("staff01", "2468");
     const unlockedRegions = harness.controller.listUnlockRegions();
     const needsSetupRegions = setupHarness.controller.listUnlockRegions();
 
@@ -177,16 +177,16 @@ describe("lock controller unlock submission", () => {
     expect(needsSetupRegions).toEqual([]);
   });
 
-  it("does not record auth failure when unlock is submitted outside locked state", () => {
+  it("does not record auth failure when unlock is submitted outside locked state", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const harness = createHarness({ unlockDurationOverrideSeconds: 60 });
-    const unlock = harness.controller.submitUnlock("staff01", "2468");
+    const unlock = await harness.controller.submitUnlock("staff01", "2468");
     const saveCountAfterUnlock = harness.lockoutStateStore.saveCount;
 
     // When
-    const result = harness.controller.submitUnlock("staff01", "wrong-code");
+    const result = await harness.controller.submitUnlock("staff01", "wrong-code");
 
     // Then
     expect(unlock.ok).toBe(true);
@@ -198,12 +198,12 @@ describe("lock controller unlock submission", () => {
     expect(harness.lockoutStateStore.saveCount).toBe(saveCountAfterUnlock);
   });
 
-  it("does not record auth failure for missing unlock input", () => {
+  it("does not record auth failure for missing unlock input", async () => {
     // Given
     const harness = createHarness();
 
     // When
-    const result = harness.controller.submitUnlock("staff01", "");
+    const result = await harness.controller.submitUnlock("staff01", "");
 
     // Then
     expect(result).toEqual({
@@ -214,7 +214,7 @@ describe("lock controller unlock submission", () => {
     expect(harness.lockoutStateStore.saveCount).toBe(0);
   });
 
-  it("uses one computed unlock duration for countdown and relock timer", () => {
+  it("uses one computed unlock duration for countdown and relock timer", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
@@ -228,7 +228,7 @@ describe("lock controller unlock submission", () => {
     });
 
     // When
-    const result = harness.controller.submitUnlock("staff01", "2468");
+    const result = await harness.controller.submitUnlock("staff01", "2468");
     vi.advanceTimersByTime(5_000);
 
     // Then
@@ -278,14 +278,14 @@ describe("lock controller QR navigation and idle safety", () => {
     expect(harness.auditLogStore.events).toEqual([]);
   });
 
-  it("keeps an unlocked authenticated session open across login URL navigation", () => {
+  it("keeps an unlocked authenticated session open across login URL navigation", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const harness = createHarness({
       unlockDurationOverrideSeconds: 60
     });
-    const unlock = harness.controller.submitUnlock("staff01", "2468");
+    const unlock = await harness.controller.submitUnlock("staff01", "2468");
 
     // When
     harness.qrWebContents.setLocation("https://example.test/login", "Fixture Login");
@@ -300,7 +300,7 @@ describe("lock controller QR navigation and idle safety", () => {
     expect(harness.auditLogStore.events).toEqual([]);
   });
 
-  it("idle polling relocks an unlocked session with reason idle", () => {
+  it("idle polling relocks an unlocked session with reason idle", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
@@ -310,7 +310,7 @@ describe("lock controller QR navigation and idle safety", () => {
       idleAutoLockSeconds: 5,
       unlockDurationOverrideSeconds: 60
     });
-    const unlock = harness.controller.submitUnlock("staff01", "2468");
+    const unlock = await harness.controller.submitUnlock("staff01", "2468");
 
     // When
     vi.advanceTimersByTime(100);

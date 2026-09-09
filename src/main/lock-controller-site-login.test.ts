@@ -56,8 +56,8 @@ class MemoryAuditLogStore implements AuditLogStore {
     this.events.push(event);
   }
 
-  read(filter?: AuditLogFilter): AuditLogReadResult {
-    return parseAuditLog(toJsonl(this.events), filter);
+  read(filter?: AuditLogFilter): Promise<AuditLogReadResult> {
+    return Promise.resolve(parseAuditLog(toJsonl(this.events), filter));
   }
 }
 
@@ -150,12 +150,12 @@ afterEach(() => {
 });
 
 describe("lock controller siteLogin mode", () => {
-  it("enters siteLogin only after a valid admin code", () => {
+  it("enters siteLogin only after a valid admin code", async () => {
     // Given
     const harness = createHarness();
 
     // When
-    const result = harness.controller.submitSiteLogin("admin-code");
+    const result = await harness.controller.submitSiteLogin("admin-code");
 
     // Then
     expect(result.ok).toBe(true);
@@ -166,12 +166,12 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.visibilityChanges.at(-1)).toBe(true);
   });
 
-  it("keeps QR locked and records a failed admin attempt when siteLogin receives a wrong code", () => {
+  it("keeps QR locked and records a failed admin attempt when siteLogin receives a wrong code", async () => {
     // Given
     const harness = createHarness();
 
     // When
-    const result = harness.controller.submitSiteLogin("9999");
+    const result = await harness.controller.submitSiteLogin("9999");
 
     // Then
     expect(result.ok).toBe(false);
@@ -180,12 +180,12 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.lockoutStateStore.saveCount).toBe(1);
   });
 
-  it("does not enter siteLogin with a regional code", () => {
+  it("does not enter siteLogin with a regional code", async () => {
     // Given
     const harness = createHarness();
 
     // When
-    const result = harness.controller.submitSiteLogin("2468");
+    const result = await harness.controller.submitSiteLogin("2468");
 
     // Then
     expect(result.ok).toBe(false);
@@ -193,17 +193,17 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.controller.getState().qrVisible).toBe(false);
   });
 
-  it("applies the admin-code lockout to siteLogin", () => {
+  it("applies the admin-code lockout to siteLogin", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const harness = createHarness();
 
     // When
-    harness.controller.submitSiteLogin("bad-1");
-    harness.controller.submitSiteLogin("bad-2");
-    const lockedResult = harness.controller.submitSiteLogin("bad-3");
-    const validWhileLockedResult = harness.controller.submitSiteLogin("admin-code");
+    await harness.controller.submitSiteLogin("bad-1");
+    await harness.controller.submitSiteLogin("bad-2");
+    const lockedResult = await harness.controller.submitSiteLogin("bad-3");
+    const validWhileLockedResult = await harness.controller.submitSiteLogin("admin-code");
 
     // Then
     expect(lockedResult).toEqual({
@@ -220,12 +220,12 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.lockoutStateStore.saveCount).toBe(3);
   });
 
-  it("does not relock siteLogin when navigation leaves the login URL pattern", () => {
+  it("does not relock siteLogin when navigation leaves the login URL pattern", async () => {
     // Given
     const harness = createHarness({
       qrUrl: "https://example.test/login"
     });
-    harness.controller.submitSiteLogin("admin-code");
+    await harness.controller.submitSiteLogin("admin-code");
 
     // When
     harness.qrWebContents.trigger("did-start-navigation", {
@@ -237,12 +237,12 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.controller.getState().qrVisible).toBe(true);
   });
 
-  it("auto-locks siteLogin when the QR title pattern appears", () => {
+  it("auto-locks siteLogin when the QR title pattern appears", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const harness = createHarness({ qrTitlePattern: "QR 코드" });
-    harness.controller.submitSiteLogin("admin-code");
+    await harness.controller.submitSiteLogin("admin-code");
 
     // When
     vi.setSystemTime(new Date("2026-06-22T00:00:07.000Z"));
@@ -261,7 +261,7 @@ describe("lock controller siteLogin mode", () => {
     );
   });
 
-  it("auto-locks siteLogin if the QR title pattern appears immediately after entry", () => {
+  it("auto-locks siteLogin if the QR title pattern appears immediately after entry", async () => {
     // Given
     const harness = createHarness({
       qrTitle: "로그인",
@@ -270,7 +270,7 @@ describe("lock controller siteLogin mode", () => {
     harness.qrWebContents.setTitleReads(["로그인", "QR 코드"]);
 
     // When
-    const result = harness.controller.submitSiteLogin("admin-code");
+    const result = await harness.controller.submitSiteLogin("admin-code");
 
     // Then
     expect(result.ok).toBe(true);
@@ -279,11 +279,11 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.auditLogStore.events.at(-1)?.reason).toBe("qr-title");
   });
 
-  it("fails safe and relocks when settings cannot load during QR navigation", () => {
+  it("fails safe and relocks when settings cannot load during QR navigation", async () => {
     // Given
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const harness = createHarness();
-    harness.controller.submitSiteLogin("admin-code");
+    await harness.controller.submitSiteLogin("admin-code");
     harness.repository.loadError = new Error("corrupted settings");
 
     // When
@@ -300,10 +300,10 @@ describe("lock controller siteLogin mode", () => {
     );
   });
 
-  it("learns the current QR title into settings and locks", () => {
+  it("learns the current QR title into settings and locks", async () => {
     // Given
     const harness = createHarness({ qrTitle: "QR 코드 - 12번 창구" });
-    harness.controller.submitSiteLogin("admin-code");
+    await harness.controller.submitSiteLogin("admin-code");
 
     // When
     const result = harness.controller.learnCurrentQrTitle();
@@ -315,12 +315,12 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.controller.getState().qrVisible).toBe(false);
   });
 
-  it("manual lock, idle timeout, and safety cap all exit siteLogin through the gate", () => {
+  it("manual lock, idle timeout, and safety cap all exit siteLogin through the gate", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
     const manualHarness = createHarness();
-    manualHarness.controller.submitSiteLogin("admin-code");
+    await manualHarness.controller.submitSiteLogin("admin-code");
 
     // When
     manualHarness.controller.manualLock();
@@ -335,7 +335,7 @@ describe("lock controller siteLogin mode", () => {
       idlePollIntervalMs: 100,
       idleSource: () => 5
     });
-    idleHarness.controller.submitSiteLogin("admin-code");
+    await idleHarness.controller.submitSiteLogin("admin-code");
 
     // When
     vi.advanceTimersByTime(100);
@@ -346,7 +346,7 @@ describe("lock controller siteLogin mode", () => {
 
     // Given
     const capHarness = createHarness({ siteLoginTimeoutOverrideMs: 1_000 });
-    capHarness.controller.submitSiteLogin("admin-code");
+    await capHarness.controller.submitSiteLogin("admin-code");
 
     // When
     vi.advanceTimersByTime(1_000);

@@ -142,7 +142,7 @@ describe("settings validation", () => {
     expect(result.value.idleAutoLockSeconds).toBe(MAX_IDLE_AUTO_LOCK_SECONDS);
   });
 
-  it("updates a user code by replacing the stored hash", () => {
+  it("updates a user code by replacing the stored hash", async () => {
     // Given
     const setupResult = createSettingsFromFirstRunSetup({
       adminCode: "1234",
@@ -180,11 +180,11 @@ describe("settings validation", () => {
 
     expect(updatedUser.hash).not.toBe(originalUser.hash);
     expect(updatedUser.salt).not.toBe(originalUser.salt);
-    expect(verifyCode("new-code", updatedUser.salt, updatedUser.hash)).toBe(true);
-    expect(verifyCode("old-code", updatedUser.salt, updatedUser.hash)).toBe(false);
+    await expect(verifyCode("new-code", updatedUser.salt, updatedUser.hash)).resolves.toBe(true);
+    await expect(verifyCode("old-code", updatedUser.salt, updatedUser.hash)).resolves.toBe(false);
   });
 
-  it("changes the admin code by replacing the stored hash without plaintext", () => {
+  it("changes the admin code by replacing the stored hash without plaintext", async () => {
     // Given
     const setupResult = createSettingsFromFirstRunSetup({
       adminCode: "old-admin-code",
@@ -209,8 +209,12 @@ describe("settings validation", () => {
     expect(changeResult.value.admin.hash).not.toBe(setupResult.value.admin.hash);
     expect(changeResult.value.admin.salt).not.toBe(setupResult.value.admin.salt);
     expect(JSON.stringify(changeResult.value)).not.toContain("new-admin-code");
-    expect(verifyCode("new-admin-code", changeResult.value.admin.salt, changeResult.value.admin.hash)).toBe(true);
-    expect(verifyCode("old-admin-code", changeResult.value.admin.salt, changeResult.value.admin.hash)).toBe(false);
+    await expect(
+      verifyCode("new-admin-code", changeResult.value.admin.salt, changeResult.value.admin.hash)
+    ).resolves.toBe(true);
+    await expect(
+      verifyCode("old-admin-code", changeResult.value.admin.salt, changeResult.value.admin.hash)
+    ).resolves.toBe(false);
   });
 
   it("rejects admin-code changes shorter than the minimum", () => {

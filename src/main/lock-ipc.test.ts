@@ -260,18 +260,18 @@ class RecordingLockController implements LockController {
     return;
   }
 
-  submitSiteLogin(_code: unknown): UnlockResponse {
-    return {
+  submitSiteLogin(_code: unknown): Promise<UnlockResponse> {
+    return Promise.resolve({
       ok: true,
       state: this.getState()
-    };
+    });
   }
 
-  submitUnlock(_userId: unknown, _code: unknown): UnlockResponse {
-    return {
+  submitUnlock(_userId: unknown, _code: unknown): Promise<UnlockResponse> {
+    return Promise.resolve({
       ok: true,
       state: this.getState()
-    };
+    });
   }
 }
 

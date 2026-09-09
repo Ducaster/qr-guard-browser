@@ -34,22 +34,22 @@ class MemoryLockoutStateStore implements LockoutStateStore {
 }
 
 describe("admin code lockout", () => {
-  it("shares one persistent admin lockout key across settings and site-login checks", () => {
+  it("shares one persistent admin lockout key across settings and site-login checks", async () => {
     // Given
     const repository = new MemorySettingsRepository(createSettings());
     const lockoutStateStore = new MemoryLockoutStateStore();
     const nowMs = Date.parse("2026-06-26T00:00:00.000Z");
 
     // When
-    authenticateAdminCode({ lockoutStateStore, nowMs, rawCode: "bad-1", repository });
-    authenticateAdminCode({ lockoutStateStore, nowMs, rawCode: "bad-2", repository });
-    const lockedSettingsResult = authenticateAdminCode({
+    await authenticateAdminCode({ lockoutStateStore, nowMs, rawCode: "bad-1", repository });
+    await authenticateAdminCode({ lockoutStateStore, nowMs, rawCode: "bad-2", repository });
+    const lockedSettingsResult = await authenticateAdminCode({
       lockoutStateStore,
       nowMs,
       rawCode: "bad-3",
       repository
     });
-    const validSiteLoginWhileLocked = authenticateAdminSiteLogin({
+    const validSiteLoginWhileLocked = await authenticateAdminSiteLogin({
       lockoutStateStore,
       nowMs,
       rawCode: "admin-code",
@@ -57,7 +57,7 @@ describe("admin code lockout", () => {
     });
     const lockedEntry = lockoutStateStore.load().entries[ADMIN_LOCKOUT_KEY];
     lockoutStateStore.save(createLockoutState());
-    const validAfterReset = authenticateAdminCode({
+    const validAfterReset = await authenticateAdminCode({
       lockoutStateStore,
       nowMs,
       rawCode: "admin-code",

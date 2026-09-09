@@ -170,6 +170,27 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     }
   });
 
+  const recoverRenderer = (label: "Control" | "QR", target: Electron.WebContents): void => {
+    target.on("render-process-gone", (_event, details) => {
+      if (details.reason === "clean-exit" || target.isDestroyed()) {
+        return;
+      }
+
+      mainLogger.warn(`${label} renderer process exited; reloading.`, {
+        exitCode: details.exitCode,
+        reason: details.reason,
+        url: target.getURL()
+      });
+      target.reload();
+    });
+    target.on("unresponsive", () => {
+      mainLogger.warn(`${label} renderer is unresponsive.`, { url: target.getURL() });
+    });
+  };
+
+  recoverRenderer("QR", qrView.webContents);
+  recoverRenderer("Control", controlView.webContents);
+
   const applyThemeBackground = (): void => {
     const backgroundColor = getSystemNeutralBackground();
 

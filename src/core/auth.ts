@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes, scrypt, scryptSync, timingSafeEqual } from "node:crypto";
 
 export const SCRYPT_N = 2 ** 15;
 export const SCRYPT_R = 8;
@@ -7,6 +7,7 @@ export const SCRYPT_KEYLEN = 32;
 export const SCRYPT_SALT_BYTES = 16;
 
 const SCRYPT_MAXMEM_BYTES = 64 * 1024 * 1024;
+let verificationQueue = Promise.resolve();
 
 export interface AuthHash {
   readonly salt: string;
@@ -23,17 +24,25 @@ export const hashCode = (code: string): AuthHash => {
   };
 };
 
-export const verifyCode = (code: string, salt: string, hash: string): boolean => {
+export const verifyCode = (code: string, salt: string, hash: string): Promise<boolean> => {
   const saltBytes = Buffer.from(salt, "base64");
   const expectedHash = Buffer.from(hash, "base64");
 
   if (saltBytes.byteLength !== SCRYPT_SALT_BYTES || expectedHash.byteLength !== SCRYPT_KEYLEN) {
-    return false;
+    return Promise.resolve(false);
   }
 
-  const actualHash = deriveHash(code, saltBytes);
+  const verification = verificationQueue.then(async () => {
+    const actualHash = await deriveHashAsync(code, saltBytes);
 
-  return timingSafeEqual(actualHash, expectedHash);
+    return timingSafeEqual(actualHash, expectedHash);
+  });
+  verificationQueue = verification.then(
+    () => undefined,
+    () => undefined
+  );
+
+  return verification;
 };
 
 const deriveHash = (code: string, salt: Buffer): Buffer =>
@@ -42,6 +51,29 @@ const deriveHash = (code: string, salt: Buffer): Buffer =>
     maxmem: SCRYPT_MAXMEM_BYTES,
     p: SCRYPT_P,
     r: SCRYPT_R
+  });
+
+const deriveHashAsync = (code: string, salt: Buffer): Promise<Buffer> =>
+  new Promise((resolve, reject) => {
+    scrypt(
+      code,
+      salt,
+      SCRYPT_KEYLEN,
+      {
+        N: SCRYPT_N,
+        maxmem: SCRYPT_MAXMEM_BYTES,
+        p: SCRYPT_P,
+        r: SCRYPT_R
+      },
+      (error, derivedKey) => {
+        if (error === null) {
+          resolve(derivedKey);
+          return;
+        }
+
+        reject(error);
+      }
+    );
   });
 
 export const LOCKOUT_FAILURE_THRESHOLD = 3;

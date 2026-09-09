@@ -74,6 +74,10 @@ const electronMock = vi.hoisted(() => {
       return false;
     }
 
+    isDestroyed(): boolean {
+      return false;
+    }
+
     loadFile(filePath: string): Promise<void> {
       this.loadFileCalls.push(filePath);
 

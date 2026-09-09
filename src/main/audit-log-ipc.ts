@@ -1,5 +1,5 @@
 import { dialog, ipcMain, type IpcMainInvokeEvent } from "electron";
-import fs from "node:fs";
+import { writeFile } from "node:fs/promises";
 
 import {
   toCsv,
@@ -16,6 +16,8 @@ interface AuditLogIpcOptions {
   readonly auditLogStore: AuditLogStore;
 }
 
+const AUDIT_LOG_VIEW_LIMIT = 1_000;
+
 type QueryAuditLogResponse =
   | ({ readonly ok: true } & AuditLogReadResult)
   | { readonly errors: readonly string[]; readonly ok: false };
@@ -27,14 +29,19 @@ type ExportAuditLogResponse =
 export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
   ipcMain.handle(
     IPC_CHANNELS.queryAuditLog,
-    (event: IpcMainInvokeEvent, payload: unknown): QueryAuditLogResponse => {
+    async (event: IpcMainInvokeEvent, payload: unknown): Promise<QueryAuditLogResponse> => {
       if (!isSenderAuthorized(event)) {
         return unauthorizedResponse();
       }
 
+      const result = await options.auditLogStore.read({
+        ...readAuditLogFilter(payload),
+        limit: AUDIT_LOG_VIEW_LIMIT
+      });
+
       return {
         ok: true,
-        ...options.auditLogStore.read(readAuditLogFilter(payload))
+        ...result
       };
     }
   );
@@ -54,7 +61,7 @@ export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
 
       try {
         // Export intentionally covers the full log; the UI user filter is view-only.
-        const result = options.auditLogStore.read();
+        const result = await options.auditLogStore.read();
         const data = exportFormat === "jsonl" ? toJsonl(result.events) : toCsv(result.events);
         const saveResult = await dialog.showSaveDialog({
           defaultPath: `인증-기록.${exportFormat}`,
@@ -76,7 +83,7 @@ export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
           return errorResponse(["내보내기 경로를 사용할 수 없습니다."]);
         }
 
-        fs.writeFileSync(filePath, data, { encoding: "utf8", mode: 0o600 });
+        await writeFile(filePath, data, { encoding: "utf8", mode: 0o600 });
 
         return { canceled: false, ok: true };
       } catch {

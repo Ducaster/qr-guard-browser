@@ -10,12 +10,12 @@ export interface LockAuthenticator {
   readonly authenticateAdminSiteLogin: (
     rawCode: unknown,
     nowMs: number
-  ) => QrAccessAuthResult;
+  ) => Promise<QrAccessAuthResult>;
   readonly authenticateQrAccess: (
     rawUserId: unknown,
     rawCode: unknown,
     nowMs: number
-  ) => QrAccessAuthResult;
+  ) => Promise<QrAccessAuthResult>;
 }
 
 export interface LockAuthenticatorOptions {
@@ -27,7 +27,7 @@ export const createLockAuthenticator = (
   options: LockAuthenticatorOptions
 ): LockAuthenticator => {
   return {
-    authenticateAdminSiteLogin: (rawCode: unknown, nowMs: number): QrAccessAuthResult =>
+    authenticateAdminSiteLogin: (rawCode: unknown, nowMs: number): Promise<QrAccessAuthResult> =>
       authenticateAdminSiteLogin({
         lockoutStateStore: options.lockoutStateStore,
         nowMs,
@@ -38,7 +38,7 @@ export const createLockAuthenticator = (
       rawUserId: unknown,
       rawCode: unknown,
       nowMs: number
-    ): QrAccessAuthResult =>
+    ): Promise<QrAccessAuthResult> =>
       authenticateQrAccess({
         lockoutState: options.lockoutStateStore.load(),
         lockoutStateStore: options.lockoutStateStore,

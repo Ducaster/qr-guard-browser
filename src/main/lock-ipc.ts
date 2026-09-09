@@ -29,7 +29,7 @@ export const registerLockIpc = (
 
   ipcMain.handle(
     IPC_CHANNELS.submitUnlock,
-    (event: IpcMainInvokeEvent, userId: unknown, code: unknown): UnlockResponse => {
+    (event: IpcMainInvokeEvent, userId: unknown, code: unknown): Promise<UnlockResponse> | UnlockResponse => {
       if (!isControlSender(event, getControlWebContents)) {
         return unauthorizedUnlockResponse();
       }
@@ -40,7 +40,7 @@ export const registerLockIpc = (
 
   ipcMain.handle(
     IPC_CHANNELS.submitSiteLogin,
-    (event: IpcMainInvokeEvent, code: unknown): UnlockResponse => {
+    (event: IpcMainInvokeEvent, code: unknown): Promise<UnlockResponse> | UnlockResponse => {
       if (!isControlSender(event, getControlWebContents)) {
         return unauthorizedUnlockResponse();
       }

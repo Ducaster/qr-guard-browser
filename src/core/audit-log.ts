@@ -12,6 +12,7 @@ export interface AuditEvent {
 }
 
 export interface AuditLogFilter {
+  readonly limit?: number;
   readonly userId?: string;
 }
 
@@ -77,9 +78,11 @@ export const parseAuditLog = (
     filter.userId === undefined
       ? events
       : events.filter((event) => event.userId === filter.userId);
+  const visibleEvents =
+    filter.limit === undefined ? filteredEvents : filteredEvents.slice(-Math.max(0, filter.limit));
 
   return {
-    events: filteredEvents,
+    events: visibleEvents,
     // Last-auth is intentionally derived from all parsed events, not the user-filtered view.
     lastSuccessfulUnlockByUserId: deriveLastSuccessfulUnlocks(events),
     skippedLines

@@ -55,8 +55,8 @@ export interface LockController {
   readonly qrNavigateToUrl: (url: string) => Promise<ActionResponse>;
   readonly qrReload: () => void;
   readonly setQrLoadFailure: (failure: QrLoadFailure) => void;
-  readonly submitSiteLogin: (code: unknown) => UnlockResponse;
-  readonly submitUnlock: (userId: unknown, code: unknown) => UnlockResponse;
+  readonly submitSiteLogin: (code: unknown) => Promise<UnlockResponse>;
+  readonly submitUnlock: (userId: unknown, code: unknown) => Promise<UnlockResponse>;
 }
 
 export interface LockControllerOptions {
@@ -94,6 +94,8 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
     return visible;
   };
+
+  const isLocked = (): boolean => state === "locked";
 
   const getState = (): StateSnapshot => {
     const nowMs = Date.now();
@@ -171,14 +173,18 @@ export const createLockController = (options: LockControllerOptions): LockContro
 
   watchQrNavigation(options.qrWebContents, handleQrNavigation);
 
-  const submitUnlock = (rawUserId: unknown, rawCode: unknown): UnlockResponse => {
+  const submitUnlock = async (rawUserId: unknown, rawCode: unknown): Promise<UnlockResponse> => {
     const nowMs = Date.now();
 
-    if (state !== "locked") {
+    if (!isLocked()) {
       return notLockedResponse();
     }
 
-    const authResult = authenticator.authenticateQrAccess(rawUserId, rawCode, nowMs);
+    const authResult = await authenticator.authenticateQrAccess(rawUserId, rawCode, nowMs);
+
+    if (!isLocked()) {
+      return notLockedResponse();
+    }
 
     if (authResult.kind === "failure") {
       return authResult.response;
@@ -198,14 +204,18 @@ export const createLockController = (options: LockControllerOptions): LockContro
     };
   };
 
-  const submitSiteLogin = (rawCode: unknown): UnlockResponse => {
+  const submitSiteLogin = async (rawCode: unknown): Promise<UnlockResponse> => {
     const nowMs = Date.now();
 
-    if (state !== "locked") {
+    if (!isLocked()) {
       return notLockedResponse();
     }
 
-    const authResult = authenticator.authenticateAdminSiteLogin(rawCode, nowMs);
+    const authResult = await authenticator.authenticateAdminSiteLogin(rawCode, nowMs);
+
+    if (!isLocked()) {
+      return notLockedResponse();
+    }
 
     if (authResult.kind === "failure") {
       return authResult.response;

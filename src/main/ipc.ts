@@ -135,8 +135,8 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
 
   ipcMain.handle(
     IPC_CHANNELS.openSettings,
-    (event: IpcMainInvokeEvent, adminCode: unknown): ActionResponse => {
-      const authResult = authenticateSettingsAdmin(options, adminCode);
+    async (event: IpcMainInvokeEvent, adminCode: unknown): Promise<ActionResponse> => {
+      const authResult = await authenticateSettingsAdmin(options, adminCode);
 
       if (authResult.kind === "failure") {
         return errorResponse(authResult.response.errors);
@@ -215,7 +215,7 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
   ipcMain.handle(
     IPC_CHANNELS.clearQrSession,
     async (_event: IpcMainInvokeEvent, adminCode: unknown): Promise<ActionResponse> => {
-      const authResult = authenticateSettingsAdmin(options, adminCode);
+      const authResult = await authenticateSettingsAdmin(options, adminCode);
 
       // This destructive action intentionally re-requires the admin code directly
       // instead of trusting an existing admin session.
@@ -297,7 +297,7 @@ const loadSettingsForIpc = (repository: SettingsRepository): SettingsLoadRespons
 const authenticateSettingsAdmin = (
   options: SettingsIpcOptions,
   adminCode: unknown
-): AdminCodeAuthResult =>
+): Promise<AdminCodeAuthResult> =>
   authenticateAdminCode({
     lockoutStateStore: options.lockoutStateStore,
     nowMs: Date.now(),
