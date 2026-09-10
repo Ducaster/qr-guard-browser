@@ -76,8 +76,9 @@ Repeated failed unlocks trigger an increasing lockout delay.
 Successful unlock sessions are appended to a local JSONL audit log with user ID, unlock time, lock time, duration, lock reason, and app version. Settings shows:
 
 - Filterable audit rows by user ID.
+- Inclusive start/end date filters and per-region unlock counts for the selected period.
 - Last successful unlock time per user.
-- JSONL and CSV export.
+- JSONL export and UTF-8 BOM/CRLF CSV export for Windows Excel compatibility.
 
 Failed unlock attempts are not written as successful audit events.
 
