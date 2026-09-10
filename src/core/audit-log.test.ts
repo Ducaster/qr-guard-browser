@@ -66,7 +66,11 @@ describe("audit log JSONL", () => {
         staff01: "1970-01-01T00:00:01.000Z",
         staff02: "1970-01-01T00:00:03.000Z"
       },
-      skippedLines: 0
+      skippedLines: 0,
+      unlockCountByUserId: {
+        staff01: 1,
+        staff02: 1
+      }
     });
   });
 
@@ -105,7 +109,11 @@ describe("audit log JSONL", () => {
         staff01: "1970-01-01T00:00:06.000Z",
         staff02: "1970-01-01T00:00:03.000Z"
       },
-      skippedLines: 0
+      skippedLines: 0,
+      unlockCountByUserId: {
+        staff01: 2,
+        staff02: 1
+      }
     });
   });
 
@@ -212,7 +220,11 @@ describe("audit log JSONL", () => {
         staff01: "1970-01-01T00:00:01.000Z",
         staff02: "1970-01-01T00:00:03.000Z"
       },
-      skippedLines: 2
+      skippedLines: 2,
+      unlockCountByUserId: {
+        staff01: 1,
+        staff02: 1
+      }
     });
   });
 
@@ -251,7 +263,7 @@ describe("audit log JSONL", () => {
 
     // Then
     expect(csv).toBe(
-      'userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n"staff, ""ops""",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n'
+      '\uFEFFuserId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\r\n"staff, ""ops""",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\r\n'
     );
   });
 
@@ -283,7 +295,7 @@ describe("audit log JSONL", () => {
 
     // Then
     expect(csv).toBe(
-      `userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n${escapedUserId},1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n`
+      `\uFEFFuserId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\r\n${escapedUserId},1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\r\n`
     );
   });
 
@@ -296,7 +308,7 @@ describe("audit log JSONL", () => {
 
     // Then
     expect(csv).toBe(
-      'userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n"\'=SUM(A1),staff",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n'
+      '\uFEFFuserId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\r\n"\'=SUM(A1),staff",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\r\n'
     );
   });
 

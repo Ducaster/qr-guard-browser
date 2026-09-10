@@ -2,6 +2,7 @@ import {
   Button,
   Dropdown,
   Field,
+  Input,
   MessageBar,
   MessageBarBody,
   Option,
@@ -13,9 +14,9 @@ import {
 import { ArrowClockwise24Regular, ArrowExportLtr24Regular } from "@fluentui/react-icons";
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 
-import type { AuditEvent, AuditExportFormat } from "../../core/audit-log";
+import type { AuditEvent, AuditExportFormat, AuditLogFilter } from "../../core/audit-log";
 import { ActionsRow, SectionCard, WrapGrid } from "../fluentLayout";
-import { buttonSlot } from "../fluentSlots";
+import { buttonSlot, inputSlot } from "../fluentSlots";
 import { ErrorList, Message } from "../settings/Feedback";
 import { AuditLogTable } from "./AuditLogTable";
 import { createAuditGridRows, formatTimestamp, getAuditUserIds } from "./auditLogFormat";
@@ -29,15 +30,23 @@ export const AuditLogView = (): JSX.Element => {
     useState<Readonly<Record<string, string>>>({});
   const [skippedLines, setSkippedLines] = useState(0);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [unlockCountByUserId, setUnlockCountByUserId] =
+    useState<Readonly<Record<string, number>>>({});
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  const loadAuditLog = useCallback(async (userId: string): Promise<void> => {
+  const loadAuditLog = useCallback(async (
+    userId: string,
+    rangeFromDate: string,
+    rangeToDate: string
+  ): Promise<void> => {
     setIsLoading(true);
     const response = await window.qrGuard.queryAuditLog(
-      userId.length === 0 ? undefined : { userId }
+      createAuditLogFilter(userId, rangeFromDate, rangeToDate)
     );
 
     if (!response.ok) {
@@ -49,16 +58,22 @@ export const AuditLogView = (): JSX.Element => {
     setEvents(response.events);
     setLastSuccessfulUnlockByUserId(response.lastSuccessfulUnlockByUserId);
     setSkippedLines(response.skippedLines);
+    setUnlockCountByUserId(response.unlockCountByUserId);
     setErrors([]);
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    void loadAuditLog(selectedUserId).catch(() => {
+    if (fromDate.length > 0 && toDate.length > 0 && fromDate > toDate) {
+      setErrors(["시작일은 종료일보다 늦을 수 없습니다."]);
+      return;
+    }
+
+    void loadAuditLog(selectedUserId, fromDate, toDate).catch(() => {
       setErrors(["인증 기록을 불러올 수 없습니다."]);
       setIsLoading(false);
     });
-  }, [loadAuditLog, selectedUserId]);
+  }, [fromDate, loadAuditLog, selectedUserId, toDate]);
 
   const userIds = useMemo(
     () => getAuditUserIds(events, lastSuccessfulUnlockByUserId),
@@ -68,6 +83,10 @@ export const AuditLogView = (): JSX.Element => {
   const rows = useMemo(
     () => createAuditGridRows(events, lastSuccessfulUnlockByUserId),
     [events, lastSuccessfulUnlockByUserId]
+  );
+  const countRows = useMemo(
+    () => Object.entries(unlockCountByUserId).sort(([left], [right]) => left.localeCompare(right)),
+    [unlockCountByUserId]
   );
 
   const exportAuditLog = (format: AuditExportFormat): void => {
@@ -102,7 +121,7 @@ export const AuditLogView = (): JSX.Element => {
           disabled={isLoading}
           icon={<ArrowClockwise24Regular />}
           onClick={() => {
-            void loadAuditLog(selectedUserId).catch(() => {
+            void loadAuditLog(selectedUserId, fromDate, toDate).catch(() => {
               setErrors(["인증 기록을 불러올 수 없습니다."]);
               setIsLoading(false);
             });
@@ -134,6 +153,28 @@ export const AuditLogView = (): JSX.Element => {
             ))}
           </Dropdown>
         </Field>
+        <Field label="시작일">
+          <Input
+            disabled={isLoading}
+            input={inputSlot({ "data-testid": "audit-date-from" })}
+            onChange={(_event, data) => {
+              setFromDate(data.value);
+            }}
+            type="date"
+            value={fromDate}
+          />
+        </Field>
+        <Field label="종료일">
+          <Input
+            disabled={isLoading}
+            input={inputSlot({ "data-testid": "audit-date-to" })}
+            onChange={(_event, data) => {
+              setToDate(data.value);
+            }}
+            type="date"
+            value={toDate}
+          />
+        </Field>
         <ActionsRow>
           <Button
             appearance="secondary"
@@ -162,6 +203,32 @@ export const AuditLogView = (): JSX.Element => {
 
       {isLoading ? <Spinner label="인증 기록 불러오는 중" size="small" /> : null}
 
+      <div className={styles.countSection}>
+        <Text weight="semibold">기간별 지역 인증 횟수</Text>
+        {countRows.length === 0 ? (
+          <Text data-testid="audit-count-empty" size={200}>선택한 기간의 지역 인증 기록이 없습니다.</Text>
+        ) : (
+          <div className={styles.countTableScroller}>
+            <table aria-label="기간별 지역 인증 횟수" className={styles.countTable}>
+              <thead>
+                <tr>
+                  <th scope="col">지역</th>
+                  <th scope="col">인증 횟수</th>
+                </tr>
+              </thead>
+              <tbody>
+                {countRows.map(([userId, count]) => (
+                  <tr key={userId}>
+                    <td>{userId}</td>
+                    <td data-testid={`audit-count-${userId}`}>{count.toLocaleString("ko-KR")}회</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className={styles.lastAuthList} data-testid="audit-last-auth-list">
         {userIds.length === 0 ? <Text size={200}>성공한 인증 기록이 없습니다.</Text> : null}
         {userIds.map((userId) => (
@@ -189,6 +256,32 @@ export const AuditLogView = (): JSX.Element => {
 };
 
 const useAuditStyles = makeStyles({
+  countSection: {
+    display: "grid",
+    gap: tokens.spacingVerticalS
+  },
+  countTable: {
+    borderCollapse: "collapse",
+    minWidth: "320px",
+    width: "100%",
+    "& th": {
+      backgroundColor: tokens.colorNeutralBackground3,
+      fontWeight: tokens.fontWeightSemibold,
+      textAlign: "left"
+    },
+    "& td, & th": {
+      borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+      padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`
+    },
+    "& td:last-child, & th:last-child": {
+      textAlign: "right"
+    }
+  },
+  countTableScroller: {
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    overflowX: "auto"
+  },
   lastAuthItem: {
     backgroundColor: tokens.colorNeutralBackground3,
     borderRadius: tokens.borderRadiusMedium,
@@ -204,3 +297,22 @@ const useAuditStyles = makeStyles({
     gap: tokens.spacingHorizontalM
   }
 });
+
+const createAuditLogFilter = (
+  userId: string,
+  fromDate: string,
+  toDate: string
+): AuditLogFilter => ({
+  ...(toDate.length === 0 ? {} : { beforeUnlockedAt: startOfNextLocalDate(toDate) }),
+  ...(fromDate.length === 0 ? {} : { fromUnlockedAt: startOfLocalDate(fromDate) }),
+  ...(userId.length === 0 ? {} : { userId })
+});
+
+const startOfLocalDate = (value: string): string => new Date(`${value}T00:00:00`).toISOString();
+
+const startOfNextLocalDate = (value: string): string => {
+  const date = new Date(`${value}T00:00:00`);
+  date.setDate(date.getDate() + 1);
+
+  return date.toISOString();
+};

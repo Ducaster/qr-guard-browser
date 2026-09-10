@@ -12,6 +12,8 @@ export interface AuditEvent {
 }
 
 export interface AuditLogFilter {
+  readonly beforeUnlockedAt?: string;
+  readonly fromUnlockedAt?: string;
   readonly limit?: number;
   readonly userId?: string;
 }
@@ -20,6 +22,7 @@ export interface AuditLogReadResult {
   readonly events: readonly AuditEvent[];
   readonly lastSuccessfulUnlockByUserId: Readonly<Record<string, string>>;
   readonly skippedLines: number;
+  readonly unlockCountByUserId: Readonly<Record<string, number>>;
 }
 
 export interface AuditEventInput {
@@ -74,10 +77,14 @@ export const parseAuditLog = (
     }
   }
 
+  const dateFilteredEvents = events.filter((event) =>
+    (filter.fromUnlockedAt === undefined || event.unlockedAt >= filter.fromUnlockedAt) &&
+    (filter.beforeUnlockedAt === undefined || event.unlockedAt < filter.beforeUnlockedAt)
+  );
   const filteredEvents =
     filter.userId === undefined
-      ? events
-      : events.filter((event) => event.userId === filter.userId);
+      ? dateFilteredEvents
+      : dateFilteredEvents.filter((event) => event.userId === filter.userId);
   const visibleEvents =
     filter.limit === undefined ? filteredEvents : filteredEvents.slice(-Math.max(0, filter.limit));
 
@@ -85,7 +92,8 @@ export const parseAuditLog = (
     events: visibleEvents,
     // Last-auth is intentionally derived from all parsed events, not the user-filtered view.
     lastSuccessfulUnlockByUserId: deriveLastSuccessfulUnlocks(events),
-    skippedLines
+    skippedLines,
+    unlockCountByUserId: deriveUnlockCounts(dateFilteredEvents)
   };
 };
 
@@ -97,7 +105,7 @@ export const toCsv = (events: readonly AuditEvent[]): string => {
     AUDIT_CSV_FIELDS.map((field) => escapeCsvField(String(event[field]))).join(",")
   );
 
-  return `${[AUDIT_CSV_FIELDS.join(","), ...rows].join("\n")}\n`;
+  return `\uFEFF${[AUDIT_CSV_FIELDS.join(","), ...rows].join("\r\n")}\r\n`;
 };
 
 type ParsedAuditLogLine =
@@ -149,6 +157,20 @@ const deriveLastSuccessfulUnlocks = (
   }
 
   return lastSuccessfulUnlockByUserId;
+};
+
+const deriveUnlockCounts = (
+  events: readonly AuditEvent[]
+): Readonly<Record<string, number>> => {
+  const unlockCountByUserId: Record<string, number> = {};
+
+  for (const event of events) {
+    if (!isSystemAuditUserId(event.userId)) {
+      unlockCountByUserId[event.userId] = (unlockCountByUserId[event.userId] ?? 0) + 1;
+    }
+  }
+
+  return unlockCountByUserId;
 };
 
 export const isSystemAuditUserId = (userId: string): boolean =>

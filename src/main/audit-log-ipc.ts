@@ -94,13 +94,29 @@ export const registerAuditLogIpc = (options: AuditLogIpcOptions): void => {
 };
 
 const readAuditLogFilter = (value: unknown): AuditLogFilter => {
-  if (!isRecord(value) || typeof value["userId"] !== "string") {
+  if (!isRecord(value)) {
     return {};
   }
 
-  const userId = value["userId"].trim();
+  const userId = typeof value["userId"] === "string" ? value["userId"].trim() : "";
+  const fromUnlockedAt = readIsoTimestamp(value["fromUnlockedAt"]);
+  const beforeUnlockedAt = readIsoTimestamp(value["beforeUnlockedAt"]);
 
-  return userId.length === 0 ? {} : { userId };
+  return {
+    ...(beforeUnlockedAt === undefined ? {} : { beforeUnlockedAt }),
+    ...(fromUnlockedAt === undefined ? {} : { fromUnlockedAt }),
+    ...(userId.length === 0 ? {} : { userId })
+  };
+};
+
+const readIsoTimestamp = (value: unknown): string | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const timestamp = Date.parse(value);
+
+  return Number.isNaN(timestamp) ? undefined : new Date(timestamp).toISOString();
 };
 
 const readExportFormat = (value: unknown): AuditExportFormat | null => {

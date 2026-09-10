@@ -71,6 +71,7 @@ export type QueryAuditLogResponse =
       readonly lastSuccessfulUnlockByUserId: Readonly<Record<string, string>>;
       readonly ok: true;
       readonly skippedLines: number;
+      readonly unlockCountByUserId: Readonly<Record<string, number>>;
     }
   | { readonly errors: readonly string[]; readonly ok: false };
 
