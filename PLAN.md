@@ -24,13 +24,13 @@
 - **Windows용 앱** (`.exe` Squirrel 설치본)
 - 두 플랫폼 모두 빌드하는 방법과 한계를 문서화(코드 서명, 크로스 빌드 제약, CI 매트릭스).
 
-**난이도:** 중 / **위험:** 중 — 가장 불확실한 부분은 실제 QR 사이트의 최종 QR 화면 title 패턴을 아직 모른다는 점. 그래서 운영자가 직접 등록할 수 있는 `QR 화면 제목` 설정과 `이 화면이 QR입니다` 학습 버튼을 둔다.
+**난이도:** 중 / **위험:** 중 — 실제 사이트의 로그인 완료 화면과 QR 송출 화면을 범용 규칙으로 안전하게 구분하기 어렵다. 그래서 관리자가 QR 송출 페이지까지 이동한 뒤 `QR 송출 준비 완료`를 눌러 직접 잠근다.
 
 **다음 행동:** Wave 1(Bootstrap)부터 구현 시작.
 
 ---
 
-> TL;DR (machine): Electron + TypeScript. 영속 `persist:qr-site` WebContentsView로 QR 사이트 호스팅. 잠금/설정/로그 control view를 위에 얹음. **잠금 = QR 뷰를 실제로 `setVisible(false)` 처리**(덮기 아님). QR webContents는 `backgroundThrottling:false`로 숨김 상태에서도 갱신 유지. QR 노출은 지역 인증 잠금해제 또는 관리자 인증을 거친 사이트 로그인 모드에서만 허용. 사이트 로그인 중에는 `QR 화면 제목` 패턴 매치 시 즉시 잠금. 로컬 salted-hash 인증, brute-force 잠금, idle auto-lock, JSONL 감사 로그. macOS(dmg/zip) + Windows(squirrel) 듀얼 패키징 + GitHub Actions 매트릭스.
+> TL;DR (machine): Electron + TypeScript. 영속 `persist:qr-site` WebContentsView로 QR 사이트 호스팅. 잠금/설정/로그 control view를 위에 얹음. **잠금 = QR 뷰를 실제로 `setVisible(false)` 처리**(덮기 아님). QR webContents는 숨김 상태에서 스로틀링하며 세션은 유지한다. QR 노출은 지역 인증 잠금해제 또는 관리자 인증을 거친 사이트 로그인 모드에서만 허용. 사이트 로그인은 관리자가 QR 송출 페이지에서 완료 버튼을 누르면 잠금. 로컬 salted-hash 인증, brute-force 잠금, idle auto-lock, JSONL 감사 로그. macOS(dmg/zip) + Windows(squirrel) 듀얼 패키징 + GitHub Actions 매트릭스.
 
 ---
 
@@ -67,8 +67,8 @@
 - 사이트 로그인 흐름 (**관리자 인증 필요**):
   - 운영자가 관리자 코드를 입력해야 QR 사이트 로그인 페이지와 중간 페이지를 볼 수 있다.
   - 다단계 로그인 중 URL 변경은 허용한다.
-  - 설정의 `QR 화면 제목` 패턴이 현재 페이지 제목과 매치되면 즉시 잠금한다.
-  - 운영자가 첫 QR 화면에서 `이 화면이 QR입니다`를 누르면 현재 제목을 저장하고 즉시 잠금한다.
+  - 로그인 후 중간 페이지와 QR 송출 페이지까지 탐색을 계속 허용한다.
+  - 운영자가 QR 송출 페이지에서 `QR 송출 준비 완료`를 누르면 현재 제목을 기록하고 즉시 잠금한다.
 - 보안 보강:
   - 인증 코드 **brute-force 방어**(연속 실패 시 점증 지연/일시 잠금).
   - **유휴 자동 잠금**(노출 중 일정 시간 무입력 시 자동 relock; 기본 별도 설정값).
@@ -132,7 +132,7 @@ unlocked --(타이머 만료)------------> locked        // QR reload 없음
 unlocked --(수동 잠금)--------------> locked
 unlocked --(유휴 타임아웃)----------> locked
 
-siteLogin --(QR 화면 제목 패턴 매치)--------------> locked
+siteLogin --(QR 송출 준비 완료)------------------> locked
 siteLogin --(수동 '지금 잠그기')------------------> locked
 siteLogin --(유휴 타임아웃)----------------------> locked
 siteLogin --(최대 지속시간 5분 도달)--------------> locked   // 운영자가 중간에 자리를 비운 경우의 보조 안전장치
@@ -155,7 +155,7 @@ function shouldShowQrView(state):
 ### 3.3 자동 로그인 화면 감지 (제거됨)
 URL/title 기반으로 로그인 화면을 자동 판정해 인증 없이 노출하는 기능은 제거됐다. QR 사이트가 다단계 로그인이라 URL 패턴만으로 안전하게 구분할 수 없기 때문이다.
 
-현재 로그인 지원은 관리자 인증을 거친 `siteLogin` 상태만 사용한다. 이 모드에서는 다단계 로그인/중간 페이지 이동을 허용하고, 설정의 `qrTitlePattern`을 현재 페이지 제목에 대해 대소문자/공백 정규화된 부분 문자열로 매칭한다. 매칭되면 즉시 `locked`로 돌아가 QR 뷰를 숨긴다. 운영자가 첫 QR 화면에서 `이 화면이 QR입니다`를 누르면 현재 제목을 `qrTitlePattern`으로 저장하고 잠근다.
+현재 로그인 지원은 관리자 인증을 거친 `siteLogin` 상태만 사용한다. 이 모드에서는 다단계 로그인과 QR 송출 페이지까지의 이동을 허용한다. 운영자가 `QR 송출 준비 완료`를 누르면 현재 제목이 있을 경우 `qrTitlePattern`에 기록하고 `locked`로 돌아가 QR 뷰를 숨긴다. 제목이 없어도 잠금은 수행한다.
 
 ### 3.4 폴더 구조 (feature 단위)
 ```
@@ -172,7 +172,6 @@ qr-guard-browser/
 │   │   └── windows-permissions.ts  # new-window deny, permission 핸들러
 │   ├── core/                       # 순수 로직(Vitest 대상, Electron 비의존)
 │   │   ├── state-machine.ts        # 상태 전이 + shouldShowQrView
-│   │   ├── qr-title-detector.ts    # QR 화면 제목 매칭
 │   │   ├── auth.ts                 # scrypt 해시/검증, brute-force 카운터
 │   │   ├── settings-repo.ts        # 스키마 + 마이그레이션 + 기본값
 │   │   └── audit-log.ts            # JSONL append/read/filter/export
@@ -183,7 +182,7 @@ qr-guard-browser/
 │       ├── lock/LockScreen.tsx
 │       ├── settings/SettingsView.tsx
 │       ├── logs/AuditLogView.tsx
-│       └── toolbar/Toolbar.tsx     # 카운트다운, 수동 잠금, QR 제목 학습
+│       └── toolbar/Toolbar.tsx     # 카운트다운, 수동 잠금, 사이트 로그인 완료
 ├── fixtures/
 │   └── qr-site-server.ts           # /login /dashboard /qr 픽스처 서버
 ├── e2e/                            # Playwright Electron
@@ -251,8 +250,8 @@ window.qrGuard = {
 ## 4. 검증 전략
 > 사람 개입 0 — 모든 검증은 에이전트가 실행.
 - 방식: tests-after + state-machine-first. 순수 로직 Vitest, 앱 플로우 Playwright Electron.
-- 단위 테스트 대상: scrypt 해시/검증, brute-force 카운터, settings 마이그레이션/기본값, audit append/read/export, **상태 머신 전이**, **QR 제목 감지 + siteLogin 자동 잠금**.
-- 앱/e2e 대상: 첫 실행 설정, 잠금→인증→카운트다운→타이머 relock(QR reload 없음 확인), 실패 인증은 잠금 유지+성공 로그 없음, `/login`은 인증 없이 노출되지 않음, 관리자 인증 후 다단계 사이트 로그인, QR 제목 매치 시 즉시 잠금, 유휴 자동 잠금, 설정 변경 반영.
+- 단위 테스트 대상: scrypt 해시/검증, brute-force 카운터, settings 마이그레이션/기본값, audit append/read/export, **상태 머신 전이**, **siteLogin 수동 완료 잠금**.
+- 앱/e2e 대상: 첫 실행 설정, 잠금→인증→카운트다운→타이머 relock(QR reload 없음 확인), 실패 인증은 잠금 유지+성공 로그 없음, `/login`은 인증 없이 노출되지 않음, 관리자 인증 후 다단계 사이트 로그인과 QR 송출 준비 완료 잠금, 유휴 자동 잠금, 설정 변경 반영.
 - **fail-safe 전용 회귀 테스트**: 인증 없는 QR 사이트 노출이 없고 `shouldShowQrView()`가 유일한 가시성 게이트임을 단언.
 - 픽스처 QR 사이트: 프로젝트 내부 로컬 서버. 라우트 `/login` `/dashboard` `/qr`. 쿠키 기반 세션 시뮬레이션 + 만료/유효 강제 토글 + QR 주기 갱신 시뮬레이션.
 - 증거 경로(프로젝트 내부): `./evidence/task-1..8.txt`, `./evidence/final.txt`.
@@ -313,10 +312,10 @@ window.qrGuard = {
   QA: Happy — 잠금 토글·카운트다운 만료 동안 픽스처 QR 페이지 유지. Failure — 오답이 QR 노출/성공로그 미생성.
   Commit: feat(lock): add timed unlock flow with single visibility gate
 
-- [ ] **6. 사이트 로그인 + QR 제목 감지 + 유휴 자동 잠금**
-  할 일 / 금지: 관리자 코드 성공 후에만 `siteLogin` 진입. 다단계 로그인/중간 페이지 이동 허용. `qrTitlePattern`이 현재 제목과 매치되면 즉시 relock. `이 화면이 QR입니다` 학습 버튼 제공. 인증 없는 `/login` 노출 금지. **유휴 자동 잠금**(무입력 시 relock). 사이트 비밀번호 저장/자동입력은 운영자 선택과 `safeStorage` 봉인만 허용.
-  수용 기준: 단위 — QR 제목 매치/불일치, siteLogin 진입/실패, QR 제목 매치 relock, 유휴 타임아웃 relock. e2e — `/login`은 인증 없이 숨김, 관리자 인증 후 다단계 로그인 가능, `/qr` 제목에서 즉시 relock. `npm run test`,`npm run test:e2e`. 출력 `./evidence/task-6.txt`.
-  QA: Happy — 관리자 인증 후 픽스처 로그인→중간 단계→QR까지 이동하고 제목 매치로 relock. Failure — 틀린 관리자 코드와 인증 없는 `/login` 노출 차단.
+- [ ] **6. 사이트 로그인 수동 완료 + 유휴 자동 잠금**
+  할 일 / 금지: 관리자 코드 성공 후에만 `siteLogin` 진입. 다단계 로그인과 QR 송출 페이지까지 이동 허용. `QR 송출 준비 완료` 버튼으로 relock. 인증 없는 `/login` 노출 금지. **유휴 자동 잠금**(무입력 시 relock). 사이트 비밀번호 저장/자동입력은 운영자 선택과 `safeStorage` 봉인만 허용.
+  수용 기준: 단위 — siteLogin 진입/실패, 탐색 중 잠금 유지, 수동 완료 relock, 유휴 타임아웃 relock. e2e — `/login`은 인증 없이 숨김, 관리자 인증 후 다단계 로그인과 `/qr` 이동 가능, 완료 버튼에서 relock. `npm run test`,`npm run test:e2e`. 출력 `./evidence/task-6.txt`.
+  QA: Happy — 관리자 인증 후 픽스처 로그인→중간 단계→QR까지 이동하고 완료 버튼으로 relock. Failure — 틀린 관리자 코드와 인증 없는 `/login` 노출 차단.
   Commit: feat(auth-state): add admin site login and idle lock
 
 - [ ] **7. 감사 로그 뷰 + 마지막 인증 표시 + 내보내기**
@@ -337,7 +336,7 @@ window.qrGuard = {
 > 모든 Todo 후 병렬 실행. 전원 APPROVE 필요. 결과를 사용자에게 보고하고 명시적 동의 전 "완료" 선언 금지.
 - [ ] **F1. 계획 준수 감사** — 모든 Must have 구현/문서화, 모든 Must NOT have 준수, 프로젝트 경로 정확. 증거 `./evidence/final.txt`.
 - [ ] **F2. 코드 품질/보안 자세** — `nodeIntegration` 없음, `contextIsolation` on, preload 좁음, QR 자격증명 미저장, QR iframe 없음, 평문 코드 없음, **fail-safe 불변식(인증 전 숨김, 가시성 단일 게이트) 코드로 확인**. 증거 `./evidence/final.txt`.
-- [ ] **F3. 실제 수동 QA** — 첫설정, 설정 진입, 실패 잠금해제, 성공 잠금해제, 타이머 relock, 유휴 relock, 관리자 사이트 로그인, QR 제목 매치 relock, 감사 로그 표시/내보내기. 스크린샷/트레이스 캡처. 증거 `./evidence/final.txt`.
+- [ ] **F3. 실제 수동 QA** — 첫설정, 설정 진입, 실패 잠금해제, 성공 잠금해제, 타이머 relock, 유휴 relock, 관리자 사이트 로그인, QR 송출 준비 완료 relock, 감사 로그 표시/내보내기. 스크린샷/트레이스 캡처. 증거 `./evidence/final.txt`.
 - [ ] **F4. 패키징 충실도** — macOS·Windows makers 구성 존재, CI 매트릭스 동작, 로컬에서 실제 빌드된 플랫폼만 "검증됨"으로 표기, 미빌드 플랫폼은 정확히 표기. 리버스 프록시·자격증명 자동화·클라우드 없음. 증거 `./evidence/final.txt`.
 
 ---

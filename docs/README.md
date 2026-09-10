@@ -27,7 +27,7 @@ On first launch, enter:
 - At least one user: user ID plus local unlock code.
 - Unlock seconds: how long QR stays visible after successful user unlock. Default is 10 seconds.
 - Idle seconds: how long system inactivity may continue before an unlocked QR view relocks. Default is 30 seconds.
-- QR screen title: optional title text used to relock admin-authenticated site login when the QR page is reached.
+- QR screen title: the last page title recorded when the operator completed site login.
 
 Admin and user codes are stored as salted `scrypt` hashes. The settings file is sealed with Electron `safeStorage` when available.
 
@@ -42,7 +42,7 @@ QR exposure is limited to:
 - Regional unlock with a configured user code.
 - Admin-authenticated `siteLogin`, used when an operator needs to log in to the QR site.
 
-During `siteLogin`, multi-step navigation is allowed. When the current page title matches the configured QR screen title, the app immediately relocks and hides the QR view. The toolbar can also learn the current page title as the QR screen title.
+During `siteLogin`, multi-step navigation remains visible after the website login succeeds. At the QR broadcast page, the operator selects `QR 송출 준비 완료`; the app records the current title when available, relocks, and hides the QR view.
 
 ## User And Code Management
 
@@ -50,7 +50,7 @@ Open Settings with the admin code. From Settings you can:
 
 - Change the QR URL.
 - Change unlock and idle-lock durations.
-- Change the QR screen title pattern.
+- Review or change the recorded QR screen title.
 - Add, rename, or delete users.
 - Reset a user's unlock code.
 - Manage saved QR-site logins.
@@ -67,7 +67,7 @@ User unlock flow:
 1. Enter user ID and code.
 2. On success, the QR view appears for the configured unlock duration.
 3. The countdown toolbar remains visible.
-4. Timer expiry, manual lock, idle timeout, or QR-title detection during `siteLogin` hides the QR view without reloading it.
+4. Timer expiry, manual completion, manual lock, or idle timeout hides the QR view without reloading it.
 
 Repeated failed unlocks trigger an increasing lockout delay.
 

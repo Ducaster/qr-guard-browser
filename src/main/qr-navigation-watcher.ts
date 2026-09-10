@@ -30,11 +30,6 @@ export interface QrWebContentsLike {
   readonly reload: () => void;
 }
 
-export interface QrNavigationSnapshot {
-  readonly title: string;
-  readonly url: string;
-}
-
 const QR_NAVIGATION_EVENTS = [
   "did-navigate",
   "did-navigate-in-page",
@@ -43,14 +38,6 @@ const QR_NAVIGATION_EVENTS = [
   "did-start-navigation",
   "page-title-updated"
 ] as const satisfies readonly QrNavigationEvent[];
-
-export const readQrNavigationSnapshot = (
-  webContents: QrWebContentsLike,
-  target?: QrNavigationTarget
-): QrNavigationSnapshot => ({
-  title: webContents.getTitle(),
-  url: target?.url ?? webContents.getURL()
-});
 
 export const watchQrNavigation = (
   webContents: QrWebContentsLike,

@@ -154,7 +154,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                   />
                 </Field>
               </SplitTwo>
-              <Field label="QR 화면 제목">
+              <Field label="QR 송출 화면 제목 기록">
                 <Input
                   disabled={isBusy || settings === null}
                   input={inputSlot({ "data-testid": "settings-qr-title-pattern" })}

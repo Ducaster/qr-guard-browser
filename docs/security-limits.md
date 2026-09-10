@@ -13,8 +13,8 @@ The app protects that asset by:
 - Hiding the QR view with `setVisible(false)` while locked.
 - Allowing QR exposure only after a regional user unlock or an admin-authenticated
   `siteLogin` session.
-- Relocking `siteLogin` immediately when the configured QR-title pattern matches
-  the current QR page title.
+- Keeping `siteLogin` available only after administrator authentication and relocking when
+  the operator confirms the QR broadcast page, the idle timeout fires, or the safety cap expires.
 
 ## Out Of Scope
 
