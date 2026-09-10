@@ -1,5 +1,4 @@
 import type { AuditLockReason } from "../core/audit-log";
-import { matchesQrTitle } from "../core/qr-title-detector";
 import {
   closeSettings,
   completeSetup,
@@ -24,9 +23,7 @@ import { notLockedResponse } from "./qr-access-auth";
 import { loadQrUrlOrBlank } from "./qr-url-loader";
 import { learnQrTitleFromCurrentPage, type ActionResponse } from "./qr-title-learning";
 import {
-  readQrNavigationSnapshot,
   watchQrNavigation,
-  type QrNavigationTarget,
   type QrWebContentsLike
 } from "./qr-navigation-watcher";
 import { loadSettingsForMainEvent } from "./settings-load-failsafe";
@@ -150,25 +147,8 @@ export const createLockController = (options: LockControllerOptions): LockContro
     ...(options.siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs: options.siteLoginTimeoutOverrideMs })
   }).sync;
 
-  const evaluateQrNavigation = (target?: QrNavigationTarget): void => {
-    if (state !== "siteLogin") {
-      return;
-    }
-
-    const settings = loadSettingsForMainEvent(options.repository, "QR navigation");
-
-    if (settings === null) { relock("manual"); return; }
-
-    const snapshot = readQrNavigationSnapshot(options.qrWebContents, target);
-
-    if (matchesQrTitle(snapshot.title, settings.qrTitlePattern)) {
-      relock("qr-title");
-    }
-  };
-
-  const handleQrNavigation = (target?: QrNavigationTarget): void => {
+  const handleQrNavigation = (): void => {
     emitState();
-    evaluateQrNavigation(target);
   };
 
   watchQrNavigation(options.qrWebContents, handleQrNavigation);
@@ -221,20 +201,9 @@ export const createLockController = (options: LockControllerOptions): LockContro
       return authResult.response;
     }
 
-    if (matchesQrTitle(options.qrWebContents.getTitle(), authResult.settings.qrTitlePattern)) {
-      return {
-        ok: true,
-        state: getState()
-      };
-    }
-
     auditSessions.beginUnlockSession(authResult.userId, nowMs);
     unlockExpiresAtMs = null;
-    const nextState = enterSiteLogin(state);
-    setState(nextState);
-    if (nextState === "siteLogin" && matchesQrTitle(options.qrWebContents.getTitle(), authResult.settings.qrTitlePattern)) {
-      relock("qr-title");
-    }
+    setState(enterSiteLogin(state));
 
     return {
       ok: true,
@@ -285,7 +254,6 @@ export const createLockController = (options: LockControllerOptions): LockContro
     },
     completeSetup: () => {
       setState(completeSetup(state));
-      evaluateQrNavigation();
     },
     getState,
     learnCurrentQrTitle,

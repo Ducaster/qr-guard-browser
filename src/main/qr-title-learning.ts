@@ -25,17 +25,13 @@ export const learnQrTitleFromCurrentPage = (input: QrTitleLearningInput): Action
 
   const title = input.qrWebContents.getTitle().trim();
 
-  if (title.length === 0) {
-    return {
-      errors: ["현재 화면 제목을 읽을 수 없습니다."],
-      ok: false
-    };
+  if (title.length > 0) {
+    input.repository.save({
+      ...input.repository.load(),
+      qrTitlePattern: title
+    });
   }
 
-  input.repository.save({
-    ...input.repository.load(),
-    qrTitlePattern: title
-  });
   input.relock("manual");
 
   return { ok: true };

@@ -165,7 +165,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
         {isSiteLogin ? (
           <ToolbarButton
             appearance="subtle"
-            aria-label="이 화면이 QR입니다"
+            aria-label="QR 송출 준비 완료"
             className={styles.actionButton}
             data-testid="learn-qr-title"
             icon={<QrCode24Regular />}
@@ -174,7 +174,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             }}
             type="button"
           >
-            <span className={styles.actionLabel}>이 화면이 QR입니다</span>
+            <span className={styles.actionLabel}>QR 송출 준비 완료</span>
           </ToolbarButton>
         ) : null}
         <ToolbarButton

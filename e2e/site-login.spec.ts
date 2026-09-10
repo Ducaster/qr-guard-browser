@@ -41,10 +41,12 @@ test.describe("site login mode", () => {
       expect(qrUrl.searchParams.has("token")).toBe(true);
       await expect(controlPage.getByTestId("site-login-indicator")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
-      await expect(controlPage.getByRole("button", { name: "QR 송출 준비 완료" })).toBeVisible();
+      const completeButton = controlPage.getByTestId("learn-qr-title");
+      await expect(completeButton).toBeVisible();
+      await expect(completeButton).toContainText("QR 송출 준비 완료");
 
       // When
-      await controlPage.getByTestId("learn-qr-title").click();
+      await completeButton.click();
 
       // Then
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
