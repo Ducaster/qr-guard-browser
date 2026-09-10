@@ -154,6 +154,31 @@ describe("audit log JSONL", () => {
     });
   });
 
+  it("filters by unlock date and counts every region before the user-row filter", () => {
+    // Given
+    const events = [
+      eventAt("staff01", Date.parse("2026-09-01T10:00:00.000Z")),
+      eventAt("staff01", Date.parse("2026-09-02T10:00:00.000Z")),
+      eventAt("staff02", Date.parse("2026-09-03T10:00:00.000Z")),
+      eventAt("관리자", Date.parse("2026-09-03T11:00:00.000Z")),
+      eventAt("staff02", Date.parse("2026-09-04T10:00:00.000Z"))
+    ];
+
+    // When
+    const result = parseAuditLog(toJsonl(events), {
+      beforeUnlockedAt: "2026-09-04T00:00:00.000Z",
+      fromUnlockedAt: "2026-09-02T00:00:00.000Z",
+      userId: "staff01"
+    });
+
+    // Then
+    expect(result.events).toEqual([events[1]]);
+    expect(result.unlockCountByUserId).toEqual({
+      staff01: 1,
+      staff02: 1
+    });
+  });
+
   it("skips malformed and wrong-shape lines while reporting the skipped count", () => {
     // Given
     const firstEvent = buildAuditEvent({
@@ -228,6 +253,20 @@ describe("audit log JSONL", () => {
     expect(csv).toBe(
       'userId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\n"staff, ""ops""",1970-01-01T00:00:01.000Z,1970-01-01T00:00:02.000Z,1,manual,0.1.0\n'
     );
+  });
+
+  it("exports an Excel-compatible UTF-8 CSV with BOM and CRLF rows", () => {
+    // Given
+    const event = eventWithUserId("서울 지역");
+
+    // When
+    const csv = toCsv([event]);
+    const bytes = Buffer.from(csv, "utf8");
+
+    // Then
+    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(csv).toContain("\r\n서울 지역,");
+    expect(csv.replaceAll("\r\n", "")).not.toContain("\n");
   });
 
   it.each([

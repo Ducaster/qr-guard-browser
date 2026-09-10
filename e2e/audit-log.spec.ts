@@ -49,6 +49,20 @@ test.describe("audit log settings view", () => {
       await expect(rows.filter({ hasText: "staff02" })).toHaveCount(1);
       await expect(controlPage.getByTestId("audit-last-auth-staff01")).not.toContainText("없음");
       await expect(controlPage.getByTestId("audit-last-auth-staff02")).not.toContainText("없음");
+      await expect(controlPage.getByTestId("audit-count-staff01")).toContainText("1");
+      await expect(controlPage.getByTestId("audit-count-staff02")).toContainText("1");
+
+      const tomorrow = await controlPage.evaluate(() => {
+        const date = new Date();
+        date.setDate(date.getDate() + 1);
+
+        return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+          .map((part) => String(part).padStart(2, "0"))
+          .join("-");
+      });
+      await controlPage.getByTestId("audit-date-from").fill(tomorrow);
+      await expect(rows).toHaveCount(0);
+      await expect(controlPage.getByTestId("audit-count-empty")).toBeVisible();
     } finally {
       await closeLaunchedApp(launchedApp);
     }
