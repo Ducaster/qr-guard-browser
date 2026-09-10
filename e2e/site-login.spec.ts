@@ -20,7 +20,7 @@ test.describe("site login mode", () => {
     await fixtureServer.close();
   });
 
-  test("auto-locks by stable QR title after multi-step login on a changing QR URL", async () => {
+  test("stays open through multi-step login and locks after the operator confirms the QR page", async () => {
     // Given
     const launchedApp = await launchApp(`${fixtureServer.baseUrl}/`);
     const electronApp = launchedApp.app;
@@ -39,6 +39,14 @@ test.describe("site login mode", () => {
       const qrUrl = new URL(qrPage.url());
       expect(qrUrl.pathname).toBe("/qr");
       expect(qrUrl.searchParams.has("token")).toBe(true);
+      await expect(controlPage.getByTestId("site-login-indicator")).toBeVisible();
+      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
+      await expect(controlPage.getByRole("button", { name: "QR 송출 준비 완료" })).toBeVisible();
+
+      // When
+      await controlPage.getByTestId("learn-qr-title").click();
+
+      // Then
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(false);
     } finally {

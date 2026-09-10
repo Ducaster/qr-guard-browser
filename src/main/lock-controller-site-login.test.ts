@@ -237,7 +237,7 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.controller.getState().qrVisible).toBe(true);
   });
 
-  it("auto-locks siteLogin when the QR title pattern appears", async () => {
+  it("keeps siteLogin visible at the QR page until the operator confirms completion", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
@@ -250,18 +250,12 @@ describe("lock controller siteLogin mode", () => {
     harness.qrWebContents.trigger("page-title-updated");
 
     // Then
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-    expect(harness.auditLogStore.events.at(-1)).toEqual(
-      expect.objectContaining({
-        durationSeconds: 7,
-        reason: "qr-title",
-        userId: ADMIN_SITE_LOGIN_AUDIT_USER_ID
-      })
-    );
+    expect(harness.controller.getState().state).toBe("siteLogin");
+    expect(harness.controller.getState().qrVisible).toBe(true);
+    expect(harness.auditLogStore.events).toEqual([]);
   });
 
-  it("auto-locks siteLogin if the QR title pattern appears immediately after entry", async () => {
+  it("enters siteLogin even when the current page title matches the saved QR title", async () => {
     // Given
     const harness = createHarness({
       qrTitle: "로그인",
@@ -274,12 +268,12 @@ describe("lock controller siteLogin mode", () => {
 
     // Then
     expect(result.ok).toBe(true);
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-    expect(harness.auditLogStore.events.at(-1)?.reason).toBe("qr-title");
+    expect(harness.controller.getState().state).toBe("siteLogin");
+    expect(harness.controller.getState().qrVisible).toBe(true);
+    expect(harness.auditLogStore.events).toEqual([]);
   });
 
-  it("fails safe and relocks when settings cannot load during QR navigation", async () => {
+  it("does not read settings or relock while the operator navigates to the QR page", async () => {
     // Given
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const harness = createHarness();
@@ -292,12 +286,10 @@ describe("lock controller siteLogin mode", () => {
     }).not.toThrow();
 
     // Then
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-    expect(harness.auditLogStore.events.at(-1)?.reason).toBe("manual");
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to load settings during QR navigation")
-    );
+    expect(harness.controller.getState().state).toBe("siteLogin");
+    expect(harness.controller.getState().qrVisible).toBe(true);
+    expect(harness.auditLogStore.events).toEqual([]);
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("learns the current QR title into settings and locks", async () => {
@@ -311,6 +303,20 @@ describe("lock controller siteLogin mode", () => {
     // Then
     expect(result).toEqual({ ok: true });
     expect(harness.repository.load().qrTitlePattern).toBe("QR 코드 - 12번 창구");
+    expect(harness.controller.getState().state).toBe("locked");
+    expect(harness.controller.getState().qrVisible).toBe(false);
+  });
+
+  it("locks when site login is completed even if the current page has no title", async () => {
+    // Given
+    const harness = createHarness({ qrTitle: "" });
+    await harness.controller.submitSiteLogin("admin-code");
+
+    // When
+    const result = harness.controller.learnCurrentQrTitle();
+
+    // Then
+    expect(result).toEqual({ ok: true });
     expect(harness.controller.getState().state).toBe("locked");
     expect(harness.controller.getState().qrVisible).toBe(false);
   });
