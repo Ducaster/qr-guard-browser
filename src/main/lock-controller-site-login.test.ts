@@ -290,6 +290,7 @@ describe("lock controller siteLogin mode", () => {
     expect(harness.controller.getState().qrVisible).toBe(true);
     expect(harness.auditLogStore.events).toEqual([]);
     expect(errorSpy).not.toHaveBeenCalled();
+    harness.controller.manualLock();
   });
 
   it("learns the current QR title into settings and locks", async () => {
