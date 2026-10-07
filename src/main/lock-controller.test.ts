@@ -237,6 +237,41 @@ describe("lock controller unlock submission", () => {
   });
 });
 
+describe("lock controller locked QR refresh", () => {
+  it("reloads the hidden QR page every minute only while locked", async () => {
+    // Given
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
+    const harness = createHarness({ unlockDurationOverrideSeconds: 600 });
+
+    // When
+    vi.advanceTimersByTime(60_000);
+    const lockedReloads = harness.qrWebContents.reloadCalls;
+    await harness.controller.submitUnlock("staff01", "2468");
+    vi.advanceTimersByTime(120_000);
+    const unlockedReloads = harness.qrWebContents.reloadCalls;
+    harness.controller.manualLock();
+    vi.advanceTimersByTime(60_000);
+
+    // Then
+    expect(lockedReloads).toBe(1);
+    expect(unlockedReloads).toBe(1);
+    expect(harness.qrWebContents.reloadCalls).toBe(2);
+  });
+
+  it("skips the locked refresh while the QR page is blank", () => {
+    // Given
+    vi.useFakeTimers();
+    const harness = createHarness({ qrUrl: "about:blank" });
+
+    // When
+    vi.advanceTimersByTime(180_000);
+
+    // Then
+    expect(harness.qrWebContents.reloadCalls).toBe(0);
+  });
+});
+
 describe("lock controller QR navigation and idle safety", () => {
   it("keeps QR load failures informational without changing the lock gate", () => {
     // Given

@@ -82,9 +82,10 @@ export const App = (): JSX.Element => {
     return <LoadingView />;
   }
 
-  const credentialPrompt =
+  const renderCredentialPrompt = (docked: boolean): JSX.Element | null =>
     credentialOffer === null ? null : (
       <SiteCredentialSavePrompt
+        docked={docked}
         offer={credentialOffer}
         onClose={() => {
           setCredentialOffer(null);
@@ -118,7 +119,7 @@ export const App = (): JSX.Element => {
               <MessageBarBody>{error}</MessageBarBody>
             </MessageBar>
           ) : null}
-          {credentialPrompt}
+          {renderCredentialPrompt(false)}
         </>
       );
     case "settings":
@@ -132,7 +133,7 @@ export const App = (): JSX.Element => {
               }}
             />
           </Suspense>
-          {credentialPrompt}
+          {renderCredentialPrompt(false)}
         </>
       );
     case "siteLogin":
@@ -140,7 +141,7 @@ export const App = (): JSX.Element => {
       return (
         <>
           <Toolbar state={state} />
-          {credentialPrompt}
+          {renderCredentialPrompt(true)}
         </>
       );
   }

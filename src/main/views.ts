@@ -6,7 +6,9 @@ import { cleanQrUserAgent } from "../core/qr-user-agent";
 import { APP_NAME } from "../core/sanity";
 import type { QrLoadFailure } from "../core/state-machine";
 import {
+  CONTROL_TOOLBAR_HEIGHT,
   CONTROL_VIEW_WEB_PREFERENCES,
+  CREDENTIAL_PROMPT_BAND_HEIGHT,
   QR_SESSION_PARTITION,
   QR_VIEW_WEB_PREFERENCES
 } from "../core/shell-config";
@@ -25,6 +27,7 @@ export interface ShellWindow {
   readonly qrView: WebContentsView;
   readonly controlView: WebContentsView;
   readonly load: () => Promise<void>;
+  readonly setCredentialPromptVisible: (visible: boolean) => void;
   readonly setQrVisible: (visible: boolean) => void;
   readonly isQrVisible: () => boolean;
 }
@@ -33,6 +36,7 @@ export interface ShellWindowOptions {
   readonly controlDevServerUrl?: string;
   readonly controlHtmlPath: string;
   readonly disableDevTools: boolean;
+  readonly initialBounds?: Rectangle;
   readonly onQrLoadStatusChanged?: (failure: QrLoadFailure | null) => void;
   readonly preloadPath: string;
   readonly qrPreloadPath: string;
@@ -44,7 +48,6 @@ const INITIAL_BOUNDS = {
   width: 1280
 } as const;
 
-const CONTROL_TOOLBAR_HEIGHT = 64;
 const RENDERER_HANG_RECOVERY_MS = 15_000;
 const DARK_NEUTRAL_BACKGROUND = "#1f1f1f" as const;
 const LIGHT_NEUTRAL_BACKGROUND = "#f3f2f1" as const;
@@ -66,7 +69,8 @@ const applyFullWindowLayout = (
   window: BaseWindow,
   qrView: WebContentsView,
   controlView: WebContentsView,
-  qrVisible: boolean
+  qrVisible: boolean,
+  credentialPromptVisible = false
 ): void => {
   const bounds = getContentBounds(window);
 
@@ -74,7 +78,7 @@ const applyFullWindowLayout = (
   controlView.setBounds(
     qrVisible
       ? {
-          height: CONTROL_TOOLBAR_HEIGHT,
+          height: CONTROL_TOOLBAR_HEIGHT + (credentialPromptVisible ? CREDENTIAL_PROMPT_BAND_HEIGHT : 0),
           width: bounds.width,
           x: 0,
           y: 0
@@ -89,12 +93,12 @@ const getSystemNeutralBackground = (): string =>
 export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   const window = new BaseWindow({
     backgroundColor: getSystemNeutralBackground(),
-    height: INITIAL_BOUNDS.height,
     show: false,
     title: APP_NAME,
-    width: INITIAL_BOUNDS.width
+    ...(options.initialBounds ?? INITIAL_BOUNDS)
   });
   window.setMinimumSize(720, 540);
+  let credentialPromptVisible = false;
 
   const qrSession = session.fromPartition(QR_SESSION_PARTITION);
   if (isQrNetDiagnosticsEnabled()) {
@@ -238,9 +242,11 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
   window.contentView.addChildView(controlView);
   applyFullWindowLayout(window, qrView, controlView, false);
 
-  window.on("resize", () => {
-    applyFullWindowLayout(window, qrView, controlView, qrView.getVisible());
-  });
+  const relayout = (): void => {
+    applyFullWindowLayout(window, qrView, controlView, qrView.getVisible(), credentialPromptVisible);
+  };
+
+  window.on("resize", relayout);
 
   const load = async (): Promise<void> => {
     if (options.qrUrl !== undefined) {
@@ -264,7 +270,7 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     qrView.setVisible(visible);
     qrView.webContents.setBackgroundThrottling(!visible);
     qrView.webContents.setAudioMuted(!visible);
-    applyFullWindowLayout(window, qrView, controlView, visible);
+    applyFullWindowLayout(window, qrView, controlView, visible, credentialPromptVisible);
 
     if (!visible) {
       controlView.webContents.focus();
@@ -278,6 +284,10 @@ export const createShellWindow = (options: ShellWindowOptions): ShellWindow => {
     isQrVisible,
     load,
     qrView,
+    setCredentialPromptVisible: (visible: boolean) => {
+      credentialPromptVisible = visible;
+      relayout();
+    },
     setQrVisible,
     window
   };

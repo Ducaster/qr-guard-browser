@@ -5,6 +5,7 @@ import {
   MessageBarBody,
   Toolbar as FluentToolbar,
   ToolbarButton,
+  mergeClasses,
   makeStyles,
   tokens
 } from "@fluentui/react-components";
@@ -15,7 +16,7 @@ import {
   LockClosed24Regular,
   QrCode24Regular
 } from "@fluentui/react-icons";
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useRef, useState, type JSX } from "react";
 
 import type { StateSnapshot } from "../../core/state-machine";
 
@@ -34,6 +35,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
   const [addressValue, setAddressValue] = useState(formatAddressUrl(state.currentUrl));
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [remainingMs, setRemainingMs] = useState(state.remainingMs);
+  const addressInputRef = useRef<HTMLInputElement>(null);
   const isSiteLogin = state.state === "siteLogin";
   const currentAddressUrl = formatAddressUrl(state.currentUrl);
 
@@ -74,6 +76,15 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
     }
   }, [currentAddressUrl, isEditingAddress]);
 
+  useEffect(
+    () =>
+      window.qrGuard.onFocusAddressBar(() => {
+        addressInputRef.current?.focus();
+        addressInputRef.current?.select();
+      }),
+    []
+  );
+
   const submitAddressNavigation = (): void => {
     const url = addressValue.trim();
 
@@ -104,6 +115,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           <ToolbarButton
             appearance="subtle"
             aria-label="뒤로"
+            className={styles.iconCollapsible}
             data-testid="qr-go-back"
             disabled={!state.canGoBack}
             icon={<ArrowLeft24Regular />}
@@ -117,6 +129,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           <ToolbarButton
             appearance="subtle"
             aria-label="앞으로"
+            className={styles.iconCollapsible}
             data-testid="qr-go-forward"
             disabled={!state.canGoForward}
             icon={<ArrowRight24Regular />}
@@ -130,6 +143,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           <ToolbarButton
             appearance="subtle"
             aria-label="새로고침"
+            className={styles.iconCollapsible}
             data-testid="qr-reload"
             icon={<ArrowClockwise24Regular />}
             onClick={() => {
@@ -144,6 +158,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
           aria-label="QR 주소"
           className={styles.addressInput}
           data-testid="qr-address-input"
+          input={{ ref: addressInputRef }}
           onBlur={() => {
             setIsEditingAddress(false);
           }}
@@ -180,7 +195,7 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
         <ToolbarButton
           appearance="primary"
           aria-label="지금 잠그기"
-          className={styles.actionButton}
+          className={mergeClasses(styles.actionButton, styles.iconCollapsible)}
           data-testid="manual-lock"
           icon={<LockClosed24Regular />}
           onClick={() => {
@@ -220,6 +235,12 @@ const useToolbarStyles = makeStyles({
     }
   },
   error: { maxWidth: "320px" },
+  // Labels hide below 820px; drop the button min-width too so icons do not overflow under the status badge.
+  iconCollapsible: {
+    "@media (max-width: 820px)": {
+      minWidth: "32px"
+    }
+  },
   manualLockLabel: {
     whiteSpace: "nowrap",
     "@media (max-width: 820px)": {

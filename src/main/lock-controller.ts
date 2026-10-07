@@ -20,7 +20,7 @@ import { createLockAuthenticator } from "./lock-authenticator";
 import { createLockModeLifecycle } from "./lock-mode-lifecycle";
 import { createLockTimers } from "./lock-timers";
 import { notLockedResponse } from "./qr-access-auth";
-import { loadQrUrlOrBlank } from "./qr-url-loader";
+import { isQrBlankFallbackUrl, loadQrUrlOrBlank } from "./qr-url-loader";
 import { learnQrTitleFromCurrentPage, type ActionResponse } from "./qr-title-learning";
 import {
   watchQrNavigation,
@@ -65,6 +65,7 @@ export interface LockControllerOptions {
   readonly shellWindow: LockControllerShellWindow;
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
+  readonly lockedRefreshIntervalMs?: number;
   readonly siteLoginTimeoutOverrideMs?: number;
   readonly unlockDurationOverrideSeconds?: number;
 }
@@ -82,7 +83,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     auditLogStore: options.auditLogStore
   });
   const timers = createLockTimers();
-  let syncModeTimers: (previousState: GuardState, nextState: GuardState) => void = () => undefined;
+  let syncModeTimers: (previousState: GuardState | null, nextState: GuardState) => void = () => undefined;
 
   const applyVisibility = (): boolean => {
     const visible = shouldShowQrView(state);
@@ -139,13 +140,20 @@ export const createLockController = (options: LockControllerOptions): LockContro
     auditSessions,
     getState: () => state,
     loadSettings: () => options.repository.load(),
+    reloadQr: () => {
+      if (!isQrBlankFallbackUrl(options.qrWebContents.getURL())) {
+        options.qrWebContents.reload();
+      }
+    },
     relock,
     setState,
     timers,
     ...(options.idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs: options.idlePollIntervalMs }),
     ...(options.idleSource === undefined ? {} : { idleSource: options.idleSource }),
+    ...(options.lockedRefreshIntervalMs === undefined ? {} : { lockedRefreshIntervalMs: options.lockedRefreshIntervalMs }),
     ...(options.siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs: options.siteLoginTimeoutOverrideMs })
   }).sync;
+  syncModeTimers(null, state);
 
   const handleQrNavigation = (): void => {
     emitState();

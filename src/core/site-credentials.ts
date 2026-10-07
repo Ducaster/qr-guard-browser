@@ -26,13 +26,17 @@ export interface SavedSiteCredential {
   readonly username: string;
 }
 
+export type SiteCredentialOfferKind = "save" | "update";
+
 export interface SiteCredentialRepository {
   readonly blockSavePromptsForOrigin: (origin: string) => void;
   readonly deleteCredential: (id: string) => void;
   readonly getAutofillCredential: (origin: string) => SiteCredentialAutofill | null;
+  readonly getSaveOfferKind: (credential: SiteCredentialInput) => SiteCredentialOfferKind | null;
+  readonly listBlockedOrigins: () => readonly string[];
   readonly listCredentials: () => readonly SavedSiteCredential[];
   readonly saveCredential: (credential: SiteCredentialInput, updatedAt: string) => void;
-  readonly shouldOfferToSave: (origin: string) => boolean;
+  readonly unblockOrigin: (origin: string) => void;
 }
 
 export class SiteCredentialInputError extends Error {
@@ -109,6 +113,23 @@ export const createSiteCredentialRepository = (
             username: entry.username
           };
     },
+    getSaveOfferKind: (credential: SiteCredentialInput) => {
+      const normalizedCredential = normalizeCredential(credential);
+      const vault = loadVault();
+      const existing = vault.entries.find(
+        (entry) =>
+          entry.origin === normalizedCredential.origin &&
+          entry.username === normalizedCredential.username
+      );
+
+      if (existing !== undefined) {
+        // A saved account opts the site in, so changed passwords still offer an update.
+        return existing.password === normalizedCredential.password ? null : "update";
+      }
+
+      return vault.blockedOrigins.includes(normalizedCredential.origin) ? null : "save";
+    },
+    listBlockedOrigins: () => [...loadVault().blockedOrigins].sort(),
     listCredentials: () =>
       [...loadVault().entries]
         .map((entry) => ({
@@ -142,10 +163,13 @@ export const createSiteCredentialRepository = (
         ]
       });
     },
-    shouldOfferToSave: (origin: string) => {
-      const normalizedOrigin = requireOrigin(origin);
+    unblockOrigin: (origin: string) => {
+      const vault = loadVault();
 
-      return !loadVault().blockedOrigins.includes(normalizedOrigin);
+      saveVault({
+        ...vault,
+        blockedOrigins: vault.blockedOrigins.filter((blocked) => blocked !== origin)
+      });
     }
   };
 };

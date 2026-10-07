@@ -10,6 +10,7 @@ export type SiteCredentialAutofillResponse =
   | { readonly ok: false };
 
 export interface SiteCredentialSaveOffer {
+  readonly isUpdate: boolean;
   readonly offerId: string;
   readonly origin: string;
   readonly username: string;
@@ -23,5 +24,9 @@ export interface SiteCredentialSaveDecisionPayload {
 }
 
 export type ListSiteCredentialsResponse =
-  | { readonly credentials: readonly SavedSiteCredential[]; readonly ok: true }
+  | {
+      readonly blockedOrigins: readonly string[];
+      readonly credentials: readonly SavedSiteCredential[];
+      readonly ok: true;
+    }
   | { readonly errors: readonly string[]; readonly ok: false };

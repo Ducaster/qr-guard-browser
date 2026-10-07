@@ -6,21 +6,25 @@ import type { AuditSessionTracker } from "./audit-session-tracker";
 import type { LockTimers } from "./lock-timers";
 
 export const DEFAULT_SITE_LOGIN_TIMEOUT_MS = 5 * 60 * 1_000;
+// Reloading the hidden QR page keeps sliding server sessions alive while locked.
+export const DEFAULT_LOCKED_REFRESH_INTERVAL_MS = 60 * 1_000;
 const DEFAULT_IDLE_POLL_INTERVAL_MS = 1_000;
 
 export interface LockModeLifecycle {
-  readonly sync: (previousState: GuardState, nextState: GuardState) => void;
+  readonly sync: (previousState: GuardState | null, nextState: GuardState) => void;
 }
 
 export interface LockModeLifecycleOptions {
   readonly auditSessions: AuditSessionTracker;
   readonly getState: () => GuardState;
   readonly loadSettings: () => Settings;
+  readonly reloadQr: () => void;
   readonly relock: (reason: AuditLockReason) => void;
   readonly setState: (nextState: GuardState) => void;
   readonly timers: LockTimers;
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
+  readonly lockedRefreshIntervalMs?: number;
   readonly siteLoginTimeoutOverrideMs?: number;
 }
 
@@ -53,7 +57,18 @@ export const createLockModeLifecycle = (
   };
 
   return {
-    sync: (previousState: GuardState, nextState: GuardState): void => {
+    sync: (previousState: GuardState | null, nextState: GuardState): void => {
+      if (previousState !== "locked" && nextState === "locked") {
+        options.timers.startLockedRefreshTimer(
+          options.lockedRefreshIntervalMs ?? DEFAULT_LOCKED_REFRESH_INTERVAL_MS,
+          options.reloadQr
+        );
+      }
+
+      if (previousState === "locked" && nextState !== "locked") {
+        options.timers.clearLockedRefreshTimer();
+      }
+
       if (previousState !== "siteLogin" && nextState === "siteLogin") {
         startIdleTimer();
         startSiteLoginTimer();

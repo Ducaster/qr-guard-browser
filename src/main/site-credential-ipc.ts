@@ -43,6 +43,7 @@ interface SiteCredentialWebContents {
 export interface SiteCredentialIpcOptions {
   readonly getControlWebContents: () => SiteCredentialWebContents | undefined;
   readonly getQrWebContents: () => SiteCredentialWebContents | undefined;
+  readonly onPromptVisibilityChanged?: (visible: boolean) => void;
   readonly repository: SiteCredentialRepository;
 }
 
@@ -77,7 +78,7 @@ export const registerSiteCredentialIpc = (options: SiteCredentialIpcOptions): vo
     const origin = getOriginFromUrl(event.sender.getURL());
     const credentialPayload = parseCapturePayload(payload);
 
-    if (origin === null || credentialPayload === null || !options.repository.shouldOfferToSave(origin)) {
+    if (origin === null || credentialPayload === null) {
       return;
     }
 
@@ -86,15 +87,25 @@ export const registerSiteCredentialIpc = (options: SiteCredentialIpcOptions): vo
       password: credentialPayload.password,
       username: credentialPayload.username
     } satisfies PendingCredentialOffer;
+    const offerKind = options.repository.getSaveOfferKind(credential);
+
+    if (offerKind === null) {
+      return;
+    }
+
     const offerId = randomUUID();
     const offer = {
+      isUpdate: offerKind === "update",
       offerId,
       origin: credential.origin,
       username: credential.username
     } satisfies SiteCredentialSaveOffer;
 
+    // The control view shows one prompt at a time; a newer capture replaces the older offer.
+    pendingOffers.clear();
     pendingOffers.set(offerId, credential);
     options.getControlWebContents()?.send(IPC_CHANNELS.siteCredentialSaveOffered, offer);
+    options.onPromptVisibilityChanged?.(true);
   });
 
   ipcMain.handle(
@@ -112,6 +123,7 @@ export const registerSiteCredentialIpc = (options: SiteCredentialIpcOptions): vo
 
       const offer = pendingOffers.get(decision.offerId);
       pendingOffers.delete(decision.offerId);
+      options.onPromptVisibilityChanged?.(pendingOffers.size > 0);
 
       if (offer === undefined) {
         return okResponse();
@@ -131,6 +143,7 @@ export const registerSiteCredentialIpc = (options: SiteCredentialIpcOptions): vo
       }
 
       return {
+        blockedOrigins: options.repository.listBlockedOrigins(),
         credentials: options.repository.listCredentials(),
         ok: true
       };
@@ -149,6 +162,23 @@ export const registerSiteCredentialIpc = (options: SiteCredentialIpcOptions): vo
       }
 
       options.repository.deleteCredential(id);
+
+      return okResponse();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.siteCredentialUnblock,
+    (event: IpcMainInvokeEvent, origin: unknown): ActionResponse => {
+      if (!isSenderAuthorized(event)) {
+        return errorResponse(["관리자 인증이 필요합니다."]);
+      }
+
+      if (typeof origin !== "string") {
+        return errorResponse(["차단된 사이트를 찾을 수 없습니다."]);
+      }
+
+      options.repository.unblockOrigin(origin);
 
       return okResponse();
     }

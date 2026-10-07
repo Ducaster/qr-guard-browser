@@ -1,5 +1,5 @@
 import { Button, Spinner, Text, makeStyles, tokens } from "@fluentui/react-components";
-import { Delete24Regular } from "@fluentui/react-icons";
+import { ArrowUndo24Regular, Delete24Regular } from "@fluentui/react-icons";
 import { useCallback, useEffect, useState, type JSX } from "react";
 
 import type { SavedSiteCredential } from "../../core/site-credentials";
@@ -9,6 +9,7 @@ import { ErrorList, Message } from "./Feedback";
 export const SavedLoginsSection = (): JSX.Element => {
   const styles = useSavedLoginsStyles();
   const [credentials, setCredentials] = useState<readonly SavedSiteCredential[]>([]);
+  const [blockedOrigins, setBlockedOrigins] = useState<readonly string[]>([]);
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [message, setMessage] = useState("");
   const [isBusy, setIsBusy] = useState(false);
@@ -22,6 +23,7 @@ export const SavedLoginsSection = (): JSX.Element => {
     }
 
     setCredentials(response.credentials);
+    setBlockedOrigins(response.blockedOrigins);
     setErrors([]);
   }, []);
 
@@ -31,22 +33,26 @@ export const SavedLoginsSection = (): JSX.Element => {
     });
   }, [loadCredentials]);
 
-  const deleteCredential = (id: string): void => {
+  const runAction = (
+    action: () => ReturnType<typeof window.qrGuard.deleteSiteCredential>,
+    successMessage: string,
+    failureMessage: string
+  ): void => {
     setIsBusy(true);
     setMessage("");
-    void window.qrGuard.deleteSiteCredential(id)
+    void action()
       .then(async (response) => {
         if (!response.ok) {
-          setErrors(response.errors ?? ["저장된 로그인을 삭제할 수 없습니다."]);
+          setErrors(response.errors ?? [failureMessage]);
           return;
         }
 
         setErrors([]);
-        setMessage("저장된 로그인이 삭제되었습니다.");
+        setMessage(successMessage);
         await loadCredentials();
       })
       .catch(() => {
-        setErrors(["저장된 로그인을 삭제할 수 없습니다."]);
+        setErrors([failureMessage]);
       })
       .finally(() => {
         setIsBusy(false);
@@ -70,11 +76,36 @@ export const SavedLoginsSection = (): JSX.Element => {
               disabled={isBusy}
               icon={<Delete24Regular />}
               onClick={() => {
-                deleteCredential(credential.id);
+                runAction(
+                  () => window.qrGuard.deleteSiteCredential(credential.id),
+                  "저장된 로그인이 삭제되었습니다.",
+                  "저장된 로그인을 삭제할 수 없습니다."
+                );
               }}
               type="button"
             >
               삭제
+            </Button>
+          </div>
+        ))}
+        {blockedOrigins.length > 0 ? <Text weight="semibold">저장 안 함으로 설정한 사이트</Text> : null}
+        {blockedOrigins.map((origin) => (
+          <div className={styles.row} data-testid="settings-blocked-origin-row" key={origin}>
+            <Text className={styles.identity}>{origin}</Text>
+            <Button
+              data-testid="settings-blocked-origin-unblock"
+              disabled={isBusy}
+              icon={<ArrowUndo24Regular />}
+              onClick={() => {
+                runAction(
+                  () => window.qrGuard.unblockSiteCredentialOrigin(origin),
+                  "다음 로그인부터 저장 여부를 다시 묻습니다.",
+                  "차단을 해제할 수 없습니다."
+                );
+              }}
+              type="button"
+            >
+              다시 묻기
             </Button>
           </div>
         ))}

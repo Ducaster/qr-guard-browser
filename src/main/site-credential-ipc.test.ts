@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  type SiteCredentialOfferKind,
   type SiteCredentialAutofill,
   type SiteCredentialInput,
   type SiteCredentialRepository
@@ -24,6 +25,7 @@ interface SentMessage {
 }
 
 interface ParsedSaveOffer {
+  readonly isUpdate: boolean;
   readonly offerId: string;
   readonly origin: string;
   readonly username: string;
@@ -113,6 +115,7 @@ describe("site credential IPC", () => {
     // Then
     expect(repository.offerChecks).toEqual(["https://real.example.test"]);
     expect(offer).toEqual({
+      isUpdate: false,
       offerId: offer?.offerId,
       origin: "https://real.example.test",
       username: "operator01"
@@ -125,10 +128,46 @@ describe("site credential IPC", () => {
       }
     ]);
   });
+
+  it("skips unchanged logins, flags changed passwords as updates, and tracks prompt visibility", async () => {
+    // Given
+    const { registerSiteCredentialIpc } = await import("./site-credential-ipc");
+    const repository = new RecordingSiteCredentialRepository();
+    const qrWebContents = createWebContents(10, "https://real.example.test/login");
+    const controlWebContents = createWebContents(20, "file:///control.html");
+    const promptVisibility: boolean[] = [];
+    registerSiteCredentialIpc({
+      getControlWebContents: () => controlWebContents,
+      getQrWebContents: () => qrWebContents,
+      onPromptVisibilityChanged: (visible) => {
+        promptVisibility.push(visible);
+      },
+      repository
+    });
+    const capture = getEventHandler(IPC_CHANNELS.siteCredentialCaptured);
+
+    // When
+    repository.nextOfferKind = null;
+    capture({ sender: qrWebContents }, { password: "same", username: "operator01" });
+    repository.nextOfferKind = "update";
+    capture({ sender: qrWebContents }, { password: "changed", username: "operator01" });
+    const offer = readSaveOffer(controlWebContents.sentMessages[0]?.payloads[0]);
+    getInvokeHandler(IPC_CHANNELS.siteCredentialSaveDecision)({ sender: controlWebContents }, {
+      decision: "save",
+      offerId: offer?.offerId
+    });
+
+    // Then
+    expect(controlWebContents.sentMessages).toHaveLength(1);
+    expect(offer?.isUpdate).toBe(true);
+    expect(repository.savedCredentials.map((credential) => credential.password)).toEqual(["changed"]);
+    expect(promptVisibility).toEqual([true, false]);
+  });
 });
 
 class RecordingSiteCredentialRepository implements SiteCredentialRepository {
   readonly autofillLookups: string[] = [];
+  nextOfferKind: SiteCredentialOfferKind | null = "save";
   readonly offerChecks: string[] = [];
   readonly savedCredentials: SiteCredentialInput[] = [];
 
@@ -148,6 +187,16 @@ class RecordingSiteCredentialRepository implements SiteCredentialRepository {
     return this.autofillCredentials.get(origin) ?? null;
   }
 
+  getSaveOfferKind(credential: SiteCredentialInput): SiteCredentialOfferKind | null {
+    this.offerChecks.push(credential.origin);
+
+    return this.nextOfferKind;
+  }
+
+  listBlockedOrigins(): readonly [] {
+    return [];
+  }
+
   listCredentials(): readonly [] {
     return [];
   }
@@ -160,10 +209,8 @@ class RecordingSiteCredentialRepository implements SiteCredentialRepository {
     this.autofillCredentials.set(origin, credential);
   }
 
-  shouldOfferToSave(origin: string): boolean {
-    this.offerChecks.push(origin);
-
-    return true;
+  unblockOrigin(_origin: string): void {
+    return;
   }
 }
 
@@ -212,6 +259,7 @@ const readSaveOffer = (value: unknown): ParsedSaveOffer | null => {
   return offerId === null || origin === null || username === null
     ? null
     : {
+        isUpdate: value["isUpdate"] === true,
         offerId,
         origin,
         username

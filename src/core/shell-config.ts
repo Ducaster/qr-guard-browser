@@ -2,6 +2,10 @@ export const QR_SESSION_PARTITION = "persist:qr-site" as const;
 
 export const QR_SURFACE_KIND = "webContentsView" as const;
 
+export const CONTROL_TOOLBAR_HEIGHT = 64;
+// Save-password prompt band rendered directly under the toolbar so it never covers toolbar buttons.
+export const CREDENTIAL_PROMPT_BAND_HEIGHT = 72;
+
 export const IPC_CHANNELS = {
   addUser: "qr-guard:add-user",
   changeAdminCode: "qr-guard:change-admin-code",
@@ -10,6 +14,8 @@ export const IPC_CHANNELS = {
   completeFirstRunSetup: "qr-guard:complete-first-run-setup",
   deleteUser: "qr-guard:delete-user",
   exportAuditLog: "qr-guard:export-audit-log",
+  focusAddressBar: "qr-guard:focus-address-bar",
+  getAutoLaunch: "qr-guard:get-auto-launch",
   getState: "qr-guard:get-state",
   getSettingsView: "qr-guard:get-settings-view",
   getShellInfo: "qr-guard:get-shell-info",
@@ -26,12 +32,14 @@ export const IPC_CHANNELS = {
   resetUserCode: "qr-guard:reset-user-code",
   retryQrLoad: "qr-guard:retry-qr-load",
   saveSettings: "qr-guard:save-settings",
+  setAutoLaunch: "qr-guard:set-auto-launch",
   siteCredentialAutofillRequest: "qr-guard:site-credential-autofill-request",
   siteCredentialCaptured: "qr-guard:site-credential-captured",
   siteCredentialDelete: "qr-guard:site-credential-delete",
   siteCredentialList: "qr-guard:site-credential-list",
   siteCredentialSaveDecision: "qr-guard:site-credential-save-decision",
   siteCredentialSaveOffered: "qr-guard:site-credential-save-offered",
+  siteCredentialUnblock: "qr-guard:site-credential-unblock",
   stateChanged: "qr-guard:state-changed",
   submitSiteLogin: "qr-guard:submit-site-login",
   submitUnlock: "qr-guard:submit-unlock",
@@ -49,7 +57,7 @@ export interface ViewWebPreferences {
   readonly contextIsolation: boolean;
   readonly nodeIntegration: boolean;
   readonly sandbox: boolean;
-  readonly transparent?: boolean;
+  readonly spellcheck: boolean;
   readonly webviewTag: boolean;
 }
 
@@ -58,6 +66,7 @@ export const QR_VIEW_WEB_PREFERENCES = {
   contextIsolation: true,
   nodeIntegration: false,
   sandbox: true,
+  spellcheck: false,
   webviewTag: false
 } as const satisfies ViewWebPreferences;
 
@@ -65,6 +74,6 @@ export const CONTROL_VIEW_WEB_PREFERENCES = {
   contextIsolation: true,
   nodeIntegration: false,
   sandbox: true,
-  transparent: true,
+  spellcheck: false,
   webviewTag: false
 } as const satisfies ViewWebPreferences;

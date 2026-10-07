@@ -134,30 +134,33 @@ const installCredentialCapture = (): void => {
     },
     true
   );
+  // Many internal sites log in through script buttons or Enter, not a real form submit.
   document.addEventListener(
     "click",
     (event) => {
-      if (isSubmitActivation(event.target)) {
+      if (isLoginActivation(event.target)) {
         captureCurrentCredential();
       }
     },
     true
   );
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+        captureCurrentCredential();
+      }
+    },
+    true
+  );
+  window.addEventListener("pagehide", captureCurrentCredential);
 };
 
-const isSubmitActivation = (target: EventTarget | null): boolean => {
-  if (!(target instanceof Element)) {
-    return false;
-  }
+const LOGIN_ACTIVATOR_SELECTOR =
+  "button,a,[role=button],input[type=submit],input[type=image],input[type=button]";
 
-  const activator = target.closest("button,input");
-
-  if (activator instanceof HTMLButtonElement) {
-    return activator.type === "submit";
-  }
-
-  return activator instanceof HTMLInputElement && (activator.type === "submit" || activator.type === "image");
-};
+const isLoginActivation = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest(LOGIN_ACTIVATOR_SELECTOR) !== null;
 
 const toDescriptor = (input: HTMLInputElement, index: number): LoginFormInputDescriptor => ({
   autocomplete: input.autocomplete,

@@ -1,4 +1,4 @@
-import { Button, Field, Input, Spinner } from "@fluentui/react-components";
+import { Button, Field, Input, Spinner, Switch } from "@fluentui/react-components";
 import { LockClosed24Regular, Save24Regular } from "@fluentui/react-icons";
 import { Suspense, lazy, useCallback, useEffect, useState, type JSX, type SyntheticEvent } from "react";
 
@@ -154,6 +154,7 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                   />
                 </Field>
               </SplitTwo>
+              <AutoLaunchSwitch />
               <Field label="QR 송출 화면 제목 기록">
                 <Input
                   disabled={isBusy || settings === null}
@@ -215,4 +216,41 @@ const validateSettingsForm = (
   }
 
   return errors;
+};
+
+const AutoLaunchSwitch = (): JSX.Element => {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [error, setError] = useState("");
+
+  const applyResponse = useCallback((response: Awaited<ReturnType<typeof window.qrGuard.getAutoLaunch>>): void => {
+    if (response.ok) {
+      setEnabled(response.enabled);
+      setError("");
+      return;
+    }
+
+    setError(response.errors[0] ?? "자동 실행 설정을 처리할 수 없습니다.");
+  }, []);
+
+  useEffect(() => {
+    void window.qrGuard.getAutoLaunch().then(applyResponse, () => {
+      setError("자동 실행 설정을 불러올 수 없습니다.");
+    });
+  }, [applyResponse]);
+
+  return (
+    <Field {...(error.length === 0 ? {} : { validationMessage: error })}>
+      <Switch
+        checked={enabled === true}
+        data-testid="settings-auto-launch"
+        disabled={enabled === null}
+        label="Windows 시작 시 자동 실행"
+        onChange={(_event, data) => {
+          void window.qrGuard.setAutoLaunch(data.checked).then(applyResponse, () => {
+            setError("자동 실행 설정을 저장할 수 없습니다.");
+          });
+        }}
+      />
+    </Field>
+  );
 };

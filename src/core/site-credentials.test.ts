@@ -115,10 +115,31 @@ describe("site credential repository", () => {
     repository.blockSavePromptsForOrigin(origin);
 
     // Then
-    expect(repository.shouldOfferToSave(origin)).toBe(false);
+    expect(repository.getSaveOfferKind({ origin, password: "new-password", username: "someone-else" })).toBeNull();
+    expect(repository.listBlockedOrigins()).toEqual([origin]);
     expect(repository.getAutofillCredential(origin)).toEqual({
       password: "already-saved",
       username: "operator01"
     });
+  });
+
+  it("offers updates only for changed passwords, even on blocked origins", () => {
+    // Given
+    const repository = createSiteCredentialRepository(new MemorySettingsStore(), new Base64TestSealer());
+    const origin = "https://qr.example.test";
+    repository.saveCredential({ origin, password: "old", username: "operator01" }, "2026-06-23T00:00:00.000Z");
+    repository.blockSavePromptsForOrigin(origin);
+
+    // When
+    const unchanged = repository.getSaveOfferKind({ origin, password: "old", username: "operator01" });
+    const changed = repository.getSaveOfferKind({ origin, password: "new", username: "operator01" });
+    repository.unblockOrigin(origin);
+    const newAccount = repository.getSaveOfferKind({ origin, password: "pw", username: "operator02" });
+
+    // Then
+    expect(unchanged).toBeNull();
+    expect(changed).toBe("update");
+    expect(newAccount).toBe("save");
+    expect(repository.listBlockedOrigins()).toEqual([]);
   });
 });

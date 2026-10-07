@@ -1,10 +1,18 @@
 import { app, BaseWindow, Menu, nativeTheme, powerMonitor } from "electron";
 import path from "node:path";
 
+import type { BrowserShortcut } from "../core/browser-shortcuts";
 import { APP_NAME } from "../core/sanity";
 import type { Sealer, SettingsRepository } from "../core/settings-repo";
+import { IPC_CHANNELS } from "../core/shell-config";
 import type { QrLoadFailure } from "../core/state-machine";
 import { createSiteCredentialRepository, type SiteCredentialRepository } from "../core/site-credentials";
+import {
+  applyZoomShortcut,
+  attachBrowserShortcuts,
+  attachCtrlWheelZoom,
+  attachEditContextMenu
+} from "./browser-input";
 import { registerLockIpc } from "./lock-ipc";
 import { createLockController, type LockController } from "./lock-controller";
 import { formatUnknownError, mainLogger } from "./logger";
@@ -27,6 +35,8 @@ import {
 import { createShellWindow, getRendererHtmlPath, type ShellWindow } from "./views";
 import { loadQrUrlOrBlank } from "./qr-url-loader";
 import { createQrWebContentsAdapter } from "./qr-navigation-watcher";
+import { loadWindowState, persistWindowStateOnClose } from "./window-state";
+import { registerAutoLaunchIpc, removeStaleSquirrelAppDirs } from "./windows-install";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -37,7 +47,8 @@ let settingsRepository: SettingsRepository | undefined;
 let siteCredentialRepository: SiteCredentialRepository | undefined;
 let lockoutStateStore: LockoutStateStore | undefined;
 
-const QR_SESSION_DISK_CACHE_BYTES = 64 * 1024 * 1024;
+const QR_SESSION_DISK_CACHE_BYTES = 32 * 1024 * 1024;
+const STALE_INSTALL_CLEANUP_DELAY_MS = 30_000;
 const configuredUserDataPath = process.env["QR_GUARD_USER_DATA_DIR"];
 
 app.commandLine.appendSwitch("disk-cache-size", String(QR_SESSION_DISK_CACHE_BYTES));
@@ -158,6 +169,9 @@ const getIdlePollIntervalOverrideMs = (): number | undefined =>
 const getSiteLoginTimeoutOverrideMs = (): number | undefined =>
   readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_SITE_LOGIN_TIMEOUT_MS");
 
+const getLockedRefreshOverrideMs = (): number | undefined =>
+  readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_LOCKED_REFRESH_MS");
+
 const getIdleSource = (): (() => number) => {
   const fixedIdleSeconds = readPositiveIntegerTestOverrideEnv("QR_GUARD_TEST_SYSTEM_IDLE_SECONDS");
 
@@ -172,9 +186,45 @@ const getTestOverrideEnvironment = (): TestOverrideEnvironment => ({
 const readPositiveIntegerTestOverrideEnv = (key: string): number | undefined =>
   readPositiveIntegerTestEnv(getTestOverrideEnvironment(), key);
 
+const getWindowStatePath = (): string => path.join(app.getPath("userData"), "window-state.json");
+
+const runBrowserShortcut = (shortcut: BrowserShortcut): void => {
+  const shellWindow = activeShellWindow;
+  const controller = activeLockController;
+
+  if (shellWindow === undefined || controller === undefined) {
+    return;
+  }
+
+  switch (shortcut) {
+    case "back":
+      controller.qrGoBack();
+      return;
+    case "forward":
+      controller.qrGoForward();
+      return;
+    case "reload":
+      controller.qrReload();
+      return;
+    case "lock":
+      // Esc only hides an operator unlock; site login keeps Esc for the site itself.
+      if (controller.getState().state === "unlocked") {
+        controller.manualLock();
+      }
+      return;
+    case "focusAddress":
+      shellWindow.controlView.webContents.focus();
+      shellWindow.controlView.webContents.send(IPC_CHANNELS.focusAddressBar);
+      return;
+    default:
+      applyZoomShortcut(shellWindow.qrView.webContents, shortcut);
+  }
+};
+
 const createAndLoadShellWindow = (): void => {
   const controlDevServerUrl = getControlDevServerUrl();
   const qrUrl = getConfiguredQrUrl();
+  const windowState = loadWindowState(getWindowStatePath());
   const shellWindow = createShellWindow({
     controlHtmlPath: getRendererHtmlPath(getRendererName()),
     disableDevTools: app.isPackaged,
@@ -182,13 +232,23 @@ const createAndLoadShellWindow = (): void => {
     preloadPath: path.join(__dirname, "preload.js"),
     qrPreloadPath: path.join(__dirname, "qr-site-preload.js"),
     ...(controlDevServerUrl === undefined ? {} : { controlDevServerUrl }),
+    ...(windowState === null ? {} : { initialBounds: windowState.bounds }),
     ...(qrUrl === undefined ? {} : { qrUrl })
   });
 
   activeShellWindow = shellWindow;
+  persistWindowStateOnClose(shellWindow.window, getWindowStatePath());
+
+  for (const webContents of [shellWindow.qrView.webContents, shellWindow.controlView.webContents]) {
+    attachBrowserShortcuts(webContents, { isQrVisible: shellWindow.isQrVisible, run: runBrowserShortcut });
+    attachEditContextMenu(webContents);
+  }
+  attachCtrlWheelZoom(shellWindow.qrView.webContents);
+
   const unlockDurationOverrideSeconds = getUnlockDurationOverrideSeconds();
   const idlePollIntervalMs = getIdlePollIntervalOverrideMs();
   const siteLoginTimeoutOverrideMs = getSiteLoginTimeoutOverrideMs();
+  const lockedRefreshIntervalMs = getLockedRefreshOverrideMs();
   activeLockController = createLockController({
     appVersion: app.getVersion(),
     auditLogStore: createElectronAuditLogStore(),
@@ -198,12 +258,17 @@ const createAndLoadShellWindow = (): void => {
     repository: getSettingsRepository(),
     shellWindow,
     ...(idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs }),
+    ...(lockedRefreshIntervalMs === undefined ? {} : { lockedRefreshIntervalMs }),
     ...(siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs }),
     ...(unlockDurationOverrideSeconds === undefined ? {} : { unlockDurationOverrideSeconds })
   });
 
   void shellWindow.load()
     .then(() => {
+      if (windowState?.maximized === true) {
+        shellWindow.window.maximize();
+      }
+
       shellWindow.window.show();
       shellWindow.window.setTitle(APP_NAME);
     })
@@ -267,9 +332,18 @@ if (!gotSingleInstanceLock) {
       registerSiteCredentialIpc({
         getControlWebContents: () => activeShellWindow?.controlView.webContents,
         getQrWebContents: () => activeShellWindow?.qrView.webContents,
+        onPromptVisibilityChanged: (visible) => {
+          activeShellWindow?.setCredentialPromptVisible(visible);
+        },
         repository: getSiteCredentialRepository()
       });
+      registerAutoLaunchIpc();
       createAndLoadShellWindow();
+      setTimeout(() => {
+        removeStaleSquirrelAppDirs().catch((error: unknown) => {
+          mainLogger.warn("Failed to remove stale install folders.", { error: formatUnknownError(error) });
+        });
+      }, STALE_INSTALL_CLEANUP_DELAY_MS);
 
       app.on("activate", () => {
         if (BaseWindow.getAllWindows().length === 0) {

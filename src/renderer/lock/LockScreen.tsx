@@ -16,7 +16,7 @@ import {
   tokens
 } from "@fluentui/react-components";
 import { Globe24Regular, Key24Regular, Settings24Regular } from "@fluentui/react-icons";
-import { useEffect, useState, type JSX, type SyntheticEvent } from "react";
+import { useEffect, useRef, useState, type JSX, type SyntheticEvent } from "react";
 
 import type { QrLoadFailure } from "../../core/state-machine";
 import { ActionsRow, FormGrid, HeaderBlock, PanelCard, Screen } from "../fluentLayout";
@@ -29,6 +29,8 @@ interface LockScreenProps {
   readonly onOpenSettings: () => void;
   readonly onRetryQrLoad: () => ReturnType<typeof window.qrGuard.retryQrLoad>;
 }
+
+const LAST_REGION_STORAGE_KEY = "qr-guard:last-unlock-region";
 
 export const LockScreen = ({
   onOpenSettings,
@@ -45,6 +47,7 @@ export const LockScreen = ({
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [regions, setRegions] = useState<readonly string[]>([]);
+  const codeInputRef = useRef<HTMLInputElement>(null);
   const emptyRegionsHint =
     !isLoadingRegions && regions.length === 0
       ? "설정된 지역이 없습니다. 설정에서 지역을 추가하세요."
@@ -67,7 +70,7 @@ export const LockScreen = ({
         }
 
         setRegions(response.regions);
-        setUserId(response.regions.length === 1 ? response.regions[0] ?? "" : "");
+        setUserId(pickInitialRegion(response.regions));
       })
       .catch(() => {
         if (!isMounted) {
@@ -89,6 +92,12 @@ export const LockScreen = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isLoadingRegions && !isSubmitting && !isSiteLoginOpen && userId.length > 0) {
+      codeInputRef.current?.focus();
+    }
+  }, [isLoadingRegions, isSiteLoginOpen, isSubmitting, userId]);
+
   const submitCredentials = (
     action: () => ReturnType<typeof window.qrGuard.submitUnlock>,
     failureMessage: string
@@ -103,6 +112,7 @@ export const LockScreen = ({
           return;
         }
 
+        setCode("");
         setErrors(formatUnlockErrors(response.errors, response.retryAfterMs));
       })
       .catch(() => {
@@ -120,6 +130,7 @@ export const LockScreen = ({
       return;
     }
 
+    window.localStorage.setItem(LAST_REGION_STORAGE_KEY, userId);
     submitCredentials(() => window.qrGuard.submitUnlock(userId, code), "잠금 해제에 실패했습니다.");
   };
 
@@ -186,7 +197,7 @@ export const LockScreen = ({
             <Field label="인증 코드">
               <Input
                 disabled={isSubmitting}
-                input={inputSlot({ "data-testid": "unlock-code" })}
+                input={{ ...inputSlot({ "data-testid": "unlock-code" }), ref: codeInputRef }}
                 onChange={(_event, data) => {
                   setCode(data.value);
                 }}
@@ -312,4 +323,14 @@ const formatUnlockErrors = (
   }
 
   return [...errors, `${String(Math.ceil(retryAfterMs / 1_000))}초 후 다시 시도하세요.`];
+};
+
+const pickInitialRegion = (regions: readonly string[]): string => {
+  if (regions.length === 1) {
+    return regions[0] ?? "";
+  }
+
+  const lastRegion = window.localStorage.getItem(LAST_REGION_STORAGE_KEY) ?? "";
+
+  return regions.includes(lastRegion) ? lastRegion : "";
 };

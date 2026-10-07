@@ -22,6 +22,7 @@ export interface LaunchedApp {
 
 export interface LaunchOverrides {
   readonly idlePollMs?: string;
+  readonly lockedRefreshMs?: string;
   readonly qrNetDiagnosticsEnabled?: boolean;
   readonly siteLoginTimeoutMs?: string;
   readonly systemIdleSeconds?: string;
@@ -124,6 +125,7 @@ const getLaunchEnv = (
     env["QR_GUARD_NET_DIAGNOSTICS"] = "1";
   }
   setOptionalEnv(env, "QR_GUARD_TEST_IDLE_POLL_MS", overrides.idlePollMs);
+  setOptionalEnv(env, "QR_GUARD_TEST_LOCKED_REFRESH_MS", overrides.lockedRefreshMs);
   setOptionalEnv(env, "QR_GUARD_TEST_SITE_LOGIN_TIMEOUT_MS", overrides.siteLoginTimeoutMs);
   env["QR_GUARD_TEST_SYSTEM_IDLE_SECONDS"] = overrides.systemIdleSeconds ?? "1";
 

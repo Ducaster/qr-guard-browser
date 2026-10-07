@@ -79,6 +79,10 @@ export type ExportAuditLogResponse =
   | { readonly canceled: boolean; readonly ok: true }
   | { readonly errors: readonly string[]; readonly ok: false };
 
+export type AutoLaunchResponse =
+  | { readonly enabled: boolean; readonly ok: true }
+  | { readonly errors: readonly string[]; readonly ok: false };
+
 const qrGuardApi = {
   addUser: (payload: SetupUserPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.addUser, payload),
@@ -94,6 +98,7 @@ const qrGuardApi = {
     ipcRenderer.invoke(IPC_CHANNELS.deleteUser, payload),
   deleteSiteCredential: (id: string): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.siteCredentialDelete, id),
+  getAutoLaunch: (): Promise<AutoLaunchResponse> => ipcRenderer.invoke(IPC_CHANNELS.getAutoLaunch),
   getSettingsView: (): Promise<SettingsViewResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.getSettingsView),
   getState: (): Promise<StateSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.getState),
@@ -133,6 +138,17 @@ const qrGuardApi = {
       ipcRenderer.removeListener(IPC_CHANNELS.siteCredentialSaveOffered, listener);
     };
   },
+  onFocusAddressBar: (callback: () => void): (() => void) => {
+    const listener = (): void => {
+      callback();
+    };
+
+    ipcRenderer.on(IPC_CHANNELS.focusAddressBar, listener);
+
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.focusAddressBar, listener);
+    };
+  },
   openSettings: (adminCode: string): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.openSettings, adminCode),
   exportAuditLog: (format: AuditExportFormat): Promise<ExportAuditLogResponse> =>
@@ -147,10 +163,14 @@ const qrGuardApi = {
   retryQrLoad: (): Promise<ActionResponse> => ipcRenderer.invoke(IPC_CHANNELS.retryQrLoad),
   saveSettings: (payload: SettingsPatchPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.saveSettings, payload),
+  setAutoLaunch: (enabled: boolean): Promise<AutoLaunchResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.setAutoLaunch, enabled),
   submitSiteLogin: (code: string): Promise<UnlockResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.submitSiteLogin, code),
   submitUnlock: (userId: string, code: string): Promise<UnlockResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.submitUnlock, userId, code),
+  unblockSiteCredentialOrigin: (origin: string): Promise<ActionResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.siteCredentialUnblock, origin),
   updateUser: (payload: UpdateUserPayload): Promise<ActionResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.updateUser, payload)
 } as const;

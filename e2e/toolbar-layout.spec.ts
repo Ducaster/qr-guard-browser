@@ -28,6 +28,12 @@ const expectToolbarOnOneRow = async (page: Page): Promise<void> => {
 
   const height = await toolbar.evaluate((element) => element.getBoundingClientRect().height);
   expect(height).toBeLessThanOrEqual(TOOLBAR_MAX_HEIGHT);
+  const navigationOverflows = await toolbar.evaluate((element) => {
+    const navigation = element.children[1];
+
+    return navigation === undefined || navigation.scrollWidth > navigation.clientWidth;
+  });
+  expect(navigationOverflows).toBe(false);
 };
 
 test("unlocked toolbar stays on one row from the minimum width up", async () => {
@@ -44,6 +50,18 @@ test("unlocked toolbar stays on one row from the minimum width up", async () => 
     await control.getByTestId("unlock-code").fill("2468");
     await control.getByTestId("unlock-submit").click();
     await expect.poll(() => getQrVisible(control), { timeout: 5_000 }).toBe(true);
+
+    for (const width of WIDTHS) {
+      await resizeWindowWidth(launched.app, width);
+      await control.waitForTimeout(200);
+      await expectToolbarOnOneRow(control);
+    }
+
+    await control.getByTestId("manual-lock").click();
+    await control.getByTestId("site-login-submit").click();
+    await control.getByTestId("site-login-admin-code-input").fill("1234");
+    await control.getByTestId("site-login-admin-code-submit").click();
+    await expect(control.getByTestId("site-login-indicator")).toBeVisible();
 
     for (const width of WIDTHS) {
       await resizeWindowWidth(launched.app, width);
