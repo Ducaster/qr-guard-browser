@@ -2,7 +2,7 @@
 
 QR 코드 사이트를 **로컬 잠금 뒤에 숨겨** 주는 데스크톱 브라우저입니다.
 
-QR 화면을 그냥 띄워 두면 지나가는 누구나 찍어 갈 수 있습니다. 이 앱은 지정한 사이트를 실제 Chromium 화면으로 띄우되, **인증한 사람이 정해 둔 시간 동안만** QR을 보여 주고, 시간이 지나거나 자리를 비우면 **자동으로 다시 가립니다.** 사이트 로그인 작업은 관리자가 QR 송출 페이지에서 완료 버튼을 누르면 잠깁니다. (macOS · Windows)
+QR 화면을 그냥 띄워 두면 지나가는 누구나 찍어 갈 수 있습니다. 이 앱은 지정한 사이트를 실제 Chromium 화면으로 띄우되, **인증한 사람이 정해 둔 시간 동안만** QR을 보여 주고, 시간이 지나거나 자리를 비우면 **자동으로 다시 가립니다.** 사이트 로그인 작업은 관리자가 QR 송출 페이지에서 완료 버튼을 누르면 잠깁니다. 잠긴 동안에도 가려진 QR 페이지를 **1분마다 새로고침**해 사이트 로그인 세션이 끊기지 않게 합니다. (Windows)
 
 ---
 
@@ -13,7 +13,8 @@ QR 화면을 그냥 띄워 두면 지나가는 누구나 찍어 갈 수 있습�
 - **항상 최신본**: <https://github.com/Ducaster/qr-guard-browser/releases/latest>
 - **Windows**: [`QRGuardBrowserSetup.exe`](https://github.com/Ducaster/qr-guard-browser/releases/latest/download/QRGuardBrowserSetup.exe)
 - **Windows 설치 실패 시**: 릴리스의 `QR Guard Browser-win32-*.zip`을 받아 압축을 풀고 `QR Guard Browser.exe`를 실행합니다.
-- **macOS**: [`QR Guard Browser.dmg`](https://github.com/Ducaster/qr-guard-browser/releases/latest/download/QR.Guard.Browser.dmg)
+- **초저사양 PC용 Lite(WebView2)**: [`QRGuardLite-win.zip`](https://github.com/Ducaster/qr-guard-browser/releases/latest/download/QRGuardLite-win.zip) · 약 1MB, 아래 [Lite 안내](#-qr-guard-lite-webview2판) 참고
+- macOS 빌드는 0.1.10까지 제공했습니다.
 
 ---
 
@@ -28,10 +29,18 @@ QR 화면을 그냥 띄워 두면 지나가는 누구나 찍어 갈 수 있습�
 
 설치 중 `Installation has failed`가 뜨면 릴리스의 Windows zip 파일을 사용하세요. zip은 설치 과정 없이 압축을 푼 폴더 안의 `QR Guard Browser.exe`를 바로 실행하는 방식이라 Squirrel 설치 실패를 우회할 수 있습니다.
 
-### macOS
-1. `QR Guard Browser.dmg`를 받아 더블클릭으로 열고, **앱 아이콘을 `Applications` 폴더로 드래그**합니다.
-2. 첫 실행 시 *"확인되지 않은 개발자"* 경고가 나오면, 앱을 **마우스 우클릭(또는 Control+클릭) → `열기`** → 다시 **`열기`**.
-3. 한 번 허용하면 이후에는 더블클릭으로 바로 열립니다.
+### 🪶 QR Guard Lite (WebView2판)
+디스크와 메모리가 아주 적은 PC용입니다. Chromium을 앱에 넣지 않고 Windows 10/11에 이미 있는 **Microsoft Edge WebView2 런타임**을 씁니다.
+
+| 항목 | Electron판 | Lite |
+|------|-----------|------|
+| 설치 후 디스크 | 약 490MB | 약 1.4MB + 캐시(최대 32MB) |
+| 설치 | Setup.exe | zip 압축을 풀고 `QRGuardLite.exe` 실행 |
+| 비밀번호 저장 | 앱 자체 저장소 | Edge 엔진 내장 저장/업데이트 제안 |
+
+- 잠금, 지역 인증, 사이트 로그인, 1분 새로고침, 유휴 잠금, 인증 기록·지역별 통계·CSV는 Electron판과 같은 규칙으로 동작합니다.
+- 런타임이 없는 PC에서는 실행 시 설치 페이지를 안내합니다.
+- 설정·로그인 세션은 Electron판에서 옮겨지지 않아 처음 실행 때 다시 설정합니다. 인증 기록은 `%APPDATA%\QR Guard Browser\audit-log.jsonl`을 `%LOCALAPPDATA%\QRGuardLite\`로 복사하면 그대로 이어집니다.
 
 ---
 
@@ -78,6 +87,8 @@ QR이 보이는 동안에는 위쪽에 일반 브라우저처럼 도구 막대�
 | **⑤ 지금 잠그기** | 노출 시간이 남아 있어도 **즉시** 잠급니다. 자리를 뜨기 전에 바로 가릴 때. (왼쪽 숫자는 남은 노출 시간 카운트다운) |
 
 > 창이 좁아지면 뒤로/앞으로/새로고침은 **아이콘만** 표시됩니다(겹침 방지). 소셜·OAuth 팝업 로그인, 생체인증(WebAuthn) 등도 동작하며, 로그인 팝업도 잠금 안쪽에서 열려 **QR이 새어 나오지 않습니다.**
+>
+> 단축키: `F5`/`Ctrl+R` 새로고침, `Alt+←/→` 뒤로/앞으로, `Ctrl+L` 주소창, `Esc` 잠그기, `Ctrl+=/-/0` 확대·축소. 우클릭으로 복사·붙여넣기를 쓸 수 있습니다.
 
 ### 4. 사이트 로그인 모드 (다단계 로그인)
 어떤 사이트는 *로그인 → 메뉴 이동 → 여러 번 클릭*을 거쳐야 QR이 나옵니다. 이때 매 단계마다 잠겨 버리면 로그인을 끝낼 수 없으므로, **관리자가 직접 로그인 단계를 진행하는 모드**입니다.
@@ -101,7 +112,8 @@ QR이 보이는 동안에는 위쪽에 일반 브라우저처럼 도구 막대�
 | **QR 화면 제목** | 마지막으로 **QR 송출 준비 완료**를 누른 페이지 제목을 기록합니다. 사이트 로그인 중 자동 잠금 판단에는 사용하지 않습니다. |
 | **지역 관리** | 지역 추가·이름 변경·인증 코드 재설정·삭제. 사람이 바뀌거나 코드가 유출됐을 때 관리. |
 | **관리자 코드 변경** | 운영자 비밀번호 교체. |
-| **저장된 로그인** | QR 사이트 비밀번호 자동저장/자동완성 관리(개별 삭제 가능). |
+| **Windows 시작 시 자동 실행** | PC를 켜면 앱이 바로 뜨게 합니다. |
+| **저장된 로그인** | QR 사이트 비밀번호 자동저장/자동완성 관리(개별 삭제 가능). 비밀번호가 바뀌면 업데이트 여부를 묻고, "저장 안 함"으로 막은 사이트는 **다시 묻기**로 풀 수 있습니다. |
 | **인증 기록(감사 로그)** | 시작일·종료일별 상세 기록과 지역별 인증 횟수를 확인하고 CSV·JSONL로 내보내기. CSV는 Windows Excel에서 한글이 깨지지 않는 UTF-8 형식입니다. |
 | **QR 세션 초기화** | 저장된 쿠키·캐시 삭제. 로그인이 꼬이거나 다른 계정으로 바꿀 때. |
 
@@ -117,7 +129,7 @@ QR이 보이는 동안에는 위쪽에 일반 브라우저처럼 도구 막대�
 - QR 화면이 숨겨져 있을 때는 렌더링과 오디오 처리를 제한합니다.
 - 렌더러가 종료되거나 15초 이상 응답하지 않으면 같은 영속 세션으로 자동 복구합니다.
 - 인증 기록 화면은 최근 1,000건만 그리며, 로그 파일은 현재 5MB와 직전 5MB까지만 보관합니다. 내보내기는 보관 중인 전체 기록을 포함합니다.
-- Chromium 디스크 캐시는 최대 64MB로 제한합니다.
+- Chromium 디스크 캐시는 최대 32MB로 제한하고, 재설치 뒤 남는 이전 버전 폴더(약 350MB)는 실행 30초 뒤 지웁니다.
 
 ## 🛠️ 개발 / 직접 빌드
 ```bash
@@ -125,7 +137,8 @@ npm ci
 npm run dev        # 개발 실행
 npm test           # 단위 테스트
 npm run test:e2e   # E2E (Playwright)
-npm run make       # 설치본(.dmg/.exe/.zip) 빌드
+npm run make       # 설치본(.exe/.zip) 빌드
+dotnet build windows-webview2/QrGuardLite.csproj -c Release   # Lite 빌드
 ```
 
-릴리스(`main` 푸시)는 GitHub Actions가 macOS·Windows 양쪽 설치본을 자동 빌드합니다.
+`main` 푸시마다 GitHub Actions가 Windows 설치본과 Lite zip을 빌드합니다.

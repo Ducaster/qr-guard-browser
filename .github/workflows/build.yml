@@ -9,14 +9,8 @@ on:
 
 jobs:
   make:
-    name: Make ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - macos-latest
-          - windows-latest
+    name: Make Electron (Windows)
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -49,11 +43,48 @@ jobs:
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: qr-guard-browser-${{ runner.os }}
+          name: qr-guard-browser-Windows
           if-no-files-found: error
           path: |
-            out/make/**/*.dmg
             out/make/**/*.zip
             out/make/**/*.exe
             out/make/**/*.nupkg
             out/make/**/RELEASES
+
+  lite:
+    name: Build WebView2 Lite
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        run: dotnet build windows-webview2/QrGuardLite.csproj -c Release
+
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $exe = "windows-webview2/bin/Release/net48/QRGuardLite.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru -NoNewWindow -RedirectStandardError self-test.log
+          Get-Content self-test.log
+          if ($process.ExitCode -ne 0) { exit 1 }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = "windows-webview2/bin/Release/net48"
+          Remove-Item "$out/Microsoft.Web.WebView2.Wpf.dll" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "$out/*" -DestinationPath QRGuardLite-win.zip
+
+      - name: Upload Lite artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qr-guard-lite-windows
+          if-no-files-found: error
+          path: QRGuardLite-win.zip

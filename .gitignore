@@ -6,3 +6,5 @@ dist/
 out/
 coverage/
 *.log
+windows-webview2/bin/
+windows-webview2/obj/
