@@ -43,9 +43,6 @@ describe("lock IPC sender gate", () => {
     const manualLockResponse = getInvokeHandler(IPC_CHANNELS.manualLock)({
       sender: qrWebContents
     });
-    const learnResponse = getInvokeHandler(IPC_CHANNELS.learnCurrentQrTitle)({
-      sender: qrWebContents
-    });
     const listRegionsResponse = getInvokeHandler(IPC_CHANNELS.listUnlockRegions)({
       sender: qrWebContents
     });
@@ -70,10 +67,6 @@ describe("lock IPC sender gate", () => {
       errors: ["허용되지 않은 요청입니다."],
       ok: false
     });
-    expect(learnResponse).toEqual({
-      errors: ["허용되지 않은 요청입니다."],
-      ok: false
-    });
     expect(listRegionsResponse).toEqual({
       errors: ["허용되지 않은 요청입니다."],
       ok: false
@@ -95,7 +88,6 @@ describe("lock IPC sender gate", () => {
       ok: false
     });
     expect(controller.manualLockCalls).toBe(0);
-    expect(controller.learnCurrentQrTitleCalls).toBe(0);
     expect(controller.listUnlockRegionsCalls).toBe(0);
     expect(controller.qrGoBackCalls).toBe(0);
     expect(controller.qrGoForwardCalls).toBe(0);
@@ -113,9 +105,6 @@ describe("lock IPC sender gate", () => {
 
     // When
     const manualLockResponse = getInvokeHandler(IPC_CHANNELS.manualLock)({
-      sender: controlWebContents
-    });
-    const learnResponse = getInvokeHandler(IPC_CHANNELS.learnCurrentQrTitle)({
       sender: controlWebContents
     });
     const listRegionsResponse = getInvokeHandler(IPC_CHANNELS.listUnlockRegions)({
@@ -139,14 +128,12 @@ describe("lock IPC sender gate", () => {
 
     // Then
     expect(manualLockResponse).toEqual({ ok: true });
-    expect(learnResponse).toEqual({ ok: true });
     expect(listRegionsResponse).toEqual({ ok: true, regions: ["staff01"] });
     expect(goBackResponse).toEqual({ ok: true });
     expect(goForwardResponse).toEqual({ ok: true });
     expect(reloadResponse).toEqual({ ok: true });
     expect(navigateResponse).toEqual({ ok: true });
     expect(controller.manualLockCalls).toBe(1);
-    expect(controller.learnCurrentQrTitleCalls).toBe(1);
     expect(controller.listUnlockRegionsCalls).toBe(1);
     expect(controller.qrGoBackCalls).toBe(1);
     expect(controller.qrGoForwardCalls).toBe(1);
@@ -181,7 +168,6 @@ describe("lock IPC sender gate", () => {
 });
 
 class RecordingLockController implements LockController {
-  learnCurrentQrTitleCalls = 0;
   listUnlockRegionsCalls = 0;
   manualLockCalls = 0;
   qrGoBackCalls = 0;
@@ -215,12 +201,6 @@ class RecordingLockController implements LockController {
       state: "locked",
       unlockExpiresAt: null
     };
-  }
-
-  learnCurrentQrTitle(): { readonly ok: true } {
-    this.learnCurrentQrTitleCalls += 1;
-
-    return { ok: true };
   }
 
   listUnlockRegions(): readonly string[] {

@@ -21,7 +21,6 @@ import { createLockModeLifecycle } from "./lock-mode-lifecycle";
 import { createLockTimers } from "./lock-timers";
 import { notLockedResponse } from "./qr-access-auth";
 import { isQrBlankFallbackUrl, loadQrUrlOrBlank } from "./qr-url-loader";
-import { learnQrTitleFromCurrentPage, type ActionResponse } from "./qr-title-learning";
 import {
   watchQrNavigation,
   type QrWebContentsLike
@@ -38,12 +37,16 @@ interface LockControllerShellWindow {
   readonly setQrVisible: (visible: boolean) => void;
 }
 
+interface ActionResponse {
+  readonly errors?: readonly string[];
+  readonly ok: boolean;
+}
+
 export interface LockController {
   readonly clearQrLoadFailure: () => void;
   readonly closeSettings: () => void;
   readonly completeSetup: () => void;
   readonly getState: () => StateSnapshot;
-  readonly learnCurrentQrTitle: () => ActionResponse;
   readonly listUnlockRegions: () => readonly string[];
   readonly manualLock: () => void;
   readonly openSettings: () => void;
@@ -219,14 +222,6 @@ export const createLockController = (options: LockControllerOptions): LockContro
     };
   };
 
-  const learnCurrentQrTitle = (): ActionResponse =>
-    learnQrTitleFromCurrentPage({
-      qrWebContents: options.qrWebContents,
-      relock,
-      repository: options.repository,
-      state
-    });
-
   const listUnlockRegions = (): readonly string[] => {
     if (state !== "locked") {
       // Unlock regions are only meaningful while rendering the lock screen.
@@ -264,7 +259,6 @@ export const createLockController = (options: LockControllerOptions): LockContro
       setState(completeSetup(state));
     },
     getState,
-    learnCurrentQrTitle,
     listUnlockRegions,
     manualLock: () => {
       relock("manual");

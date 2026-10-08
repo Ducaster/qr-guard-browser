@@ -8,7 +8,6 @@ import {
   isRecord,
   readDurationSeconds,
   readHttpUrl,
-  readOptionalTrimmedString,
   readRequiredCode,
   readRequiredString
 } from "./settings-validation-primitives";
@@ -106,13 +105,9 @@ export const readSettingsPatchInput = (
     "유휴 자동잠금",
     errors
   );
-  const qrTitlePattern = Object.hasOwn(payload, "qrTitlePattern")
-    ? readOptionalTrimmedString(payload, "qrTitlePattern", settings.qrTitlePattern)
-    : settings.qrTitlePattern;
-
   return errors.length > 0
     ? fail(errors)
-    : ok({ idleAutoLockSeconds, qrTitlePattern, qrUrl, unlockDurationSeconds });
+    : ok({ idleAutoLockSeconds, qrUrl, unlockDurationSeconds });
 };
 
 export const readSingleUserCodeInput = (payload: unknown): ValidationResult<UserCodeInput> => {

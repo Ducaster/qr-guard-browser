@@ -29,7 +29,6 @@ export const isFirstRunSettings = (settings: Settings): boolean =>
 
 export const toSettingsSafeView = (settings: Settings): SettingsSafeView => ({
   idleAutoLockSeconds: settings.idleAutoLockSeconds,
-  qrTitlePattern: settings.qrTitlePattern,
   qrUrl: settings.qrUrl,
   unlockDurationSeconds: settings.unlockDurationSeconds,
   users: settings.users.map((user) => ({
@@ -76,7 +75,6 @@ export const applySettingsPatch = (
   return ok({
     ...settings,
     idleAutoLockSeconds: patchResult.value.idleAutoLockSeconds,
-    qrTitlePattern: patchResult.value.qrTitlePattern,
     qrUrl: patchResult.value.qrUrl,
     unlockDurationSeconds: patchResult.value.unlockDurationSeconds
   });

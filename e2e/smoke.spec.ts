@@ -98,6 +98,11 @@ test.describe("secure Electron shell", () => {
 
     try {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
+      const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
+      // Simulates a QR login left over from before the settings file was reset.
+      await qrPage.evaluate(() => {
+        document.cookie = "previous-operator=1; max-age=3600";
+      });
 
       // When
       await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/login`);
@@ -106,6 +111,7 @@ test.describe("secure Electron shell", () => {
       const shellInfo = await controlPage.evaluate(() => window.qrGuard.getShellInfo());
       expect(shellInfo.qrVisible).toBe(false);
       await expect(controlPage.getByRole("button", { name: "설정" })).toBeVisible();
+      await expect.poll(() => qrPage.evaluate(() => document.cookie)).not.toContain("previous-operator");
     } finally {
       await closeLaunchedApp(launchedApp);
     }

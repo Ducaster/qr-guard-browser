@@ -29,6 +29,7 @@ export type ShellInfoProvider = () => Pick<ShellInfo, "qrVisible">;
 
 export interface SettingsIpcOptions {
   readonly auditLogStore: AuditLogStore;
+  readonly clearSiteCredentials: () => void;
   readonly loadQrUrl: (url: string) => Promise<void>;
   readonly lockoutStateStore: LockoutStateStore;
   readonly onSettingsClosed: () => void;
@@ -113,6 +114,10 @@ export const registerSettingsIpc = (options: SettingsIpcOptions): void => {
       if (!result.ok) {
         return errorResponse(result.errors);
       }
+
+      // A reset settings file must not reuse the previous operator's QR login or saved site passwords.
+      await session.fromPartition(QR_SESSION_PARTITION).clearStorageData();
+      options.clearSiteCredentials();
 
       const finalLoadResult = loadSettingsForIpc(options.repository);
 

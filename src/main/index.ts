@@ -316,6 +316,9 @@ if (!gotSingleInstanceLock) {
 
       registerSettingsIpc({
         auditLogStore: createElectronAuditLogStore(),
+        clearSiteCredentials: () => {
+          getSiteCredentialRepository().clearAll();
+        },
         loadQrUrl: loadActiveQrUrl,
         lockoutStateStore: getLockoutStateStore(),
         onSettingsClosed: () => {

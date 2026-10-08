@@ -30,6 +30,7 @@ export type SiteCredentialOfferKind = "save" | "update";
 
 export interface SiteCredentialRepository {
   readonly blockSavePromptsForOrigin: (origin: string) => void;
+  readonly clearAll: () => void;
   readonly deleteCredential: (id: string) => void;
   readonly getAutofillCredential: (origin: string) => SiteCredentialAutofill | null;
   readonly getSaveOfferKind: (credential: SiteCredentialInput) => SiteCredentialOfferKind | null;
@@ -82,6 +83,9 @@ export const createSiteCredentialRepository = (
         ...vault,
         blockedOrigins: [...vault.blockedOrigins, normalizedOrigin]
       });
+    },
+    clearAll: () => {
+      saveVault(createEmptyVault());
     },
     deleteCredential: (id: string) => {
       const parsedId = parseCredentialId(id);

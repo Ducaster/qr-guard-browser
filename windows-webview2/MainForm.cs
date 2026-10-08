@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -23,8 +24,9 @@ namespace QrGuardLite
     {
         // Reloading the hidden page keeps sliding server sessions alive while locked.
         private const int LockedRefreshMs = 60000;
-        private const string BrowserArguments = "--disk-cache-size=33554432";
+        internal const string BrowserArguments = "--disk-cache-size=33554432";
         private static readonly TimeSpan SiteLoginCap = TimeSpan.FromMinutes(5);
+        private readonly DateTime startedUtc = DateTime.UtcNow;
 
         private readonly WebView2 webView = new WebView2 { Dock = DockStyle.Fill };
         private readonly TableLayoutPanel toolbar = new TableLayoutPanel();
@@ -200,13 +202,65 @@ namespace QrGuardLite
                 }
                 else if (args.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled)
                 {
-                    ShowLoadFailure($"QR 사이트를 불러오지 못했습니다. ({args.WebErrorStatus})");
+                    ShowLoadFailure("QR 사이트를 불러오지 못했습니다. " + DescribeLoadError(args.WebErrorStatus));
                 }
 
                 UpdateToolbar();
             };
             core.HistoryChanged += (sender, args) => UpdateToolbar();
             core.SourceChanged += (sender, args) => UpdateToolbar();
+            // Low-memory PCs kill browser processes; Electron reloads in this case, so Lite must too.
+            core.ProcessFailed += (sender, args) =>
+            {
+                switch (args.ProcessFailedKind)
+                {
+                    case CoreWebView2ProcessFailedKind.RenderProcessExited:
+                    case CoreWebView2ProcessFailedKind.RenderProcessUnresponsive:
+                        BeginInvoke(new Action(() => core.Reload()));
+                        break;
+                    case CoreWebView2ProcessFailedKind.BrowserProcessExited:
+                        BeginInvoke(new Action(RestartAfterBrowserExit));
+                        break;
+                }
+            };
+        }
+
+        private static string DescribeLoadError(CoreWebView2WebErrorStatus status)
+        {
+            switch (status)
+            {
+                case CoreWebView2WebErrorStatus.CertificateCommonNameIsIncorrect:
+                case CoreWebView2WebErrorStatus.CertificateExpired:
+                case CoreWebView2WebErrorStatus.CertificateRevoked:
+                case CoreWebView2WebErrorStatus.CertificateIsInvalid:
+                case CoreWebView2WebErrorStatus.ClientCertificateContainsErrors:
+                    return "사이트 인증서를 확인하세요.";
+                case CoreWebView2WebErrorStatus.HostNameNotResolved:
+                case CoreWebView2WebErrorStatus.ServerUnreachable:
+                case CoreWebView2WebErrorStatus.CannotConnect:
+                case CoreWebView2WebErrorStatus.Timeout:
+                case CoreWebView2WebErrorStatus.ConnectionAborted:
+                case CoreWebView2WebErrorStatus.ConnectionReset:
+                case CoreWebView2WebErrorStatus.Disconnected:
+                    return "네트워크 연결이나 허용 IP를 확인하세요.";
+                default:
+                    return $"({status})";
+            }
+        }
+
+        // The CoreWebView2 cannot be reused after its browser process exits, so start a fresh app.
+        private void RestartAfterBrowserExit()
+        {
+            if (DateTime.UtcNow - startedUtc < TimeSpan.FromMinutes(1))
+            {
+                // Avoid a restart loop when the engine dies right after starting.
+                MessageBox.Show(this, "브라우저 엔진이 계속 종료됩니다. 앱을 다시 실행하세요.", AppInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
+                return;
+            }
+
+            Process.Start(Application.ExecutablePath, Program.RestartArgument);
+            Close();
         }
 
         private static bool IsAllowedUrl(string uri) =>
@@ -662,6 +716,9 @@ namespace QrGuardLite
             lockCard.Padding = new Padding(Ui.S(24));
             lockCard.MinimumSize = new Size(Ui.S(380), 0);
             lockCard.MaximumSize = new Size(Ui.S(380), 0);
+            // Card width minus its padding, so long messages wrap instead of being cut off.
+            errorLabel.MaximumSize = new Size(Ui.S(380 - 48), 0);
+            loadFailureLabel.MaximumSize = errorLabel.MaximumSize;
 
             var title = new Label { AutoSize = true, Font = new Font(Ui.Font.FontFamily, 16F, FontStyle.Bold), Text = "QR 숨김" };
             var hint = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, Text = "지역 인증 후 QR 화면을 표시합니다." };

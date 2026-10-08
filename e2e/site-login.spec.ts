@@ -29,7 +29,6 @@ test.describe("site login mode", () => {
       const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
       const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
       await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/`);
-      await saveQrTitlePattern(controlPage, "QR 코드");
 
       // When
       await enterSiteLogin(controlPage, "1234");
@@ -41,7 +40,7 @@ test.describe("site login mode", () => {
       expect(qrUrl.searchParams.has("token")).toBe(true);
       await expect(controlPage.getByTestId("site-login-indicator")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
-      const completeButton = controlPage.getByTestId("learn-qr-title");
+      const completeButton = controlPage.getByTestId("qr-ready");
       await expect(completeButton).toBeVisible();
       await expect(completeButton).toContainText("QR 송출 준비 완료");
 
@@ -51,33 +50,6 @@ test.describe("site login mode", () => {
       // Then
       await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
       await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(false);
-    } finally {
-      await closeLaunchedApp(launchedApp);
-    }
-  });
-
-  test("learns the current QR title from the siteLogin toolbar", async () => {
-    // Given
-    const launchedApp = await launchApp(`${fixtureServer.baseUrl}/`);
-    const electronApp = launchedApp.app;
-
-    try {
-      const controlPage = await findPage(electronApp, (page) => page.url().includes("main_window"));
-      const qrPage = await findPage(electronApp, (page) => page.url().startsWith(fixtureServer.baseUrl));
-      await completeFirstRunSetup(controlPage, `${fixtureServer.baseUrl}/`);
-      await enterSiteLogin(controlPage, "1234");
-      await navigateFixtureToQr(qrPage);
-      await expect(controlPage.getByTestId("site-login-indicator")).toBeVisible();
-      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(true);
-
-      // When
-      await controlPage.getByTestId("learn-qr-title").click();
-
-      // Then
-      await expect(controlPage.getByTestId("locked-screen")).toBeVisible();
-      await expect.poll(() => getQrVisible(controlPage), { timeout: 2_000 }).toBe(false);
-      await openSettings(controlPage);
-      await expect(controlPage.getByTestId("settings-qr-title-pattern")).toHaveValue("QR 코드");
     } finally {
       await closeLaunchedApp(launchedApp);
     }
@@ -118,19 +90,4 @@ const navigateFixtureToQr = async (page: Page): Promise<void> => {
   await page.getByTestId("fixture-login-submit").click();
   await page.getByTestId("fixture-step-one-next").click();
   await page.getByTestId("fixture-step-two-qr").click();
-};
-
-const openSettings = async (page: Page): Promise<void> => {
-  const response = await page.evaluate(() => window.qrGuard.openSettings("1234"));
-
-  expect(response.ok).toBe(true);
-  await expect(page.getByTestId("settings-qr-title-pattern")).toBeVisible();
-};
-
-const saveQrTitlePattern = async (page: Page, qrTitlePattern: string): Promise<void> => {
-  await openSettings(page);
-  await page.getByTestId("settings-qr-title-pattern").fill(qrTitlePattern);
-  await page.getByRole("button", { name: "설정 저장" }).click();
-  await page.getByRole("button", { name: "설정 잠그기" }).click();
-  await expect(page.getByTestId("locked-screen")).toBeVisible();
 };

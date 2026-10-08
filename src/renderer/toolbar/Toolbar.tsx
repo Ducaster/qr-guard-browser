@@ -182,10 +182,10 @@ export const Toolbar = ({ state }: ToolbarProps): JSX.Element => {
             appearance="subtle"
             aria-label="QR 송출 준비 완료"
             className={styles.actionButton}
-            data-testid="learn-qr-title"
+            data-testid="qr-ready"
             icon={<QrCode24Regular />}
             onClick={() => {
-              runToolbarAction(() => window.qrGuard.learnCurrentQrTitle());
+              runToolbarAction(() => window.qrGuard.manualLock());
             }}
             type="button"
           >

@@ -104,14 +104,6 @@ export const registerLockIpc = (
     }
   );
 
-  ipcMain.handle(IPC_CHANNELS.learnCurrentQrTitle, (event: IpcMainInvokeEvent): ActionResponse => {
-    if (!isControlSender(event, getControlWebContents)) {
-      return unauthorizedActionResponse();
-    }
-
-    return getRequiredController(getController).learnCurrentQrTitle();
-  });
-
   ipcMain.handle(
     IPC_CHANNELS.listUnlockRegions,
     (event: IpcMainInvokeEvent): ListUnlockRegionsResponse => {

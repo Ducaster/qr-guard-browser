@@ -89,18 +89,6 @@ export const readDurationSeconds = (
   return Math.min(Math.trunc(value), maxValue);
 };
 
-export const readOptionalTrimmedString = (
-  record: Readonly<Record<string, unknown>>,
-  key: string,
-  fallback: string
-): string => {
-  if (!Object.hasOwn(record, key)) {
-    return fallback;
-  }
-
-  return readTrimmedString(record, key);
-};
-
 export const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 

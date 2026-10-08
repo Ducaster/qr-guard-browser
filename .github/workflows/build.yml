@@ -67,13 +67,15 @@ jobs:
       - name: Build
         run: dotnet build windows-webview2/QrGuardLite.csproj -c Release
 
-      - name: Self-test
+      - name: Self-test and browser smoke test
         shell: pwsh
         run: |
           $exe = "windows-webview2/bin/Release/net48/QRGuardLite.exe"
-          $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru -NoNewWindow -RedirectStandardError self-test.log
-          Get-Content self-test.log
-          if ($process.ExitCode -ne 0) { exit 1 }
+          foreach ($test in "--self-test", "--smoke-test") {
+            $process = Start-Process -FilePath $exe -ArgumentList $test -Wait -PassThru -NoNewWindow -RedirectStandardError "$test.log"
+            Get-Content "$test.log"
+            if ($process.ExitCode -ne 0) { Write-Error "$test failed with exit code $($process.ExitCode)"; exit 1 }
+          }
 
       - name: Package
         shell: pwsh

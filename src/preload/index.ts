@@ -35,7 +35,6 @@ export interface FirstRunSetupPayload {
 
 export interface SettingsPatchPayload {
   readonly idleAutoLockSeconds?: number;
-  readonly qrTitlePattern?: string;
   readonly qrUrl?: string;
   readonly unlockDurationSeconds?: number;
 }
@@ -104,8 +103,6 @@ const qrGuardApi = {
   getState: (): Promise<StateSnapshot> => ipcRenderer.invoke(IPC_CHANNELS.getState),
   getShellInfo: (): Promise<ShellInfo> => ipcRenderer.invoke(IPC_CHANNELS.getShellInfo),
   isFirstRun: (): Promise<FirstRunResponse> => ipcRenderer.invoke(IPC_CHANNELS.isFirstRun),
-  learnCurrentQrTitle: (): Promise<ActionResponse> =>
-    ipcRenderer.invoke(IPC_CHANNELS.learnCurrentQrTitle),
   listSiteCredentials: (): Promise<ListSiteCredentialsResponse> =>
     ipcRenderer.invoke(IPC_CHANNELS.siteCredentialList),
   listUnlockRegions: (): Promise<ListUnlockRegionsResponse> =>

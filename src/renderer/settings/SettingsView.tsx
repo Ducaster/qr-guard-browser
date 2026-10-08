@@ -25,7 +25,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
   const [qrUrl, setQrUrl] = useState("");
   const [unlockDurationSeconds, setUnlockDurationSeconds] = useState("10");
   const [idleAutoLockSeconds, setIdleAutoLockSeconds] = useState("30");
-  const [qrTitlePattern, setQrTitlePattern] = useState("");
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [message, setMessage] = useState("");
   const [isBusy, setIsBusy] = useState(false);
@@ -47,7 +46,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
     setQrUrl(nextSettings.qrUrl);
     setUnlockDurationSeconds(String(nextSettings.unlockDurationSeconds));
     setIdleAutoLockSeconds(String(nextSettings.idleAutoLockSeconds));
-    setQrTitlePattern(nextSettings.qrTitlePattern);
   }, []);
 
   useEffect(() => {
@@ -75,7 +73,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
     setIsBusy(true);
     void window.qrGuard.saveSettings({
       idleAutoLockSeconds: idleSeconds,
-      qrTitlePattern: qrTitlePattern.trim(),
       qrUrl: qrUrl.trim(),
       unlockDurationSeconds: unlockSeconds
     })
@@ -155,16 +152,6 @@ export const SettingsView = ({ onClose }: SettingsViewProps): JSX.Element => {
                 </Field>
               </SplitTwo>
               <AutoLaunchSwitch />
-              <Field label="QR 송출 화면 제목 기록">
-                <Input
-                  disabled={isBusy || settings === null}
-                  input={inputSlot({ "data-testid": "settings-qr-title-pattern" })}
-                  onChange={(_event, data) => {
-                    setQrTitlePattern(data.value);
-                  }}
-                  value={qrTitlePattern}
-                />
-              </Field>
               <Button
                 appearance="primary"
                 disabled={isBusy || settings === null}

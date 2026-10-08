@@ -293,35 +293,6 @@ describe("lock controller siteLogin mode", () => {
     harness.controller.manualLock();
   });
 
-  it("learns the current QR title into settings and locks", async () => {
-    // Given
-    const harness = createHarness({ qrTitle: "QR 코드 - 12번 창구" });
-    await harness.controller.submitSiteLogin("admin-code");
-
-    // When
-    const result = harness.controller.learnCurrentQrTitle();
-
-    // Then
-    expect(result).toEqual({ ok: true });
-    expect(harness.repository.load().qrTitlePattern).toBe("QR 코드 - 12번 창구");
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-  });
-
-  it("locks when site login is completed even if the current page has no title", async () => {
-    // Given
-    const harness = createHarness({ qrTitle: "" });
-    await harness.controller.submitSiteLogin("admin-code");
-
-    // When
-    const result = harness.controller.learnCurrentQrTitle();
-
-    // Then
-    expect(result).toEqual({ ok: true });
-    expect(harness.controller.getState().state).toBe("locked");
-    expect(harness.controller.getState().qrVisible).toBe(false);
-  });
-
   it("manual lock, idle timeout, and safety cap all exit siteLogin through the gate", async () => {
     // Given
     vi.useFakeTimers();

@@ -177,6 +177,10 @@ class RecordingSiteCredentialRepository implements SiteCredentialRepository {
     return;
   }
 
+  clearAll(): void {
+    return;
+  }
+
   deleteCredential(_id: string): void {
     return;
   }

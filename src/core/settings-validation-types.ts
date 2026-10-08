@@ -25,7 +25,6 @@ export interface FirstRunSetupInput {
 
 export interface SettingsPatchInput {
   readonly idleAutoLockSeconds: number;
-  readonly qrTitlePattern: string;
   readonly qrUrl: string;
   readonly unlockDurationSeconds: number;
 }
@@ -37,7 +36,6 @@ export interface SettingsSafeUserView {
 
 export interface SettingsSafeView {
   readonly idleAutoLockSeconds: number;
-  readonly qrTitlePattern: string;
   readonly qrUrl: string;
   readonly unlockDurationSeconds: number;
   readonly users: readonly SettingsSafeUserView[];

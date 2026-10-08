@@ -20,7 +20,6 @@ export const IPC_CHANNELS = {
   getSettingsView: "qr-guard:get-settings-view",
   getShellInfo: "qr-guard:get-shell-info",
   isFirstRun: "qr-guard:is-first-run",
-  learnCurrentQrTitle: "qr-guard:learn-current-qr-title",
   listUnlockRegions: "qr-guard:list-unlock-regions",
   manualLock: "qr-guard:manual-lock",
   openSettings: "qr-guard:open-settings",
