@@ -81,6 +81,7 @@ namespace QrGuardLite
         {
             this.settings = settings;
             Font = Ui.Font;
+            Icon = Ui.AppIcon;
             MinimumSize = new Size(Ui.S(720), Ui.S(540));
             Size = new Size(Ui.S(1280), Ui.S(800));
             StartPosition = FormStartPosition.CenterScreen;

@@ -10,6 +10,8 @@ namespace QrGuardLite
     internal static class Ui
     {
         public static readonly Font Font = new Font("Malgun Gothic", 9F);
+        // Loaded from the full .ico so title bars get the crisp 16px frame instead of a shrunken 32px one.
+        public static readonly Icon AppIcon = new Icon(typeof(Ui).Assembly.GetManifestResourceStream("QrGuardLite.icon.ico"));
         public static readonly Color Primary = Color.FromArgb(0, 95, 184);
         private static readonly float ScaleFactor = ReadScale();
 
@@ -200,6 +202,7 @@ namespace QrGuardLite
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Font = Ui.Font,
             FormBorderStyle = FormBorderStyle.FixedDialog,
+            Icon = Ui.AppIcon,
             MaximizeBox = false,
             MinimizeBox = false,
             ShowInTaskbar = false,
@@ -224,6 +227,7 @@ namespace QrGuardLite
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             Font = Ui.Font;
+            Icon = Ui.AppIcon;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;

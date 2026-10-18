@@ -59,6 +59,8 @@ namespace QrGuardLite
             var parsed = AuditLog.Parse(AuditLog.Serialize(auditEvent));
             Check(parsed != null && parsed.UserId == auditEvent.UserId && parsed.UnlockedAt == auditEvent.UnlockedAt, "audit JSONL round-trips");
             Check(AuditLog.Parse("{broken") == null, "broken audit lines are skipped");
+            // Every form reads Ui.AppIcon, so a missing embedded icon would crash the app on start.
+            Check(Ui.AppIcon.Width > 0, "embedded app icon loads");
             var csv = AuditLog.ToCsv(new[] { auditEvent });
             Check(csv.StartsWith("\uFEFFuserId,unlockedAt,lockedAt,durationSeconds,reason,appVersion\r\n", StringComparison.Ordinal), "CSV has a BOM and CRLF header");
             Check(csv.Contains("'=강남,2026-10-08T01:02:03.000Z,2026-10-08T01:02:13.000Z,10,timer,0.1.11\r\n"), "CSV neutralizes formulas");

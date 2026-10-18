@@ -24,6 +24,7 @@ namespace QrGuardLite
             this.settings = settings;
             this.core = core;
             Font = Ui.Font;
+            Icon = Ui.AppIcon;
             MinimizeBox = false;
             MinimumSize = new Size(Ui.S(640), Ui.S(480));
             ShowInTaskbar = false;

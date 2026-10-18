@@ -10,6 +10,8 @@ const packagerConfig = {
   appBundleId: "com.qrguard.browser",
   asar: true,
   executableName: "qr-guard-browser",
+  // Generated from assets/icon.svg (and icon-small.svg for 24px and below).
+  icon: "assets/icon",
   name: "QR Guard Browser"
 } satisfies ForgePackagerConfig;
 
@@ -20,8 +22,11 @@ const config: ForgeConfig = {
     new MakerSquirrel(
       {
         authors: "Ducaster",
+        // Squirrel downloads this for the Windows "Apps & features" entry.
+        iconUrl: "https://raw.githubusercontent.com/Ducaster/qr-guard-browser/main/assets/icon.ico",
         name: "qr_guard_browser",
         owners: "Ducaster",
+        setupIcon: "assets/icon.ico",
         setupExe: "QRGuardBrowserSetup.exe"
       },
       ["win32"]
