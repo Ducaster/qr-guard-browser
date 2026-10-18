@@ -42,6 +42,25 @@ interface ActionResponse {
   readonly ok: boolean;
 }
 
+// Mouse events go to the page body, not a screen point, so no link or button is pressed.
+// A reload is avoided because some sites end the login session on reload.
+// shortcut: script events are untrusted (isTrusted=false), switch to CDP Input.dispatchMouseEvent if a site ignores them.
+export const QR_ACTIVITY_SCRIPT = `
+(() => {
+  const poke = (doc) => {
+    const target = doc && (doc.body || doc.documentElement);
+    if (!target) return;
+    for (const type of ['mousemove', 'mousedown', 'mouseup', 'click']) {
+      target.dispatchEvent(new doc.defaultView.MouseEvent(type, { bubbles: true, cancelable: true, view: doc.defaultView }));
+    }
+    for (const frame of doc.querySelectorAll('iframe, frame')) {
+      try { poke(frame.contentDocument); } catch (error) {}
+    }
+  };
+  poke(document);
+})();
+`;
+
 export interface LockController {
   readonly clearQrLoadFailure: () => void;
   readonly closeSettings: () => void;
@@ -68,7 +87,7 @@ export interface LockControllerOptions {
   readonly shellWindow: LockControllerShellWindow;
   readonly idlePollIntervalMs?: number;
   readonly idleSource?: () => number;
-  readonly lockedRefreshIntervalMs?: number;
+  readonly lockedActivityIntervalMs?: number;
   readonly siteLoginTimeoutOverrideMs?: number;
   readonly unlockDurationOverrideSeconds?: number;
 }
@@ -143,9 +162,10 @@ export const createLockController = (options: LockControllerOptions): LockContro
     auditSessions,
     getState: () => state,
     loadSettings: () => options.repository.load(),
-    reloadQr: () => {
+    pokeQr: () => {
       if (!isQrBlankFallbackUrl(options.qrWebContents.getURL())) {
-        options.qrWebContents.reload();
+        // A failed poke (page mid-navigation) is retried on the next tick.
+        options.qrWebContents.executeJavaScript(QR_ACTIVITY_SCRIPT).catch(() => undefined);
       }
     },
     relock,
@@ -153,7 +173,7 @@ export const createLockController = (options: LockControllerOptions): LockContro
     timers,
     ...(options.idlePollIntervalMs === undefined ? {} : { idlePollIntervalMs: options.idlePollIntervalMs }),
     ...(options.idleSource === undefined ? {} : { idleSource: options.idleSource }),
-    ...(options.lockedRefreshIntervalMs === undefined ? {} : { lockedRefreshIntervalMs: options.lockedRefreshIntervalMs }),
+    ...(options.lockedActivityIntervalMs === undefined ? {} : { lockedActivityIntervalMs: options.lockedActivityIntervalMs }),
     ...(options.siteLoginTimeoutOverrideMs === undefined ? {} : { siteLoginTimeoutOverrideMs: options.siteLoginTimeoutOverrideMs })
   }).sync;
   syncModeTimers(null, state);

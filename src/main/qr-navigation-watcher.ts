@@ -22,6 +22,7 @@ export interface QrNavigationHistoryLike {
 }
 
 export interface QrWebContentsLike {
+  readonly executeJavaScript: (code: string) => Promise<unknown>;
   readonly getTitle: () => string;
   readonly getURL: () => string;
   readonly loadURL: (url: string) => Promise<void>;
@@ -49,6 +50,7 @@ export const watchQrNavigation = (
 };
 
 export const createQrWebContentsAdapter = (webContents: WebContents): QrWebContentsLike => ({
+  executeJavaScript: (code: string) => webContents.executeJavaScript(code),
   getTitle: () => webContents.getTitle(),
   getURL: () => webContents.getURL(),
   loadURL: (url: string) => webContents.loadURL(url),

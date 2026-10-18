@@ -14,7 +14,7 @@ import {
   type SettingsRepository
 } from "../core/settings-repo";
 import type { StateSnapshot } from "../core/state-machine";
-import { createLockController, type LockControllerOptions } from "./lock-controller";
+import { createLockController, QR_ACTIVITY_SCRIPT, type LockControllerOptions } from "./lock-controller";
 import type { AuditLogStore, LockoutStateStore } from "./settings-adapters";
 
 class MemorySettingsRepository implements SettingsRepository {
@@ -237,8 +237,8 @@ describe("lock controller unlock submission", () => {
   });
 });
 
-describe("lock controller locked QR refresh", () => {
-  it("reloads the hidden QR page every minute only while locked", async () => {
+describe("lock controller locked QR activity", () => {
+  it("clicks the hidden QR page every minute only while locked, without reloading", async () => {
     // Given
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-22T00:00:00.000Z"));
@@ -246,20 +246,21 @@ describe("lock controller locked QR refresh", () => {
 
     // When
     vi.advanceTimersByTime(60_000);
-    const lockedReloads = harness.qrWebContents.reloadCalls;
+    const lockedPokes = harness.qrWebContents.executedScripts.length;
     await harness.controller.submitUnlock("staff01", "2468");
     vi.advanceTimersByTime(120_000);
-    const unlockedReloads = harness.qrWebContents.reloadCalls;
+    const unlockedPokes = harness.qrWebContents.executedScripts.length;
     harness.controller.manualLock();
     vi.advanceTimersByTime(60_000);
 
     // Then
-    expect(lockedReloads).toBe(1);
-    expect(unlockedReloads).toBe(1);
-    expect(harness.qrWebContents.reloadCalls).toBe(2);
+    expect(lockedPokes).toBe(1);
+    expect(unlockedPokes).toBe(1);
+    expect(harness.qrWebContents.executedScripts).toEqual([QR_ACTIVITY_SCRIPT, QR_ACTIVITY_SCRIPT]);
+    expect(harness.qrWebContents.reloadCalls).toBe(0);
   });
 
-  it("skips the locked refresh while the QR page is blank", () => {
+  it("skips the locked activity while the QR page is blank", () => {
     // Given
     vi.useFakeTimers();
     const harness = createHarness({ qrUrl: "about:blank" });
@@ -268,7 +269,7 @@ describe("lock controller locked QR refresh", () => {
     vi.advanceTimersByTime(180_000);
 
     // Then
-    expect(harness.qrWebContents.reloadCalls).toBe(0);
+    expect(harness.qrWebContents.executedScripts).toEqual([]);
   });
 });
 
@@ -383,6 +384,7 @@ class FakeQrWebContents {
 
   goBackCalls = 0;
   goForwardCalls = 0;
+  readonly executedScripts: string[] = [];
   reloadCalls = 0;
 
   private readonly listeners = new Map<QrNavigationEvent, ((details?: FakeQrNavigationTarget) => void)[]>();
@@ -393,6 +395,12 @@ class FakeQrWebContents {
     private url: string,
     private title: string
   ) {}
+
+  executeJavaScript(code: string): Promise<unknown> {
+    this.executedScripts.push(code);
+
+    return Promise.resolve(undefined);
+  }
 
   getTitle(): string {
     return this.title;

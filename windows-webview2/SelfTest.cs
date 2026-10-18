@@ -94,12 +94,31 @@ namespace QrGuardLite
                         var environment = await CoreWebView2Environment.CreateAsync(
                             null, Path.Combine(Path.GetTempPath(), "QRGuardLite-smoke"), new CoreWebView2EnvironmentOptions(MainForm.BrowserArguments));
                         await view.EnsureCoreWebView2Async(environment);
-                        view.CoreWebView2.NavigationCompleted += (navigationSender, navigation) =>
+                        view.CoreWebView2.NavigationCompleted += async (navigationSender, navigation) =>
                         {
-                            exitCode = navigation.IsSuccess ? 0 : 1;
-                            form.Close();
+                            try
+                            {
+                                // The page counts clicks, so this checks the lock-screen activity script on the real engine.
+                                await view.CoreWebView2.ExecuteScriptAsync(MainForm.ActivityScript);
+                                var clicks = await view.CoreWebView2.ExecuteScriptAsync("window.clicks");
+                                exitCode = navigation.IsSuccess && clicks == "1" ? 0 : 1;
+
+                                if (exitCode != 0)
+                                {
+                                    Console.Error.WriteLine($"FAIL page loaded={navigation.IsSuccess}, activity clicks={clicks}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine("FAIL " + ex);
+                            }
+                            finally
+                            {
+                                form.Close();
+                            }
                         };
-                        view.CoreWebView2.NavigateToString("<p>QR Guard Lite smoke test</p>");
+                        view.CoreWebView2.NavigateToString(
+                            "<body><script>window.clicks = 0; document.addEventListener('click', () => window.clicks++);</script>QR Guard Lite smoke test</body>");
                     }
                     catch (Exception ex)
                     {

@@ -22,9 +22,28 @@ namespace QrGuardLite
 
     internal sealed class MainForm : Form
     {
-        // Reloading the hidden page keeps sliding server sessions alive while locked.
-        private const int LockedRefreshMs = 60000;
+        // Simulated activity on the hidden page keeps site idle-logout timers from firing while locked.
+        private const int LockedActivityMs = 60000;
         internal const string BrowserArguments = "--disk-cache-size=33554432";
+
+        // Same script as the Electron build: mouse events go to the page body, not a screen point,
+        // so no link or button is pressed. A reload is avoided because some sites log out on reload.
+        // shortcut: script events are untrusted (isTrusted=false), switch to CDP Input.dispatchMouseEvent if a site ignores them.
+        internal const string ActivityScript = @"
+(() => {
+  const poke = (doc) => {
+    const target = doc && (doc.body || doc.documentElement);
+    if (!target) return;
+    for (const type of ['mousemove', 'mousedown', 'mouseup', 'click']) {
+      target.dispatchEvent(new doc.defaultView.MouseEvent(type, { bubbles: true, cancelable: true, view: doc.defaultView }));
+    }
+    for (const frame of doc.querySelectorAll('iframe, frame')) {
+      try { poke(frame.contentDocument); } catch (error) {}
+    }
+  };
+  poke(document);
+})();
+";
         private static readonly TimeSpan SiteLoginCap = TimeSpan.FromMinutes(5);
         private readonly DateTime startedUtc = DateTime.UtcNow;
 
@@ -48,7 +67,7 @@ namespace QrGuardLite
         private readonly Button siteLoginButton;
         private readonly Button settingsButton;
         private readonly Timer tickTimer = new Timer { Interval = 500 };
-        private readonly Timer refreshTimer = new Timer { Interval = LockedRefreshMs };
+        private readonly Timer activityTimer = new Timer { Interval = LockedActivityMs };
         private readonly ToolTip toolTip = new ToolTip();
         private readonly AppSettings settings;
 
@@ -88,7 +107,7 @@ namespace QrGuardLite
             toolbar.Visible = false;
 
             tickTimer.Tick += (sender, args) => OnTick();
-            refreshTimer.Tick += (sender, args) => RefreshWhileLocked();
+            activityTimer.Tick += (sender, args) => PokeWhileLocked();
             // Accelerators pressed inside the page arrive here; WebView2 APIs must not run inside this handler.
             webView.KeyDown += (sender, args) =>
             {
@@ -300,7 +319,7 @@ namespace QrGuardLite
 
             SetMemoryTarget(qrVisible);
             tickTimer.Enabled = qrVisible;
-            refreshTimer.Enabled = next == GuardState.Locked;
+            activityTimer.Enabled = next == GuardState.Locked;
 
             if (qrVisible)
             {
@@ -334,13 +353,14 @@ namespace QrGuardLite
             }
         }
 
-        private void RefreshWhileLocked()
+        private void PokeWhileLocked()
         {
             var source = webView.Source;
 
             if (state == GuardState.Locked && webView.CoreWebView2 != null && source != null && Ui.IsHttpUrl(source.AbsoluteUri))
             {
-                webView.CoreWebView2.Reload();
+                // A failed poke (page mid-navigation) is retried on the next tick.
+                _ = webView.CoreWebView2.ExecuteScriptAsync(ActivityScript);
             }
         }
 

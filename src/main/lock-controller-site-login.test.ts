@@ -119,6 +119,10 @@ class FakeQrWebContents {
     return;
   }
 
+  executeJavaScript(_code: string): Promise<unknown> {
+    return Promise.resolve(undefined);
+  }
+
   setLocation(url: string, title: string): void {
     this.url = url;
     this.title = title;
